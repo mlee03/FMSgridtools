@@ -1,1 +1,1 @@
-from .shared.GridObj import GridObj
+from .shared.gridobj import GridObj
