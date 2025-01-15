@@ -9,10 +9,18 @@ from setuptools.command.install import install
 class CustomInstall(install):
     def run(self):
         with open("compile_log.txt", "w") as f:
-            os.chdir("./gridtools_lib/clib/c_build")
-            subprocess.run(["cmake", ".."], stdout=f)
-            subprocess.run(["make"], stdout=f)
-            os.chdir("../../..")
+            subprocess.run(
+                ["cmake", ".."], 
+                cwd="./gridtools_lib/clib/c_build", 
+                stdout=f,
+                stderr=subprocess.STDOUT,
+            )
+            subprocess.run(
+                ["make"], 
+                cwd="./gridtools_lib/clib/c_build", 
+                stdout=f,
+                stderr=subprocess.STDOUT,
+            )
         install.run(self)
 
 test_requirements = ["pytest", "coverage"]
