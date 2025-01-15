@@ -11,21 +11,23 @@ class XGridObj() :
     src_mosaic : Optional[str] = None
     tgt_mosaic : Optional[str] = None
     restart_remap_file : Optional[str] = None
-    write_remap_file : Optional[str] = None
+    write_remap_file   : Optional[str] = None
     src_grid : Optional[GridObj] = None 
     tgt_grid : Optional[GridObj] = None 
-    dataset : Optional[xr.Dataset] = None 
+    debug    : Optional[bool] = False
 
+    dataset : Optional[xr.Dataset] = None 
     _dataset_exists = False
     
     def __post_init__(self) :
 
         self._set_write_remap_filename()
-        
-        if(self._check_restart_remap_file()) : return
-        if(self._check_mosaic()) : return
-        if(self._check_grids())  : return
 
+        if self._check_dataset()            : return
+        if self._check_restart_remap_file() : return
+        if self._check_mosaic()             : return
+        if self._check_grids()              : return
+ 
         raise RuntimeError("""Exchange grids can be generated from 
         (1) a restart remap_file
         (2) input and tgt mosaic files with grid file information
@@ -36,6 +38,11 @@ class XGridObj() :
     def _set_write_remap_filename(self) :
         if self.write_remap_file is None : self.write_remap_file = 'remap.nc' 
 
+        
+    def _check_dataset(self) :
+        if self.dataset is not None : self._dataset_exists = True
+        return True
+        
         
     def _check_restart_remap_file(self) :
         
@@ -67,3 +74,5 @@ class XGridObj() :
         self._dataset_exists = True
         
                 
+    def write_remap_file(self) :
+        self.dataset.to_netcdf(self.wite_remap_file)
