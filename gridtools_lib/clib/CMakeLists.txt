@@ -10,12 +10,20 @@ list(APPEND c_source_files
   make_topog/topog.c
 )
 
-set(INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+execute_process(
+  COMMAND nc-config --includedir
+  OUTPUT_VARIABLE NetCDF_INCLUDE_DIR
+)
+
+set(SRC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Create the shared library target
 add_library(clib SHARED ${c_source_files})
 
-target_include_directories(clib PUBLIC ${INCLUDE_DIR})
+target_include_directories(clib PUBLIC 
+    ${SRC_INCLUDE_DIR}
+    ${NetCDF_INCLUDE_DIR}
+)
 
 # Set the output directory
 set_target_properties(
