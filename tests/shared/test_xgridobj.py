@@ -49,11 +49,11 @@ def test_in_development_create_xgridobj() :
     
 def test_create_xgridobj_from_restart_file() :
 
-    remap_file = 'remap.nc'
+    remap_file = './remap.nc'
 
     answer = generate_remap_file(remap_file)
     xgrid = XGridObj(restart_remap_file=remap_file)
-
+    
     assert( answer.equals(xgrid.dataset) )
     del(xgrid, answer)
     os.remove(remap_file)

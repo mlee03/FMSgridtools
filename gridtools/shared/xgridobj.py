@@ -2,7 +2,7 @@ import ctypes as ct
 from dataclasses import dataclass
 from typing import Optional
 import xarray as xr
-from .gridtools_utils import file_is_there
+from .gridtools_utils import check_file_is_there
 from .gridobj import GridObj
 
 @dataclass
@@ -10,8 +10,8 @@ class XGridObj() :
 
     src_mosaic : Optional[str] = None
     tgt_mosaic : Optional[str] = None
-    restart_remap_file : Optional[str] = None
-    write_remap_file   : Optional[str] = None
+    restart_remap_file : Optional[str] = 'remap.nc'
+    out_remap_file     : Optional[str] = None
     src_grid : Optional[GridObj] = None 
     tgt_grid : Optional[GridObj] = None 
     debug    : Optional[bool] = False
@@ -20,8 +20,6 @@ class XGridObj() :
     _dataset_exists = False
     
     def __post_init__(self) :
-
-        self._set_write_remap_filename()
 
         if self._check_dataset()            : return
         if self._check_restart_remap_file() : return
@@ -32,22 +30,22 @@ class XGridObj() :
         (1) a restart remap_file
         (2) input and tgt mosaic files with grid file information
         (3) input and output grids as instances of GridObj 
-        Please provide either src_mosaic and tgt_mosaic, src_grid and tgt_grid, or a restart_remap_file""")
+        Please provide either the src_mosaic with the tgt_mosaic, 
+                                  src_grid with the tgt_grid, 
+                                  or a restart_remap_file""")
     
-
-    def _set_write_remap_filename(self) :
-        if self.write_remap_file is None : self.write_remap_file = 'remap.nc' 
-
         
     def _check_dataset(self) :
-        if self.dataset is not None : self._dataset_exists = True
-        return True
+        if self.dataset is not None :
+            self._dataset_exists = True
+            return True
+        else : return False
         
         
     def _check_restart_remap_file(self) :
         
         if self.restart_remap_file is not None :
-            file_is_there(self.restart_remap_file)
+            check_file_is_there(self.restart_remap_file)
             self.read_remap_file()
             return True
         else : return False
@@ -56,9 +54,10 @@ class XGridObj() :
     def _check_mosaic(self) :
         
         if self.src_mosaic is not None and self.tgt_mosaic is not None :
-            file_is_there(self.src_mosaic)
-            file_is_there(self.tgt_mosaic)
-            # set self.src_grid and self.tgt_grid from mosaic files
+            check_file_is_there(self.src_mosaic) #done in MosaicObj?
+            check_file_is_there(self.tgt_mosaic) #done in MosaicObj?
+            # self.src_grid = MosaicObj(self.src_mosaic).get_grid(), MosaicObj(self.src_mosaic).grid ?
+            # self.tgt_grid = MosaicObj(self.tgt_mosaic).get_grid()
             return True
         else : return False
 
@@ -74,5 +73,5 @@ class XGridObj() :
         self._dataset_exists = True
         
                 
-    def write_remap_file(self) :
+    def out_remap_file(self) :
         self.dataset.to_netcdf(self.wite_remap_file)
