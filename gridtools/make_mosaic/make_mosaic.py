@@ -38,7 +38,7 @@ def main(num_tiles, grid_dir, global_mosaic, regional_mosaic, input_mosaic, atmo
     elif type == 'regional':
         make_regional_mosaic(global_mosaic, regional_mosaic)
     else:
-        make_coupler_moasic(atmos_mosaic, ocean_mosaic, ocean_topog, land_mosaic, wave_mosaic, interp_order, sea_level, mosaic_name, area_ratio_thresh, check, print_memory, rotate_poly)
+        make_coupler_mosaic(atmos_mosaic, ocean_mosaic, ocean_topog, land_mosaic, wave_mosaic, interp_order, sea_level, mosaic_name, area_ratio_thresh, check, print_memory, rotate_poly)
 
 
 
