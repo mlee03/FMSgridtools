@@ -4,7 +4,7 @@ import os
 import pytest
 import xarray as xr
 
-def generate_remap_file(filename) :
+def generate_remap(filename : str = None) :
     string = 255
     ncells = 10
     two = 2
@@ -25,7 +25,7 @@ def generate_remap_file(filename) :
                                          tile1_cell = tile1_cell,
                                          tile2_cell = tile2_cell,
                                          xgrid_area = xgrid_area))
-    xgrid.to_netcdf(filename, mode='w')
+    if filename is not None : xgrid.to_netcdf(filename, mode='w')
     return xgrid
 
 
@@ -50,22 +50,25 @@ def test_create_xgridobj_from_restart_file() :
 
     remap_file = './remap.nc'
     
-    answer = generate_remap_file(remap_file)
+    answer = generate_remap(remap_file)
     xgridobj = XGridObj(restart_remap_file=remap_file)
 
     assert( answer.equals(xgridobj.dataset) )
     del(xgridobj, answer)
     os.remove(remap_file)
-
+    
     
 def test_write_remap_file() :
 
-    remap_file = './remap.nc'
-    answer = generate_remap_file(remap_file)
+    out_remap_file = 'test_remap.nc'
+    answer = generate_remap()
+    
+    xgridobj = XGridObj(dataset=answer, out_remap_file=out_remap_file)
+    xgridobj.write_remap_file()
 
-    xgrid = XGridObj(restart_remap_file=remap_file).dataset
-
-    assert(answer.equals(xgrid))
-    del(xgrid)
+    test_dataset = xr.open_dataset(out_remap_file)
+    
+    assert(answer.equals(test_dataset))
+    del(xgridobj, test_dataset)
     
 

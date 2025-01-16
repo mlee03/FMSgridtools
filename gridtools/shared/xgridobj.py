@@ -72,7 +72,7 @@ class XGridObj() :
         self._dataset_exists = True
         
                 
-    def out_remap_file(self) :
-        self.dataset.to_netcdf(self.wite_remap_file)
+    def write_remap_file(self) :
+        self.dataset.to_netcdf(self.out_remap_file)
         
 
