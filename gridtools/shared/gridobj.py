@@ -6,8 +6,8 @@ import dataclasses
 
 @dataclasses.dataclass
 class GridObj:
-    gridfile: str
     grid: Optional[xr.Dataset] = None
+    gridfile: Optional[str] = None
 
     @classmethod
     def from_file(cls, filepath: str) -> "GridObj":
