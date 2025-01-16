@@ -1,2 +1,2 @@
-from .shared.GridObj import GridObj
+from .shared.gridobj import GridObj
 from .shared.gridtools_utils import check_file_is_there
