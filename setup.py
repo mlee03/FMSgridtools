@@ -27,15 +27,15 @@ setup(
     classifiers="",
     install_requires=requirements,
     extras_require=extras_requires,
-    name="gridtools",
+    name="fmsgridtools",
     license="",
-    packages=find_namespace_packages(include=["gridtools", "gridtools.*"]),
+    packages=find_namespace_packages(include=["FMSgridtools", "FMSgridtools.*"]),
     include_package_data=True,
     version="0.0.1",
     zip_safe=False,
     entry_points={
         "console_scripts": [
-            "gridtools make_hgrid = gridtools.make_grid.hgrid.make_hgrid:main",
+            "fmsgridtools make_hgrid = fmgridtools.make_grid.hgrid.make_hgrid:main",
         ]
     },
 )
