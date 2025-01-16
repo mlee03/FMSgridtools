@@ -1,8 +1,8 @@
-import gridtools
+from gridtools import check_file_is_there
 import os
 import pytest
 
-def test_file_is_there_pass() :
+def test_check_file_is_there() :
 
     testfile = 'file_is_here'    
     with open(testfile, 'w') as myfile : pass
@@ -10,7 +10,8 @@ def test_file_is_there_pass() :
     os.remove(testfile)
 
 @pytest.mark.xfail
-def test_file_is_there_fail() :
+def test_check_file_is_not_there() :
+>>>>>>> origin/main
     
     testfile = 'file_is_not_here'
     gridtools.check_file_is_there(testfile)
