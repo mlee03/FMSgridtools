@@ -2,16 +2,16 @@ import ctypes as ct
 from dataclasses import dataclass
 from typing import Optional
 import xarray as xr
-from .gridtools_utils import check_file_is_there
-from .gridobj import GridObj
+from gridtools.shared.gridtools_utils import check_file_is_there
+from gridtools.shared.gridobj import GridObj
 
 @dataclass
 class XGridObj() :
 
     src_mosaic : Optional[str] = None
     tgt_mosaic : Optional[str] = None
-    restart_remap_file : Optional[str] = 'remap.nc'
-    out_remap_file     : Optional[str] = None
+    restart_remap_file : Optional[str] = None
+    out_remap_file     : Optional[str] = 'remap.nc'
     src_grid : Optional[GridObj] = None 
     tgt_grid : Optional[GridObj] = None 
     debug    : Optional[bool] = False
@@ -54,8 +54,7 @@ class XGridObj() :
     def _check_mosaic(self) :
         
         if self.src_mosaic is not None and self.tgt_mosaic is not None :
-            check_file_is_there(self.src_mosaic) #done in MosaicObj?
-            check_file_is_there(self.tgt_mosaic) #done in MosaicObj?
+            # file checks are done in mosaic
             # self.src_grid = MosaicObj(self.src_mosaic).get_grid(), MosaicObj(self.src_mosaic).grid ?
             # self.tgt_grid = MosaicObj(self.tgt_mosaic).get_grid()
             return True
@@ -75,3 +74,5 @@ class XGridObj() :
                 
     def out_remap_file(self) :
         self.dataset.to_netcdf(self.wite_remap_file)
+        
+

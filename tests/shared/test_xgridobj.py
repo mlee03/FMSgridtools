@@ -4,7 +4,6 @@ import os
 import pytest
 import xarray as xr
 
-
 def generate_remap_file(filename) :
     string = 255
     ncells = 10
@@ -35,28 +34,38 @@ def test_in_development_create_xgridobj() :
     # create xgrid from mosaic files
     with open('src_mosaic.nc', 'w') as myfile : pass
     with open('tgt_mosaic.nc', 'w') as myfile : pass    
-    xgrid = XGridObj(src_mosaic='src_mosaic.nc', tgt_mosaic='tgt_mosaic.nc')
-    del(xgrid)
+    xgridobj = XGridObj(src_mosaic='./src_mosaic.nc', tgt_mosaic='./tgt_mosaic.nc')
+    del(xgridobj)
     os.remove('src_mosaic.nc')
     os.remove('tgt_mosaic.nc')
 
     # create xgrid from gridobjs
     src_grid = GridObj(gridfile='file')
     tgt_grid = GridObj(gridfile='file')    
-    xgrid = XGridObj( src_grid=src_grid, tgt_grid=tgt_grid )
-    del(src_grid, tgt_grid, xgrid)
+    xgridobj = XGridObj( src_grid=src_grid, tgt_grid=tgt_grid )
+    del(src_grid, tgt_grid, xgridobj)
 
     
 def test_create_xgridobj_from_restart_file() :
 
     remap_file = './remap.nc'
-
-    answer = generate_remap_file(remap_file)
-    xgrid = XGridObj(restart_remap_file=remap_file)
     
-    assert( answer.equals(xgrid.dataset) )
-    del(xgrid, answer)
+    answer = generate_remap_file(remap_file)
+    xgridobj = XGridObj(restart_remap_file=remap_file)
+
+    assert( answer.equals(xgridobj.dataset) )
+    del(xgridobj, answer)
     os.remove(remap_file)
 
+    
+def test_write_remap_file() :
 
+    remap_file = './remap.nc'
+    answer = generate_remap_file(remap_file)
+
+    xgrid = XGridObj(restart_remap_file=remap_file).dataset
+
+    assert(answer.equals(xgrid))
+    del(xgrid)
+    
 
