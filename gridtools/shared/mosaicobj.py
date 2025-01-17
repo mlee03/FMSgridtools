@@ -56,21 +56,36 @@ class MosaicObj:
             i+=1
 
     def write_out_mosaic(self):
-        #mosaic_vars = dict()
         
-        mosaic = xr.DataArray([self.mosaic_name], attrs=dict(standard_name="grid_mosaic_spec", contact_regions="contacts", children="gridtiles", grid_descriptor=""))
+        mosaic = xr.DataArray(
+                [self.mosaic_name], 
+                attrs=dict(standard_name="grid_mosaic_spec", contact_regions="contacts", 
+                        children="gridtiles", grid_descriptor=""))
 
-        gridlocation = xr.DataArray([self.gridlocation], attrs=dict(standard_name="grid_file_location"))
+        gridlocation = xr.DataArray(
+                    [self.gridlocation], attrs=dict(standard_name="grid_file_location"))
         
-        gridfiles = xr.DataArray(data=self.gridfiles, dims=["ntiles"])
+        gridfiles = xr.DataArray(
+                    data=self.gridfiles, dims=["ntiles"])
         
-        gridtiles = xr.DataArray(data=self.gridtiles, dims=["ntiles"])
+        gridtiles = xr.DataArray(
+                    data=self.gridtiles, dims=["ntiles"])
         
-        contacts = xr.DataArray(data=self.contacts, dims=["ncontact"], attrs=dict(standard_name="grid_contact_spec", contact_type="boundary", alignment="true", contact_index="contact_index", orientation="orient"))
+        contacts = xr.DataArray(
+                   data=self.contacts, dims=["ncontact"], 
+                            attrs=dict(standard_name="grid_contact_spec", contact_type="boundary", 
+                                alignment="true", contact_index="contact_index", orientation="orient"))
         
-        contact_index = xr.DataArray(data=self.contact_index, dims=["ncontact"], attrs=dict(standard_name="starting_ending_point_index_of_contact"))
+        contact_index = xr.DataArray(
+                        data=self.contact_index, dims=["ncontact"], 
+                            attrs=dict(standard_name="starting_ending_point_index_of_contact"))
 
-        out = xr.Dataset(data_vars={ "mosaic": mosaic, "gridlocation": gridlocation, "gridfiles": gridfiles, "gridtiles": gridtiles, "contacts": contacts, "contact_index": contact_index})
+        out = xr.Dataset(
+            data_vars={"mosaic": mosaic, 
+                        "gridlocation": gridlocation, 
+                        "gridfiles": gridfiles, 
+                        "gridtiles": gridtiles, 
+                        "contacts": contacts, 
+                        "contact_index": contact_index})
 
         out.to_netcdf(self.output_file)
-
