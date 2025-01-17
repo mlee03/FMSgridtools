@@ -1,9 +1,7 @@
 from typing import Optional, Dict
 from dataclasses import dataclass,field
-from datetime import datetime
-import socket
-import time
 import sys
+import os
 import xarray as xr
 import numpy as np
 import numpy.typing as npt
@@ -26,25 +24,32 @@ class MosaicObj:
     grid_dict: Optional[Dict] | None = field(default_factory=dict)
 
     def __post_init__(self):
-        try:
-            if self.mosaic_file is not None:
-                self.mosaic = xr.open_dataset(self.mosaic_file)
-        except FileNotFoundError:
+        if self.mosaic_file is not None and self.gridfiles is None:
+            try:
+                self.dataset = xr.open_dataset(self.mosaic_file)
+            except FileNotFoundError:
                 sys.exit("No such file or directory: {}".format(self.mosaic_file))
+            self.gridfiles = self.get_gridfiles()
 
-        if self.gridfiles is None and self.ntiles is None:
-            self.gridfiles, self.ntiles = self.read_mosaic()
+    def get_gridfiles(self):
+        try:
+            files = list(self.dataset['gridfiles'][:].values.flatten())
+            return [f.decode('utf-8') for f in files]
+        except AttributeError:
+                print("Error: Mosaic file not provided as an attribute, unable to return gridfiles")
+    def get_ntiles(self):
+        try:
+            return  self.dataset['ntiles'].size
+        except AttributeError:
+            print("Error: Mosaic file not provided as an attribute, unable to return number of tiles")
 
-
-    def read_mosaic(self):
-        files = list(self.mosaic['gridfiles'][:].values.flatten())
-        gridfiles = [f.decode('utf-8') for f in files]
-        ntiles = self.mosaic['ntiles'].size
-
-        return gridfiles, ntiles
+    def file_is_there(self, check_file:str): 
+        if os.path.isfile(check_file): 
+            print(f"File {check_file} exists.") 
+        else:
+            raise FileNotFoundError(f"File {check_file} does not exist.")
 
     def griddict(self):
-        #parse gridfiles 
         i = 1
         for file in self.gridfiles:
             self.grid_dict[f'tile{i}'] = GridObj.from_file(file)
