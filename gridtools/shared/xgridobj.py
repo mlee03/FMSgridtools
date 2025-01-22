@@ -79,10 +79,5 @@ class XGridObj() :
 
         
     def _check_grids(self) :
-        if self.src_grid is not None and self.tgt_grid is not None:
-            return True
-        else : return False
-        
-
-    #def create_xgrid(self) :
+        return self.src_grid is not None and self.tgt_grid is not None
         
