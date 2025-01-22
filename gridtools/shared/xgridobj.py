@@ -15,16 +15,18 @@ class XGridObj() :
     src_grid : Optional[GridObj] = None 
     tgt_grid : Optional[GridObj] = None 
     debug    : Optional[bool] = False
+    order    : Optional[int] = 1
+    on_gpu   : Optional[bool] = False
 
     dataset : Optional[xr.Dataset] = None 
     _dataset_exists = False
     
     def __post_init__(self) :
 
-        if self._check_dataset()            : return
-        if self._check_restart_remap_file() : return
-        if self._check_mosaic()             : return
-        if self._check_grids()              : return
+        if self._check_dataset()            or \
+           self._check_restart_remap_file() or \
+           self._check_mosaic()             or \
+           self._check_grids()             :return
  
         raise RuntimeError("""Exchange grids can be generated from 
         (1) a restart remap_file
@@ -33,6 +35,21 @@ class XGridObj() :
         Please provide either the src_mosaic with the tgt_mosaic, 
                                   src_grid with the tgt_grid, 
                                   or a restart_remap_file""")
+    
+        
+        
+    def read_remap_file(self) :
+        self.dataset = xr.open_dataset(self.restart_remap_file)
+        self._dataset_exists = True
+        
+                
+    def write_remap_file(self) :
+        self.dataset.to_netcdf(self.out_remap_file)
+
+
+    def create_xgrid(self) :
+        if not any( i == self.order for i in (1,2) ) : raise RuntimeError("conservative order must be 1 or 2")
+        #create_xgrid
     
         
     def _check_dataset(self) :
@@ -65,14 +82,7 @@ class XGridObj() :
         if self.src_grid is not None and self.tgt_grid is not None:
             return True
         else : return False
-
-        
-    def read_remap_file(self) :
-        self.dataset = xr.open_dataset(self.restart_remap_file)
-        self._dataset_exists = True
-        
-                
-    def write_remap_file(self) :
-        self.dataset.to_netcdf(self.out_remap_file)
         
 
+    #def create_xgrid(self) :
+        
