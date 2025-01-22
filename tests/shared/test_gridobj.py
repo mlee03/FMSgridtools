@@ -7,6 +7,9 @@ import numpy as np
 from gridtools import GridObj
 
 def test_read_and_write_gridstruct(tmp_path):
+    """
+    Creating data to generate xarray dataset from
+    """
     nx = 3
     ny = 3
     nxp = nx + 1
@@ -103,23 +106,38 @@ def test_read_and_write_gridstruct(tmp_path):
 
     file_path = tmp_path / "test_grid.nc"
 
-    out_grid_obj = GridObj(grid=out_grid_dataset, gridfile=file_path)
+    empty_grid_obj = GridObj()
 
-    out_grid_obj.write_out_grid(filepath=file_path)
+    assert isinstance(empty_grid_obj, GridObj)
+
+    from_dataset_grid_obj = GridObj(grid_data=out_grid_dataset)
+    assert from_dataset_grid_obj.grid_data is not None
+    assert from_dataset_grid_obj.grid_file is None
+
+    from_dataset_grid_obj.write_out_grid(filepath=file_path)
 
     assert file_path.exists()
 
-    in_grid_obj = GridObj.from_file(filepath=file_path)
+    from_file_grid_obj = GridObj(grid_file=file_path)
+    assert from_file_grid_obj.grid_data is None
+    assert from_file_grid_obj.grid_file is not None
 
-    assert in_grid_obj.grid.tile == out_grid_obj.grid.tile
-    np.testing.assert_array_equal(in_grid_obj.grid.x, out_grid_obj.grid.x)
-    np.testing.assert_array_equal(in_grid_obj.grid.y, out_grid_obj.grid.y)
-    np.testing.assert_array_equal(in_grid_obj.grid.dx, out_grid_obj.grid.dx)
-    np.testing.assert_array_equal(in_grid_obj.grid.dy, out_grid_obj.grid.dy)
-    np.testing.assert_array_equal(in_grid_obj.grid.area, out_grid_obj.grid.area)
-    np.testing.assert_array_equal(in_grid_obj.grid.angle_dx, out_grid_obj.grid.angle_dx)
-    np.testing.assert_array_equal(in_grid_obj.grid.angle_dy, out_grid_obj.grid.angle_dy)
-    assert in_grid_obj.grid.arcx == out_grid_obj.grid.arcx
+    assert isinstance(from_file_grid_obj, GridObj)
+
+    from_file_meth_grid_obj = GridObj.from_file(filepath=file_path)
+
+    """
+    Checking if from_file class method generates instance of GridObj,
+    and compares contents to file contents
+    """
+    assert isinstance(from_file_meth_grid_obj, GridObj)
+    np.testing.assert_array_equal(from_file_meth_grid_obj.x, from_dataset_grid_obj.x)
+    np.testing.assert_array_equal(from_file_meth_grid_obj.y, from_dataset_grid_obj.y)
+    np.testing.assert_array_equal(from_file_meth_grid_obj.dx, from_dataset_grid_obj.dx)
+    np.testing.assert_array_equal(from_file_meth_grid_obj.dy, from_dataset_grid_obj.dy)
+    np.testing.assert_array_equal(from_file_meth_grid_obj.area, from_dataset_grid_obj.area)
+    np.testing.assert_array_equal(from_file_meth_grid_obj.angle_dx, from_dataset_grid_obj.angle_dx)
+    np.testing.assert_array_equal(from_file_meth_grid_obj.angle_dy, from_dataset_grid_obj.angle_dy)
 
     file_path.unlink()
 
