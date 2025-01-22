@@ -18,7 +18,6 @@ class MosaicObj:
     gridtiles: npt.NDArray[np.str_] = None
     contacts: npt.NDArray[np.str_] = None
     contact_index: npt.NDArray[np.str_] = None
-    mosaic: object = field(init=False)
     grid_dict: Optional[Dict] | None = field(default_factory=dict)
 
     def __post_init__(self):
@@ -79,3 +78,4 @@ class MosaicObj:
                         "contact_index": contact_index})
 
         out.to_netcdf(self.output_file)
+
