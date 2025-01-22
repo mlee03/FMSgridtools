@@ -19,14 +19,14 @@ class XGridObj() :
     on_gpu   : Optional[bool] = False
 
     dataset : Optional[xr.Dataset] = None 
-    _dataset_exists = False
+    __dataset_exists = False
     
     def __post_init__(self) :
 
-        if self._check_dataset()            or \
-           self._check_restart_remap_file() or \
-           self._check_mosaic()             or \
-           self._check_grids()             :return
+        if self.__check_dataset()            or \
+           self.__check_restart_remap_file() or \
+           self.__check_mosaic()             or \
+           self.__check_grids()             :return
  
         raise RuntimeError("""Exchange grids can be generated from 
         (1) a restart remap_file
@@ -40,7 +40,7 @@ class XGridObj() :
         
     def read_remap_file(self) :
         self.dataset = xr.open_dataset(self.restart_remap_file)
-        self._dataset_exists = True
+        self.__dataset_exists = True
         
                 
     def write_remap_file(self) :
@@ -52,14 +52,14 @@ class XGridObj() :
         #create_xgrid
     
         
-    def _check_dataset(self) :
+    def __check_dataset(self) :
         if self.dataset is not None :
-            self._dataset_exists = True
+            self.__dataset_exists = True
             return True
         else : return False
         
         
-    def _check_restart_remap_file(self) :
+    def __check_restart_remap_file(self) :
         
         if self.restart_remap_file is not None :
             check_file_is_there(self.restart_remap_file)
@@ -68,7 +68,7 @@ class XGridObj() :
         else : return False
 
         
-    def _check_mosaic(self) :
+    def __check_mosaic(self) :
         
         if self.src_mosaic is not None and self.tgt_mosaic is not None :
             # file checks are done in mosaic
@@ -78,6 +78,6 @@ class XGridObj() :
         else : return False
 
         
-    def _check_grids(self) :
+    def __check_grids(self) :
         return self.src_grid is not None and self.tgt_grid is not None
         
