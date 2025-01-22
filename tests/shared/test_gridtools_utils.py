@@ -11,7 +11,6 @@ def test_check_file_is_there() :
 
 @pytest.mark.xfail
 def test_check_file_is_not_there() :
->>>>>>> origin/main
     
     testfile = 'file_is_not_here'
     gridtools.check_file_is_there(testfile)
