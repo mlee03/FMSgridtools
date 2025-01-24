@@ -3,7 +3,7 @@ from dataclasses import dataclass,field
 import xarray as xr
 import numpy as np
 import numpy.typing as npt
-from gridtools_lib import GridObj
+from gridtools.shared import GridObj
 from gridtools.shared.gridtools_utils import check_file_is_there
 
 @dataclass
