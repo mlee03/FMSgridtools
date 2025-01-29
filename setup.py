@@ -48,23 +48,15 @@ setup(
     extras_require=extras_requires,
     name="fmsgridtools",
     license="",
-<<<<<<< HEAD
-    packages=find_namespace_packages(include=["FMSgridtools", "FMSgridtools.*"]),
-=======
-    packages=find_namespace_packages(include=["gridtools", "gridtools.*", "gridtools_lib", "gridtools_lib.pylib.*"]),
->>>>>>> origin/main
+    packages=find_namespace_packages(include=["FMSgridtools", "FMSgridtools.*", "gridtools_lib", "gridtools_lib.pylib.*"]),
     include_package_data=True,
     version="0.0.1",
     zip_safe=False,
     cmdclass={'install': CustomInstall},
     entry_points={
         "console_scripts": [
-<<<<<<< HEAD
-            "fmsgridtools make_hgrid = fmgridtools.make_grid.hgrid.make_hgrid:main",
-=======
-            "gridtools make_hgrid = gridtools.make_grid.hgrid.make_hgrid:main",
-            "make_topog = gridtools.make_topog.make_topog:make_topog",
->>>>>>> origin/main
+            "fmsgridtools make_hgrid = fmsgridtools.make_grid.hgrid.make_hgrid:main",
+            "make_topog = fmsgridtools.make_topog.make_topog:make_topog",
         ]
     },
 )
