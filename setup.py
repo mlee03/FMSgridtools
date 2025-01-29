@@ -1,8 +1,27 @@
 import os
 from pathlib import Path
 from typing import List
+import subprocess
 
 from setuptools import setup, find_namespace_packages
+from setuptools.command.install import install
+
+class CustomInstall(install):
+    def run(self):
+        with open("compile_log.txt", "w") as f:
+            subprocess.run(
+                ["cmake", ".."], 
+                cwd="./gridtools_lib/clib/c_build", 
+                stdout=f,
+                stderr=subprocess.STDOUT,
+            )
+            subprocess.run(
+                ["make"], 
+                cwd="./gridtools_lib/clib/c_build", 
+                stdout=f,
+                stderr=subprocess.STDOUT,
+            )
+        install.run(self)
 
 test_requirements = ["pytest", "coverage"]
 develop_requirements = test_requirements + ["pre-commit"]
@@ -29,13 +48,23 @@ setup(
     extras_require=extras_requires,
     name="fmsgridtools",
     license="",
+<<<<<<< HEAD
     packages=find_namespace_packages(include=["FMSgridtools", "FMSgridtools.*"]),
+=======
+    packages=find_namespace_packages(include=["gridtools", "gridtools.*", "gridtools_lib", "gridtools_lib.pylib.*"]),
+>>>>>>> origin/main
     include_package_data=True,
     version="0.0.1",
     zip_safe=False,
+    cmdclass={'install': CustomInstall},
     entry_points={
         "console_scripts": [
+<<<<<<< HEAD
             "fmsgridtools make_hgrid = fmgridtools.make_grid.hgrid.make_hgrid:main",
+=======
+            "gridtools make_hgrid = gridtools.make_grid.hgrid.make_hgrid:main",
+            "make_topog = gridtools.make_topog.make_topog:make_topog",
+>>>>>>> origin/main
         ]
     },
 )

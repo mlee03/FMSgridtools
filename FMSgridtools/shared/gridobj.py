@@ -13,7 +13,7 @@ class GridObj:
     def from_file(cls, filepath: str) -> "GridObj":
         with xr.open_dataset(filepath) as ds:
             return cls(grid=ds, gridfile=filepath)
-        
+
     def write_out_grid(self, filepath: str):
         self.grid.to_netcdf(filepath)
 
