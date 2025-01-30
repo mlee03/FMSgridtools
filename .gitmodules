@@ -1,4 +1,4 @@
-[submodule "PyFMS"]
-	path = PyFMS
-	url = git@github.com:fmalatino/PyFMS.git
-	branch = main
+
+[submodule "pyFMS"]
+	path = pyFMS
+	url = https://github.com/fmalatino/pyFMS.git
