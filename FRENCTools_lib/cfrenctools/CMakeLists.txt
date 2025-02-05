@@ -8,6 +8,40 @@ list(APPEND c_source_files
   make_hgrid/create_lonlat_grid.c
   make_mosaic/get_contact.c
   make_topog/topog.c
+  shared/create_xgrid.c
+  shared/create_xgrid_gpu.c
+  shared/create_xgrid_utils_gpu.c
+  shared/general_utils_gpu.c
+  shared/gradient_c2l.c
+  shared/interp.c
+  shared/mosaic_util.c
+  shared/mpp.c
+  shared/mpp_domain.c
+  shared/mpp_io.c
+  shared/read_mosaic.c
+  shared/tool_util.c
+)
+
+list(APPEND header_files
+  make_hgrid/create_hgrid.h
+  make_mosaic/get_contact.h
+  make_topog/topog.h
+  shared/constant.h
+  shred/create_xgrid.h
+  shared/create_xgrid_gpu.h
+  shared/create_xgrid_utils_gpu.h
+  shared/general_utils_gpu.h
+  shared/globals_gpu.h
+  shared/globals.h
+  shared/gradient_c2l.h
+  shared/interp.h
+  shared/mosaic_util.h
+  shared/mpp.h
+  shared/mpp_domain.h
+  shared/mpp_io.h
+  shared/parameters_gpu.h
+  shared/read_mosaic.h
+  shared/tool_util.h
 )
 
 execute_process(
@@ -15,13 +49,11 @@ execute_process(
   OUTPUT_VARIABLE NetCDF_INCLUDE_DIR
 )
 
-set(SRC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
-
 # Create the shared library target
 add_library(clib SHARED ${c_source_files})
 
 target_include_directories(clib PUBLIC 
-    ${SRC_INCLUDE_DIR}
+    shared
     ${NetCDF_INCLUDE_DIR}
 )
 
