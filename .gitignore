@@ -19,4 +19,6 @@ share/python-wheels/
 *.egg
 .vscode
 MANIFEST
+*.nc
+*.pyc
 *__pycache__
