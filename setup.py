@@ -56,7 +56,7 @@ setup(
     entry_points={
         "console_scripts": [
             "fmsgridtools make_hgrid = fmsgridtools.make_grid.hgrid.make_hgrid:main",
-            "make_topog = fmsgridtools.make_topog.make_topog:make_topog",
+            "fmsgridtools make_topog = fmsgridtools.make_topog.make_topog:make_topog",
         ]
     },
 )
