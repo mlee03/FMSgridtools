@@ -7,6 +7,8 @@ import xarray as xr
 
 from FMSgridtools.shared.gridtools_utils import check_file_is_there
 
+# TODO: Remove direct attributes, use property decorators instead
+
 """
 GridObj:
 
@@ -126,7 +128,7 @@ class GridObj:
     def write_out_grid(self, filepath: str):
         if self.tile is not None:
             tile = xr.DataArray(
-                [self.tile.encode("utf-8")],
+                [self.tile],
                 attrs=dict(
                     standard_name = "grid_tile_spec",
                     geometry = "spherical",
@@ -135,7 +137,7 @@ class GridObj:
                     discretization = "logically_rectangular",
                     conformal = "FALSE",
                 )
-            )
+            ).encode
         else:
             tile = None
         if self.x is not None:
@@ -146,7 +148,7 @@ class GridObj:
                     units="degree_east",
                     standard_name="geographic_longitude",
                 )
-            )
+            ).encode
         else:
             x = None
         if self.y is not None:
@@ -157,7 +159,7 @@ class GridObj:
                     units="degree_north",
                     standard_name="geographic_latitude",
                 )
-            )
+            ).encode
         else:
             y = None
         if self.dx is not None:
@@ -168,7 +170,7 @@ class GridObj:
                     units="meters",
                     standard_name="grid_edge_x_distance",
                 )
-            )
+            ).encode
         else:
             dx = None
         if self.dy is not None:
@@ -179,7 +181,7 @@ class GridObj:
                     units="meters",
                     standard_name="grid_edge_y_distance",
                 )
-            )
+            ).encode
         else:
             dy = None
         if self.area is not None:
@@ -190,7 +192,7 @@ class GridObj:
                     units="m2",
                     standard_name="grid_cell_area",
                 )
-            )
+            ).encode
         else:
             area = None
         if self.angle_dx is not None:
@@ -201,7 +203,7 @@ class GridObj:
                     units="degrees_east",
                     standard_name="grid_vertex_x_angle_WRT_geographic_east",
                 )
-            )
+            ).encode
         else:
             angle_dx = None
         if self.angle_dy is not None:
@@ -212,17 +214,17 @@ class GridObj:
                     units="degrees_east",
                     standard_name="grid_vertex_x_angle_WRT_geographic_east",
                 )
-            )
+            ).encode
         else:
             angle_dy = None
         if self.arcx is not None:
             arcx = xr.DataArray(
-                [self.arcx.encode("utf-8")],
+                [self.arcx],
                 attrs=dict(
                     standard_name = "grid_edge_x_arc_type",
                     north_pole = "0.0 90.0",
                 )
-            )
+            ).encode
         else:
             arcx = None
         out_grid_dataset = xr.Dataset(
