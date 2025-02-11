@@ -1,5 +1,6 @@
 import xarray as xr
 import numpy as np
+import numpy.typing as npt
 import click
 from typing import Optional
 
@@ -7,6 +8,7 @@ from pyfms import pyFMS_mpp, pyFMS_mpp_domains
 from FMSgridtools.shared.gridobj import GridObj
 
 MAXBOUNDS = 100
+MAX_NESTS = 128
 REGULAR_LONLAT_GRID = 1
 TRIPOLAR_GRID = 2
 FROM_FILE = 3
@@ -18,42 +20,92 @@ F_PLANE_GRID = 8
 BETA_PLANE_GRID = 9
 MISSING_VALUE = -9999.
 
-# TODO: Click stuff needed in here
+def fill_cubic_grid_halo(
+        nx: int, 
+        ny: int, 
+        halo: int, 
+        data: npt.NDArray[np.float64], 
+        data1_all: npt.NDArray[np.float64],
+        data2_all: npt.NDArray[np.float64],
+        tile: int,
+        ioff: int,
+        joff: int,
+):
+    nxp = nx + ioff
+    nyp = ny + joff
+    nxph = nx + ioff + 2*halo
+    nyph = ny + joff + 2*halo
+
+    for i in range(nxph*nyph):
+        data[i] = MISSING_VALUE
+
+    # first copy computing domain data
+    for j in range (nyp+1):
+        for i in range(nxp+1):
+            data[j*nxph+i] = data1_all[tile*nxp*nyp+(j-1)*nxp+(i-1)]
+
+    ntiles = 6
+
+    if tile%2 == 1:
+        lw = (tile+ntiles-1)%ntiles
+        le = (tile+ntiles+2)%ntiles
+        ls = (tile+ntiles-2)%ntiles
+        ln = (tile+ntiles+1)%ntiles
+        for j in range(nyp+1):
+            data[j*nxph] = data1_all[lw*nxp*nyp+(j-1)*nxp+nx-1]       # west halo
+            data[j*nxph+nxp+1] = data2_all[le*nxp*nyp+ioff*nxp+nyp-j] # east halo
+
+        for i in range(nxp+1):
+            data[i] = data2_all[ls*nxp*nyp+(nxp-i)*nyp+(nx-1)]        # south halo
+            data[(nyp+1)*nxph+i] = data1_all[ln*nxp*nyp+joff*nxp+i-1] # north halo
+    else:
+        lw = (tile+ntiles-2)%ntiles
+        le = (tile+ntiles+1)%ntiles
+        ls = (tile+ntiles-1)%ntiles
+        ln = (tile+ntiles+2)%ntiles
+        for j in range(nyp+1):
+            data[j*nxph] = data2_all[lw*nxp*nyp+(ny-1)*nxp+nyp-j]     # west halo
+            data[j*nxph+nxp+1] = data1_all[le*nxp*nyp+(j-1)*nxp+ioff] # east halo
+
+        for i in range(nxp+1):
+            data[i] = data1_all[ls*nxp*nyp+(ny-1)*nxp+i-1]                # south halo
+            data[(nyp+1)*nxph+i] = data2_all[ln*nxp*nyp+(nxp-i)*nyp+joff] # north halo
+
 @click.command()
 @click.argument('args', nargs=-1)
-@click.option("--grid_type", default="regular_lonlat_grid")
-@click.option("--my_grid_file", default="")
-@click.option("--nxbnds", default=2)
-@click.option("--nybnds", default=2)
-@click.option("--xbnds", type=str)
-@click.option("--ybnds", type=str)
-@click.option("--nlon", type=str)
-@click.option("--nlat", type=str)
-@click.option("--dlon", type=str)
-@click.option("--dlat", type=str)
-@click.option("--lat_join", default=65.)
-@click.option("--nratio", default=1)
-@click.option("--simple_dx", default=0.)
-@click.option("--simple_dy", default=0.)
-@click.option("--grid_name", default="horizontal_grid")
-@click.option("--center", default="none")
-@click.option("--shift_fac", default=18.0)
-@click.option("--f_plane_latitude", default=100.)
-@click.option("--do_schmidt", default=0)
-@click.option("--do_cube_transform", default=0)
+@click.option("--grid_type", type=str, default="regular_lonlat_grid")
+@click.option("--my_grid_file", type=str, default=None)
+@click.option("--nxbnds", type=int, default=2)
+@click.option("--nybnds", type=int, default=2)
+@click.option("--xbnds", type=str, default=None)
+@click.option("--ybnds", type=str, default=None)
+@click.option("--nlon", type=str, default=None)
+@click.option("--nlat", type=str, default=None)
+@click.option("--dlon", type=str, default=None)
+@click.option("--dlat", type=str, default=None)
+@click.option("--lat_join", type=float, default=65.)
+@click.option("--nratio", type=int, default=1)
+@click.option("--simple_dx", type=float, default=0.)
+@click.option("--simple_dy", type=float, default=0.)
+@click.option("--grid_name", type=str, default="horizontal_grid")
+@click.option("--center", type=str, default="none")
+@click.option("--shift_fac", type=float, default=18.0)
+@click.option("--f_plane_latitude", type=float, default=100.)
+@click.option("--do_schmidt", type=int, default=0)
+@click.option("--do_cube_transform", type=int, default=0)
 @click.option("--stretch_factor", type=float, default=0.0)
 @click.option("--target_lon", type=float, default=0.0)
 @click.option("--target_lat", type=float, default=0.0)
-@click.option("--nest_grids", default=0)
-@click.option("--parent_tile", type=str)
-@click.option("--refine_ratio", type=str)
-@click.option("--istart_nest", type=str)
-@click.option("--iend_nest", type=str)
-@click.option("--jstart_nest", type=str)
-@click.option("--jend_nest", type=str)
-@click.option("--halo", default=0)
+@click.option("--nest_grids", type=int, default=0)
+@click.option("--parent_tile", type=str, default=None)
+@click.option("--refine_ratio", type=str, default=None)
+@click.option("--istart_nest", type=str, default=None)
+@click.option("--iend_nest", type=str, default=None)
+@click.option("--jstart_nest", type=str, default=None)
+@click.option("--jend_nest", type=str, default=None)
+@click.option("--halo", type=int, default=0)
 @click.option("--great_circle_algorithm", default=False)
-@click.option("--out_halo", default=0)
+@click.option("--out_halo", type=int, default=0)
 @click.option("--non_length_angle", default=False)
 @click.option("--angular_midpoint", default=False)
 @click.option("--rotate_poly", default=False)
@@ -98,6 +150,82 @@ def main(
     rotate_poly: bool,
     verbose: bool,
 ):
+    nratio = 1
+    method = "conformal"
+    orientation = "center_pole"
+    nxbnds0 = nxbnds
+    nybnds0 = nybnds
+    nxbnds1 = 0
+    nybnds1 = 0
+    nxbnds2 = 0
+    nybnds2 = 0
+    nxbnds3 = 0
+    nybnds3 = 0
+    num_nest_args = 0
+    nn = 0
+    present_stretch_factor = 0
+    present_target_lon = 0
+    present_target_lat = 0
+    use_great_circle_algorithm = 0
+    use_angular_midpoint = 0
+    output_length_angle = 1
+    ntiles = 1
+    ntiles_global = 1
+    grid_obj = GridObj()
+    gridname = "horizontal_grid"
+    center = "none"
+    arcx = "small_circle"
+    north_pole_tile = "0.0 90.0"
+    north_pole_arcx = "0.0 90.0"
+    discretization = "logically_rectangular"
+    conformal = "true"
+
+    if xbnds is not None:
+        xbnds = np.fromstring(xbnds, dtype=np.float64, sep=',')
+        nxbnds1 = xbnds.size
+    if ybnds is not None:
+        ybnds = np.fromstring(ybnds, dtype=np.float64, sep=',')
+        nybnds1 = ybnds.size
+    if nlon is not None:
+        nlon = np.fromstring(nlon, dtype=int, sep=',')
+        nxbnds2 = nlon.size
+    if nlat is not None:
+        nlat = np.fromstring(nlat, dtype=int, sep=',')
+        nybnds2 = nlat.size
+    if dlon is not None:
+        dx_bnds = np.fromstring(dlon, dtype=np.float64, sep=',')
+        nxbnds3 = dx_bnds.size
+    if dlat is not None:
+        dy_bnds = np.fromstring(dlat, dtype=np.float64, sep=',')
+        nybnds3 = dy_bnds.size
+    if refine_ratio is not None:
+        refine_ratio = np.fromstring(refine_ratio, dtype=int, sep=',')
+        num_nest_args = refine_ratio.size
+    if parent_tile is not None:
+        parent_tile = np.fromstring(refine_ratio, dtype=int, sep=',')
+        num_nest_args = parent_tile.size
+    if istart_nest is not None:
+        istart_nest = np.fromstring(istart_nest, dtype=int, sep=',')
+        num_nest_args = istart_nest.size 
+    if iend_nest is not None:
+        iend_nest = np.fromstring(iend_nest, dtype=int, sep=',')
+        num_nest_args = iend_nest.size
+    if jstart_nest is not None:
+        jstart_nest = np.fromstring(jstart_nest, dtype=int, sep=',')
+        num_nest_args = jstart_nest.size
+    if jend_nest is not None:
+        jend_nest = np.fromstring(jend_nest, dtype=int, sep=',')
+        num_nest_args = jend_nest.size
+    if great_circle_algorithm:
+        use_great_circle_algorithm = 1
+    if no_length_angle:
+        output_length_angle = 0
+    if angular_midpoint:
+        use_angular_midpoint = 1
+    if my_grid_file is not None:
+        my_grid_file = np.array(my_grid_file.split(','))
+        ntiles_file = my_grid_file.size
+    
 
     # start parallel
     # TODO: need to link to location of pyFMS shared library
@@ -108,10 +236,122 @@ def main(
     if(mpp.pyfms_npes() > 1):
         mpp.pyfms_error(error_type, "make_hgrid: make_hgrid must be run one processor, contact developer")
 
-
     print(f"==>NOTE: the grid type is {grid_type}")
 
+    if grid_type == "regular_lonlat_grid":
+        my_grid_type = REGULAR_LONLAT_GRID
+    elif grid_type == "tripolar_grid":
+        my_grid_type = TRIPOLAR_GRID
+    elif grid_type == "from_file":
+        my_grid_type = FROM_FILE
+    elif grid_type == "simple_cartesian_grid":
+        my_grid_type = SIMPLE_CARTESIAN_GRID
+    elif grid_type == "spectral_grid":
+        my_grid_type = SPECTRAL_GRID
+    elif grid_type == "conformal_cubic_grid":
+        my_grid_type = CONFORMAL_CUBIC_GRID
+    elif grid_type == "gnomonic_ed":
+        my_grid_type = GNOMONIC_ED
+    elif grid_type == "f_plane_grid":
+        my_grid_type = F_PLANE_GRID
+    elif grid_type == "beta_plane_grid":
+        my_grid_type = BETA_PLANE_GRID
+    else:
+        mpp.pyfms_error("make_hgrid: only grid_type = 'regular_lonlat_grid', 'tripolar_grid', 'from_file', "
+              "'gnomonic_ed', 'conformal_cubic_grid', 'simple_cartesian_grid', "
+              "'spectral_grid', 'f_plane_grid' and 'beta_plane_grid' is implemented")
+        
+    if my_grid_type != GNOMONIC_ED and out_halo != 0:
+        mpp.pyfms_error("make_hgrid: out_halo should not be set when grid_type = gnomonic_ed")
+    if out_halo != 0 and out_halo != 1:
+        mpp.pyfms_error("make_hgrid: out_halo should be 0 or 1")
+    if my_grid_type != GNOMONIC_ED and do_schmidt:
+        mpp.pyfms_error("make_hgrid: --do_schmidt should not be set when grid_type is not 'gnomonic_ed'")
+    if my_grid_type != GNOMONIC_ED and do_cube_transform:
+        mpp.pyfms_error("make_hgrid: --do_cube_transform should not be set when grid_type is not 'gnomonic_ed'")
+    if do_cube_transform and do_schmidt:
+        mpp.pyfms_error("make_hgrid: both --do_cube_transform and --do_schmidt are set")
+    
+    use_legacy = 0
+
+    """
+    Command line argument check
+    """
+    if my_grid_type == REGULAR_LONLAT_GRID or my_grid_type == TRIPOLAR_GRID or my_grid_type == F_PLANE_GRID or my_grid_type == BETA_PLANE_GRID:
+        nxbnds = nxbnds0
+        nybnds = nybnds0
+        if nxbnds < 2 or nybnds < 2:
+            mpp.pyfms_error("make_hgrid: grid type is 'regular_lonlat_grid', 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', both nxbnds and nybnds should be no less than 2")
+        if nxbnds != nxbnds1:
+            mpp.pyfms_error("make_hgrid: grid type is 'regular_lonlat_grid, 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', nxbnds does not match number of entry in xbnds")
+        if nybnds != nybnds1:
+            mpp.pyfms_error("make_hgrid: grid type is 'regular_lonlat_grid, 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', nybnds does not match number of entry in ybnds")
+        
+        num_specify = 0
+        
+        if nxbnds2 > 0 and nybnds2 > 0:
+            num_specify += 1
+        if nxbnds3 > 0 and nybnds3 > 0:
+            num_specify += 1
+            use_legacy = 1
+        
+        if num_specify == 0:
+            mpp.pyfms_error("make_hgrid: grid type is 'regular_lonlat_grid', 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', need to specify one of the pair --nlon --nlat or --dlon --dlat")
+        if num_specify == 2:
+            mpp.pyfms_error("make_hgrid: grid type is 'regular_lonlat_grid', 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', can not specify both --nlon --nlat and --dlon --dlat")
+        if use_legacy:
+            if nxbnds != nxbnds3:
+                mpp.pfms_error("make_hgrid: grid type is 'tripolar_grid', 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', nxbnds does not match number of entry in dlon")
+            if nybnds != nybnds3:
+                mpp.pyfms_error("make_hgrid: grid type is 'tripolar_grid', 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', nybnds does not match number of entry in dlat")
+        else:
+            if nxbnds != nxbnds2+1:
+                mpp.pyfms_error("make_hgrid: grid type is 'tripolar_grid', 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', nxbnds does not match number of entry in nlon")
+            if nybnds != nybnds2+1:
+                mpp.pyfms_error("make_hgrid: grid type is 'tripolar_grid', 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', nybnds does not match number of entry in nlat")
+
+    if my_grid_type == CONFORMAL_CUBIC_GRID or my_grid_type == GNOMONIC_ED:
+        ntiles = 6
+        ntiles_global = 6
+
+    if my_grid_type != GNOMONIC_ED and nest_grids:
+        mpp.pyfms_error("make_hgrid: --nest_grids can be set only when grid_type = 'gnomonic_ed'")
+
+    if my_grid_type == TRIPOLAR_GRID:
+        projection = "tripolar"
+        if nxbnds != 2:
+            mpp.pyfms_error("make_hgrid: grid type is 'tripolar_grid', nxbnds should be 2")
+    elif my_grid_type == FROM_FILE:
+        if ntiles_file == 0:
+            mpp.pyfms_error("make_hgrid: grid_type is 'from_file', but my_grid_file is not specified")
+        ntiles = ntiles_file
+        ntiles_global = ntiles_file
+        for n in range(ntiles):
+            # look at fms_gridtools for variable check
+    elif my_grid_type == SIMPLE_CARTESIAN_GRID:
+        geometry = "planar"
+        north_pole_tile = "none"
+        if nxbnds1 != 2 or nybnds1 != 2:
+            mpp.pyfms_error("make_hgrid: grid type is 'simple_cartesian_grid', number entry entered through --xbnds and --ybnds should be 2")
+        if nxbnds2 != 1 or nybnds2 != 1:
+            mpp.pyfms_error("make_hgrid: grid type is 'simple_cartesian_grid', number entry entered through --nlon and --nlat should be 1")
+        if simple_dx == 0 or simple_dy == 0:
+            mpp.pyfms_error("make_hgrid: grid_type is 'simple_cartesian_grid', both simple_dx and simple_dy both should be specified")
+    elif my_grid_type == SPECTRAL_GRID:
+        if nxbnds2 != 1 or nybnds2 != 1:
+            mpp.pyfms_error("make_hgrid: grid type is 'spectral_grid', number entry entered through --nlon and --nlat should be 1")
+    elif my_grid_type == CONFORMAL_CUBIC_GRID:
+        projection = "cube_gnomonic"
+        conformal = "FALSE"
+        if nxbnds2 != 1:
+            mpp.pyfms_error("make_hgrid: grid type is 'conformal_cubic_grid', number entry entered through --nlon should be 1")
+        if nratio < 1:
+            mpp.pyfms_error("make_hgrid: grid type is 'conformal_cubic_grid', nratio should be a positive integer")
+    
+
+
     # TODO: Find where ntiles went
+    # line 1002 in make_hgrid.c
     if verbose:
         print(f"[INFO] make_hgrid.c Number of tiles (ntiles): {ntiles}")
         print(f"[INFO] make_hgrid.c Number of global tiles (ntiles_global): {ntiles_global}")
