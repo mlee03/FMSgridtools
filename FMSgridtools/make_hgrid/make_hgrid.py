@@ -108,44 +108,6 @@ def main(
     if(mpp.pyfms_npes() > 1):
         mpp.pyfms_error(error_type, "make_hgrid: make_hgrid must be run one processor, contact developer")
 
-    # grid_data = GridStruct(
-    #     args=args,
-    #     grid_type=grid_type,
-    #     my_grid_file=my_grid_file,
-    #     nxbnds=nxbnds,
-    #     nybnds=nybnds,
-    #     nlon=nlon,
-    #     nlat=nlat,
-    #     dlon=dlon,
-    #     dlat=dlat,
-    #     lat_join=lat_join,
-    #     nratio=nratio,
-    #     simple_dx=simple_dx,
-    #     simple_dy=simple_dy,
-    #     grid_name=grid_name,
-    #     center=center,
-    #     shift_fac=shift_fac,
-    #     f_plane_latitude=f_plane_latitude,
-    #     do_schmidt=do_schmidt,
-    #     do_cube_transform=do_cube_transform,
-    #     stretch_factor=stretch_factor,
-    #     target_lon=target_lon,
-    #     target_lat=target_lat,
-    #     nest_grids=nest_grids,
-    #     parent_tile=parent_tile,
-    #     refine_ratio=refine_ratio,
-    #     istart_nest=istart_nest,
-    #     iend_nest=iend_nest,
-    #     jstart_nest=jstart_nest,
-    #     jend_nest=jend_nest,
-    #     halo=halo,
-    #     great_circle_algorithm=great_circle_algorithm,
-    #     out_halo=out_halo,
-    #     no_length_angle=no_length_angle,
-    #     angular_midpoint=angular_midpoint,
-    #     rotate_poly=rotate_poly,
-    #     verbose=verbose,
-    # )
 
     print(f"==>NOTE: the grid type is {grid_type}")
 
