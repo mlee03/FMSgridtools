@@ -58,8 +58,8 @@ void create_upbound_nxcells_arrays_on_device_gpu(const int n, int **approx_nxcel
 void free_upbound_nxcells_arrays_gpu( const int n, int **approx_nxcells_per_ij1,
                                               int **ij2_start, int **ij2_end);
 
-void copy_data_to_xgrid_on_device_gpu(const int nxcells, const int input_ncells, const int upbound_nxcells,
-                                      int *xcells_per_ij1, double *xcell_clon, double *xcell_clat,
-                                      int *approx_xcells_per_ij1, int *parent_input_indices, int *parent_output_indices,
-                                      double *xcell_areas, Interp_per_input_tile *interp_for_input_tile);
+void copy_data_to_interp_on_device_gpu(const int nxcells, const int input_ncells, const int upbound_nxcells,
+                                       int *xcells_per_ij1, double *xcell_clon, double *xcell_clat,
+                                       int *approx_xcells_per_ij1, int *parent_input_indices, int *parent_output_indices,
+                                       double *xcell_areas, Interp_per_input_tile *interp_for_input_tile);
 #endif

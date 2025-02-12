@@ -27,7 +27,7 @@ execute_process(
   OUTPUT_VARIABLE NetCDF_INCLUDE_DIR
 )
 
-set(SRC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR/include})
+set(SRC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Create the shared library target
 add_library(clib SHARED ${c_source_files})
