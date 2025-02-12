@@ -7,6 +7,7 @@ from typing import Optional
 
 from pyfms import pyFMS_mpp, pyFMS_mpp_domains
 from FMSgridtools.shared.gridobj import GridObj
+from FMSgridtools.shared.gridtools_utils import check_file_is_there
 
 MAXBOUNDS = 100
 MAX_NESTS = 128
@@ -328,7 +329,43 @@ def main(
         ntiles = ntiles_file
         ntiles_global = ntiles_file
         for n in range(ntiles):
-            # look at fms_gridtools for variable check
+            if ".nc" in my_grid_file[n]:
+                file_path = my_grid_file[n] + ".nc"
+                check_file_is_there(file_path)
+                with xr.open_dataset(file_path) as ds:
+                    if "grid_xt" in ds.sizes:
+                        if "grid_yt" not in ds.sizes:
+                            mpp.pyfms_error("make_hgrid: grid_yt should be a dimension when grid_xt is a dimension")
+                        nlon[n] = ds.sizes["grid_xt"]*2
+                        nlat[n] = ds.sizes["grid_yt"]*2
+                    elif "rlon" in ds.sizes:
+                        if "rlat" not in ds.sizes:
+                            mpp.pyfms_error("make_hgrid: rlat should be a dimension when rlon is a dimension")
+                        nlon[n] = ds.sizes["rlon"]*2
+                        nlat[n] = ds.sizes["rlat"]*2
+                    elif "lon" in ds.sizes:
+                        if "lat" not in ds.sizes:
+                            mpp.pyfms_error("make_hgrid: lat should be a dimension when lon is a dimension")
+                        nlon[n] = ds.sizes["lon"]*2
+                        nlat[n] = ds.sizes["lat"]*2
+                    elif "i" in ds.sizes:
+                        if "j" not in ds.sizes:
+                            mpp.pyfms_error("make_hgrid: j should be a dimension when i is a dimension")
+                        nlon[n] = ds.sizes["i"]*2
+                        nlat[n] = ds.sizes["j"]*2
+                    elif "x" in ds.sizes:
+                        if "y" not in ds.sizes:
+                            mpp.pyfms_error("make_hgrid: y should be a dimension when x is a dimension")
+                        nlon[n] = ds.sizes["x"]*2
+                        nlat[n] = ds.sizes["y"]*2
+                    else:
+                        mpp.pyfms_error("make_hgrid: none of grid_xt, rlon, lon, x, and i is a dimension in input file")
+            else:
+                if nxbnds2 != ntiles or nybnds2 != ntiles:
+                    mpp.pyfms_error("make_hgrid: grid type is 'from_file', number entry entered through --nlon and --nlat should be equal to number of files specified through --my_grid_file")
+        for n in range(1, ntiles):
+            if nlon[n] != nlon[0] or nlat[n] != nlat[0]:
+                mpp.pyfms_error("make_hgrid: grid_type is from_file, all the tiles should have same grid size, contact developer")
     elif my_grid_type == SIMPLE_CARTESIAN_GRID:
         geometry = "planar"
         north_pole_tile = "none"
@@ -476,7 +513,10 @@ def main(
         if conformal != "true":
             grid_obj.angle_dy = np.empty(shape=size1, dtype=np.float64)
 
-
+    isc = 0
+    iec = nx - 1
+    jsc = 0
+    jec = ny - 1
     # TODO: Methods to create types of grids to be passed instance of
     # GridStruct class
 

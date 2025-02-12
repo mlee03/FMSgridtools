@@ -5,7 +5,7 @@ import numpy as np
 import numpy.typing as npt
 import xarray as xr
 
-from gridtools.shared.gridtools_utils import check_file_is_there
+from FMSgridtools.shared.gridtools_utils import check_file_is_there
 
 """
 GridObj:
