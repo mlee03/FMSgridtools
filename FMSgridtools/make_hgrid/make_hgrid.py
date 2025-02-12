@@ -1,3 +1,4 @@
+import sys
 import xarray as xr
 import numpy as np
 import numpy.typing as npt
@@ -347,14 +348,133 @@ def main(
             mpp.pyfms_error("make_hgrid: grid type is 'conformal_cubic_grid', number entry entered through --nlon should be 1")
         if nratio < 1:
             mpp.pyfms_error("make_hgrid: grid type is 'conformal_cubic_grid', nratio should be a positive integer")
-    
+    elif my_grid_type == GNOMONIC_ED:
+        projection = "cube_gnomonic"
+        conformal = "FALSE"
+        if do_schmidt or do_cube_transform:
+            if present_stretch_factor == 0 or present_target_lon == 0 or present_target_lat == 0:
+                mpp.pyfms_error("make_hgrid: grid type is 'gnomonic_ed, --stretch_factor, --target_lon and --target_lat must be set when --do_schmidt or --do_cube_transform is set")
+        for n in range(nest_grids):
+            if refine_ratio[n] == 0:
+                mpp.pyfms_error("make_hgrid: --refine_ratio must be set when --nest_grids is set")
+            else:
+                if istart_nest[n] == 0:
+                    mpp.pyfms_error("make_hgrid: --istart_nest must be set when --nest_grids is set")
+                if iend_nest[n] == 0:
+                    mpp.pyfms_error("make_hgrid: --iend_nest must be set when --nest_grids is set")
+                if jstart_nest[n] == 0:
+                    mpp.pyfms_error("make_hgrid: --jstart_nest must be set when --nest_grids is set")
+                if jend_nest[n] == 0:
+                    mpp.pyfms_error("make_hgrid: --jend_nest must be set when --nest_grids is set")
+                if halo == 0:
+                    mpp.pyfms_error("make_hgrid: --halo must be set when --nest_grids is set")
+                ntiles += 1
+                if verbose:
+                    print(f"Configuration for nest {ntiles} validated.", file=sys.stderr)
+        if verbose:
+            print(f"Updated number of tiles, including nests (ntiles): {ntiles}", file=sys.stderr)
+        if nxbnds2 != 1:
+            mpp.pyfms_error("make_hgrid: grid type is 'gnomonic_cubic_grid', number entry entered through --nlon should be 1")
+    elif my_grid_type == F_PLANE_GRID or my_grid_type == BETA_PLANE_GRID:
+        if f_plane_latitude > 90 or f_plane_latitude < -90:
+            mpp.pyfms_error("make_hgrid: f_plane_latitude should be between -90 and 90.")
+        if f_plane_latitude > ybnds[nybnds-1] or f_plane_latitude < ybnds[0]:
+            print("Warning from make_hgrid: f_plane_latitude is not inside the latitude range of the grid", file=sys.stderr)
+        if mpp.pe() == 0:
+            print(f"make_hgrid: setting geometric factor according to f-plane with f_plane_latitude = {f_plane_latitude}", file=sys.stderr)
+    else:
+        mpp.pyfms_error("make_hgrid: passed grid type is not implemented")
 
-
-    # TODO: Find where ntiles went
-    # line 1002 in make_hgrid.c
     if verbose:
-        print(f"[INFO] make_hgrid.c Number of tiles (ntiles): {ntiles}")
-        print(f"[INFO] make_hgrid.c Number of global tiles (ntiles_global): {ntiles_global}")
+        print(f"[INFO] make_hgrid.c Number of tiles (ntiles): {ntiles}", file=sys.stderr)
+        print(f"[INFO] make_hgrid.c Number of global tiles (ntiles_global): {ntiles_global}", file=sys.stderr)
+
+    nxl = np.empty(shape=ntiles, dtype=np.int32)
+    nyl = np.empty(shape=ntiles, dtype=np.int32)
+
+    """
+    Get super grid size
+    """
+    if use_legacy:
+        nxl[0] = get_legacy_grid_size(nxbnds, xbnds, dx_bnds) # in tool_util.c
+        nyl[0] = get_legacy_grid_size(nybnds, ybnds, dy_bnds) # in tool_util.c
+    elif my_grid_type == GNOMONIC_ED or my_grid_file == CONFORMAL_CUBIC_GRID:
+        for n in range(ntiles_global):
+            nxl[n] = nlon[n]
+            nyl[n] = nxl[n]
+            if nest_grids and parent_tile[0] == 0:
+                nxl[n] *= refine_ratio[0]
+                nyl[n] *= refine_ratio[0]
+
+        for n in range(ntiles_global, ntiles):
+            nn = n - ntiles_global
+            nxl[n] = (iend_nest[nn] - istart_nest[nn] + 1) * refine_ratio[nn]
+            nyl[n] = (jend_nest[nn] - jstart_nest[nn] + 1) * refine_ratio[nn]
+    elif my_grid_type == FROM_FILE:
+        for n in range(ntiles_global):
+            nxl[n] = nlon[n]
+            nyl[n] = nlat[n]
+    else:
+        nxl[0] = 0
+        nyl[0] = 0
+        for n in range(nxbnds-1):
+            nxl[0] += nlon[n]
+        for n in range(nybnds - 1):
+            nyl[0] += nlat[n]
+
+    nx = nxl[0]
+    ny = nyl[0]
+    nxp = nx + 1
+    nyp = ny + 1
+
+    if center == "none" and center == "c_cell" and center == "t_cell":
+        mpp.pyfms_error("make_hgrid: center should be 'none', 'c_cell' or 't_cell' ")
+    if not output_length_angle and my_grid_type != GNOMONIC_ED:
+        mpp.pyfms_error("make_hgrid: --no_length_angle is set but grid_type is not 'gnomonic_ed'")
+
+    """
+    Create grid information
+    """
+
+    for n_nest in range(ntiles):
+        print(f"[INFO] tile: {n_nest}, {nxl[n_nest]}, {nyl[n_nest]}, ntiles: {ntiles}", file=sys.stderr)
+
+    if my_grid_type == FROM_FILE:
+        size1 = 0
+        size2 = 0
+        size3 = 0
+        size4 = 0
+        for n in range(ntiles_global):
+            size1 += (nlon[n] + 1) * (nlat[n] + 1)
+            size2 += (nlon[n] + 1) * (nlat[n] + 1 + 1)
+            size3 += (nlon[n] + 1 +1) * (nlat[n] + 1)
+            size4 += (nlon[n] + 1) * (nlat[n] + 1)
+    else:
+        size1 = nxp * nyp * ntiles_global
+        size2 = nxp * (nyp + 1) * ntiles_global
+        size3 = (nxp + 1) * nyp * ntiles_global
+        size4 = nxp * nyp * ntiles_global
+
+    if nest_grids == 1 and parent_tile[0] == 0:
+        for n_nest  in range(ntiles_global, ntiles_global+nest_grids):
+            if verbose:
+                print(f"[INFO] Adding memory size for nest {n_nest}, nest_grids: {nest_grids}", file=sys.stderr)
+            size1 += (nxl[n_nest]+1) * (nyl[n_nest]+1)
+            size2 += (nxl[n_nest]+1) * (nyl[n_nest]+2)
+            size3 += (nxl[n_nest]+2) * (nyl[n_nest]+1)
+            size4 += (nxl[n_nest]+1) * (nyl[n_nest]+1)
+
+    if verbose:
+        print(f"[INFO] Allocating arrays of size {size1} for x, y based on nxp: {nxp} nyp: {nyp} ntiles: {ntiles}", file=sys.stderr)
+    grid_obj.x = np.empty(shape=size1, dtype=np.float64)
+    grid_obj.y = np.empty(shape=size1, dtype=np.float64)
+    grid_obj.area = np.empty(shape=size4, dtype=np.float64)
+    if output_length_angle:
+        grid_obj.dx = np.empty(shape=size2, dtype=np.float64)
+        grid_obj.dy = np.empty(shape=size3, dtype=np.float64)
+        grid_obj.angle_dx = np.empty(shape=size1, dtype=np.float64)
+        if conformal != "true":
+            grid_obj.angle_dy = np.empty(shape=size1, dtype=np.float64)
 
 
     # TODO: Methods to create types of grids to be passed instance of
