@@ -22,27 +22,7 @@ list(APPEND c_source_files
   shared/tool_util.c
 )
 
-list(APPEND header_files
-  make_hgrid/create_hgrid.h
-  make_mosaic/get_contact.h
-  make_topog/topog.h
-  shared/constant.h
-  shred/create_xgrid.h
-  shared/create_xgrid_gpu.h
-  shared/create_xgrid_utils_gpu.h
-  shared/general_utils_gpu.h
-  shared/globals_gpu.h
-  shared/globals.h
-  shared/gradient_c2l.h
-  shared/interp.h
-  shared/mosaic_util.h
-  shared/mpp.h
-  shared/mpp_domain.h
-  shared/mpp_io.h
-  shared/parameters_gpu.h
-  shared/read_mosaic.h
-  shared/tool_util.h
-)
+set(SRC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR/include})
 
 execute_process(
   COMMAND nc-config --includedir
@@ -53,7 +33,7 @@ execute_process(
 add_library(clib SHARED ${c_source_files})
 
 target_include_directories(clib PUBLIC 
-    shared
+    ${SRC_INCLUDE_DIR}
     ${NetCDF_INCLUDE_DIR}
 )
 
