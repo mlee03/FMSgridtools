@@ -22,12 +22,12 @@ list(APPEND c_source_files
   shared/tool_util.c
 )
 
-set(SRC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR/include})
-
 execute_process(
   COMMAND nc-config --includedir
   OUTPUT_VARIABLE NetCDF_INCLUDE_DIR
 )
+
+set(SRC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR/include})
 
 # Create the shared library target
 add_library(clib SHARED ${c_source_files})
