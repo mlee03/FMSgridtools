@@ -91,6 +91,15 @@ class GridObj:
         check_file_is_there(filepath)
         with xr.open_dataset(filepath) as ds:
             varlist = list(ds.data_vars)
+            _tile = None
+            _x = None
+            _y = None
+            _dx = None
+            _dy = None
+            _area = None
+            _angle_dx = None
+            _angle_dy = None
+            _arcx = None
             if "tile" in varlist:
                 _tile = ds.tile.values.item().decode('ascii')
             if "x" in varlist:
