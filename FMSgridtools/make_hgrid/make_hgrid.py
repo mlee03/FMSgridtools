@@ -5,9 +5,22 @@ import numpy.typing as npt
 import click
 from typing import Optional
 
-from pyfms import pyFMS_mpp, pyFMS_mpp_domains
+from pyfms import pyFMS, pyFMS_mpp, pyFMS_mpp_domains
+
 from FMSgridtools.shared.gridobj import GridObj
 from FMSgridtools.shared.gridtools_utils import check_file_is_there
+from FRENCTools_lib.pyfrenctools.make_hgrid.make_hgrid_util import (
+    create_regular_lonlat_grid,
+    create_tripolar_grid,
+    create_grid_from_file,
+    create_simple_cartesian_grid,
+    create_spectral_grid,
+    create_conformal_cubic_grid,
+    create_gnomonic_cubic_grid_GR,
+    create_gnomonic_cubic_grid,
+    create_f_plane_grid,
+)
+from FRENCTools_lib.pyfrenctools.shared.tool_util import get_legacy_grid_size
 
 MAXBOUNDS = 100
 MAX_NESTS = 128
@@ -163,8 +176,10 @@ def main(
     nybnds2 = 0
     nxbnds3 = 0
     nybnds3 = 0
+
     num_nest_args = 0
     nn = 0
+
     present_stretch_factor = 0
     present_target_lon = 0
     present_target_lat = 0
@@ -174,13 +189,24 @@ def main(
     ntiles = 1
     ntiles_global = 1
     grid_obj = GridObj()
+
     gridname = "horizontal_grid"
     center = "none"
+    geometry = "spherical"
+    projection = "none"
     arcx = "small_circle"
     north_pole_tile = "0.0 90.0"
     north_pole_arcx = "0.0 90.0"
     discretization = "logically_rectangular"
     conformal = "true"
+
+    pyfms = pyFMS(clibFMS_path="")
+    mpp = pyFMS_mpp(clibFMS=pyfms.clibFMS)
+    mpp_domains = pyFMS_mpp_domains(clibFMS=pyfms.clibFMS)
+
+    # TODO: Find what to use for error_type
+    if(mpp.npes() > 1):
+        mpp.pyfms_error("make_hgrid: make_hgrid must be run one processor, contact developer")
 
     if xbnds is not None:
         xbnds = np.fromstring(xbnds, dtype=np.float64, sep=',')
@@ -227,18 +253,9 @@ def main(
     if my_grid_file is not None:
         my_grid_file = np.array(my_grid_file.split(','))
         ntiles_file = my_grid_file.size
-    
 
-    # start parallel
-    # TODO: need to link to location of pyFMS shared library
-    mpp = pyFMS_mpp(clib)
-    mpp_domains = pyFMS_mpp_domains(clib)
-
-    # TODO: Find what to use for error_type
-    if(mpp.pyfms_npes() > 1):
-        mpp.pyfms_error(error_type, "make_hgrid: make_hgrid must be run one processor, contact developer")
-
-    print(f"==>NOTE: the grid type is {grid_type}")
+    if mpp.pe() == 0 and verbose:
+        print(f"==>NOTE: the grid type is {grid_type}")
 
     if grid_type == "regular_lonlat_grid":
         my_grid_type = REGULAR_LONLAT_GRID
@@ -259,18 +276,19 @@ def main(
     elif grid_type == "beta_plane_grid":
         my_grid_type = BETA_PLANE_GRID
     else:
-        mpp.pyfms_error("make_hgrid: only grid_type = 'regular_lonlat_grid', 'tripolar_grid', 'from_file', "
-              "'gnomonic_ed', 'conformal_cubic_grid', 'simple_cartesian_grid', "
-              "'spectral_grid', 'f_plane_grid' and 'beta_plane_grid' is implemented")
+        mpp.pyfms_error("make_hgrid: only grid_type = 'regular_lonlat_grid', 'tripolar_grid', 'from_file', 'gnomonic_ed', 'conformal_cubic_grid', 'simple_cartesian_grid', 'spectral_grid', 'f_plane_grid' and 'beta_plane_grid' is implemented")
         
     if my_grid_type != GNOMONIC_ED and out_halo != 0:
         mpp.pyfms_error("make_hgrid: out_halo should not be set when grid_type = gnomonic_ed")
     if out_halo != 0 and out_halo != 1:
         mpp.pyfms_error("make_hgrid: out_halo should be 0 or 1")
+
     if my_grid_type != GNOMONIC_ED and do_schmidt:
         mpp.pyfms_error("make_hgrid: --do_schmidt should not be set when grid_type is not 'gnomonic_ed'")
+
     if my_grid_type != GNOMONIC_ED and do_cube_transform:
         mpp.pyfms_error("make_hgrid: --do_cube_transform should not be set when grid_type is not 'gnomonic_ed'")
+
     if do_cube_transform and do_schmidt:
         mpp.pyfms_error("make_hgrid: both --do_cube_transform and --do_schmidt are set")
     
@@ -290,7 +308,6 @@ def main(
             mpp.pyfms_error("make_hgrid: grid type is 'regular_lonlat_grid, 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', nybnds does not match number of entry in ybnds")
         
         num_specify = 0
-        
         if nxbnds2 > 0 and nybnds2 > 0:
             num_specify += 1
         if nxbnds3 > 0 and nybnds3 > 0:
@@ -433,8 +450,8 @@ def main(
     Get super grid size
     """
     if use_legacy:
-        nxl[0] = get_legacy_grid_size(nxbnds, xbnds, dx_bnds) # in tool_util.c
-        nyl[0] = get_legacy_grid_size(nybnds, ybnds, dy_bnds) # in tool_util.c
+        nxl[0] = get_legacy_grid_size(nxbnds, xbnds, dx_bnds)
+        nyl[0] = get_legacy_grid_size(nybnds, ybnds, dy_bnds)
     elif my_grid_type == GNOMONIC_ED or my_grid_file == CONFORMAL_CUBIC_GRID:
         for n in range(ntiles_global):
             nxl[n] = nlon[n]
@@ -454,7 +471,7 @@ def main(
     else:
         nxl[0] = 0
         nyl[0] = 0
-        for n in range(nxbnds-1):
+        for n in range(nxbnds - 1):
             nxl[0] += nlon[n]
         for n in range(nybnds - 1):
             nyl[0] += nlat[n]
@@ -517,13 +534,11 @@ def main(
     iec = nx - 1
     jsc = 0
     jec = ny - 1
-    # TODO: Methods to create types of grids to be passed instance of
-    # GridStruct class
 
     if(my_grid_type==REGULAR_LONLAT_GRID):
         create_regular_lonlat_grid(
-            &nxbnds, 
-            &nybnds, 
+            nxbnds, 
+            nybnds, 
             xbnds, 
             ybnds, 
             nlon, 
@@ -531,23 +546,23 @@ def main(
             dx_bnds, 
             dy_bnds,
             use_legacy, 
-            &isc, 
-            &iec, 
-            &jsc, 
-            &jec, 
-            x, 
-            y, 
-            dx, 
-            dy, 
-            area,
-            angle_dx, 
+            isc, 
+            iec, 
+            jsc, 
+            jec, 
+            grid_obj.x, 
+            grid_obj.y, 
+            grid_obj.dx, 
+            grid_obj.dy, 
+            grid_obj.area,
+            grid_obj.angle_dx, 
             center,
             use_great_circle_algorithm,
         )
     elif(my_grid_type==TRIPOLAR_GRID):
         create_tripolar_grid(
-            &nxbnds, 
-            &nybnds, 
+            nxbnds, 
+            nybnds, 
             xbnds, 
             ybnds, 
             nlon, 
@@ -555,17 +570,17 @@ def main(
             dx_bnds, 
             dy_bnds,
             use_legacy, 
-            &lat_join, 
-            &isc, 
-            &iec, 
-            &jsc, 
-            &jec, 
-            x, 
-            y, 
-            dx, 
-            dy,
-            area, 
-            angle_dx, 
+            lat_join, 
+            isc, 
+            iec, 
+            jsc, 
+            jec, 
+            grid_obj.x, 
+            grid_obj.y, 
+            grid_obj.dx, 
+            grid_obj.dy,
+            grid_obj.area, 
+            grid_obj.angle_dx, 
             center, 
             verbose, 
             use_great_circle_algorithm,
@@ -578,14 +593,14 @@ def main(
             n4 = n * nx * ny
             create_grid_from_file(
                 my_grid_file[n], 
-                &nx, 
-                &ny, 
-                x+n1, 
-                y+n1, 
-                dx+n2, 
-                dy+n3, 
-                area+n4, 
-                angle_dx+n1, 
+                nx, 
+                ny, 
+                grid_obj.x[n1], 
+                grid_obj.y[n1], 
+                grid_obj.dx[n2], 
+                grid_obj.dy[n3], 
+                grid_obj.area[n4], 
+                grid_obj.angle_dx[n1], 
                 use_great_circle_algorithm, 
                 use_angular_midpoint,
             )
@@ -593,64 +608,64 @@ def main(
         create_simple_cartesian_grid(
             xbnds, 
             ybnds, 
-            &nx, 
-            &ny, 
-            &simple_dx, 
-            &simple_dy, 
-            &isc, 
-            &iec, 
-            &jsc, 
-            &jec,
-            x, 
-            y, 
-            dx, 
-            dy, 
-            area, 
-            angle_dx,
+            nx, 
+            ny, 
+            simple_dx, 
+            simple_dy, 
+            isc, 
+            iec, 
+            jsc, 
+            jec,
+            grid_obj.x, 
+            grid_obj.y, 
+            grid_obj.dx, 
+            grid_obj.dy, 
+            grid_obj.area, 
+            grid_obj.angle_dx,
         )
     elif(my_grid_type==SPECTRAL_GRID):
         create_spectral_grid(
-            &nx, 
-            &ny, 
-            &isc, 
-            &iec, 
-            &jsc, 
-            &jec, 
-            x, 
-            y, 
-            dx, 
-            dy, 
-            area, 
-            angle_dx, 
+            nx, 
+            ny, 
+            isc, 
+            iec, 
+            jsc, 
+            jec, 
+            grid_obj.x, 
+            grid_obj.y, 
+            grid_obj.dx, 
+            grid_obj.dy, 
+            grid_obj.area, 
+            grid_obj.angle_dx, 
             use_great_circle_algorithm,
         )
     elif(my_grid_type==CONFORMAL_CUBIC_GRID):
         create_conformal_cubic_grid(
-            &nx, 
-            &nratio, 
+            nx, 
+            nratio, 
             method, 
             orientation, 
-            x, 
-            y, 
-            dx, 
-            dy, 
-            area, 
-            angle_dx, 
-            angle_dy,
+            grid_obj.x, 
+            grid_obj.y, 
+            grid_obj.dx, 
+            grid_obj.dy, 
+            grid_obj.area, 
+            grid_obj.angle_dx, 
+            grid_obj.angle_dy,
         )
     elif(my_grid_type==GNOMONIC_ED):
-        if(nest_grids == 1 and parent_tile_list[0] == 0):
+        if(nest_grids == 1 and parent_tile[0] == 0):
             create_gnomonic_cubic_grid_GR(
                 grid_type, 
                 nxl, 
                 nyl, 
-                x, 
-                y, 
-                dx, 
-                dy, 
-                area, 
-                angle_dx, 
-                angle_dy,
+                grid_obj.x, 
+                grid_obj.y, 
+                grid_obj.dx, 
+                grid_obj.dy, 
+                grid_obj.area, 
+                grid_obj.angle_dx, 
+                grid_obj.angle_dy,
                 shift_fac, 
                 do_schmidt, 
                 do_cube_transform, 
@@ -672,13 +687,13 @@ def main(
                 grid_type, 
                 nxl, 
                 nyl, 
-                x, 
-                y, 
-                dx, 
-                dy, 
-                area, 
-                angle_dx, 
-                angle_dy,
+                grid_obj.x, 
+                grid_obj.y, 
+                grid_obj.dx, 
+                grid_obj.dy, 
+                grid_obj.area, 
+                grid_obj.angle_dx, 
+                grid_obj.angle_dy,
                 shift_fac, 
                 do_schmidt, 
                 do_cube_transform, 
@@ -697,8 +712,8 @@ def main(
             )
     elif(my_grid_type==F_PLANE_GRID or my_grid_type==BETA_PLANE_GRID):
         create_f_plane_grid(
-            &nxbnds, 
-            &nybnds, 
+            nxbnds, 
+            nybnds, 
             xbnds, 
             ybnds, 
             nlon, 
@@ -707,24 +722,25 @@ def main(
             dy_bnds,
             use_legacy, 
             f_plane_latitude, 
-            &isc, 
-            &iec, 
-            &jsc, 
-            &jec, 
-            x, 
-            y, 
-            dx, 
-            dy, 
-            area, 
-            angle_dx, 
+            isc, 
+            iec, 
+            jsc, 
+            jec, 
+            grid_obj.x, 
+            grid_obj.y, 
+            grid_obj.dx, 
+            grid_obj.dy, 
+            grid_obj.area, 
+            grid_obj.angle_dx, 
             center,
         )
 
-    grid_data.write_data()
+    grid_obj.write_out_grid(filepath="")
 
-    if(mpp_pe() == mpp_root_pe() and verbose):
+    if(mpp.pe() == 0 and verbose):
         print("generate_grid is run successfully")
+
+    pyfms.pyfms_end()
     
-    mpp_end()
 
     # End of main
