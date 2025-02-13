@@ -7,6 +7,11 @@ import xarray as xr
 
 from FMSgridtools.shared.gridtools_utils import check_file_is_there
 
+<<<<<<< HEAD
+=======
+# TODO: Remove direct attributes, use property decorators instead
+
+>>>>>>> fix/grid_obj
 """
 GridObj:
 
@@ -17,6 +22,13 @@ class GridObj:
     grid_data: Optional[xr.Dataset] = None
     grid_file: Optional[str] = None
     tile: Optional[str] = None
+<<<<<<< HEAD
+=======
+    _nx: Optional[int] = None
+    _ny: Optional[int] = None
+    _nxp: Optional[int] = None
+    _nyp: Optional[int] = None
+>>>>>>> fix/grid_obj
     x: Optional[npt.NDArray] = None
     y: Optional[npt.NDArray] = None
     dx: Optional[npt.NDArray] = None
@@ -85,6 +97,15 @@ class GridObj:
         check_file_is_there(filepath)
         with xr.open_dataset(filepath) as ds:
             varlist = list(ds.data_vars)
+            _tile = None
+            _x = None
+            _y = None
+            _dx = None
+            _dy = None
+            _area = None
+            _angle_dx = None
+            _angle_dy = None
+            _arcx = None
             if "tile" in varlist:
                 _tile = ds.tile.values.item().decode('ascii')
             if "x" in varlist:
@@ -126,15 +147,7 @@ class GridObj:
     def write_out_grid(self, filepath: str):
         if self.tile is not None:
             tile = xr.DataArray(
-                [self.tile.encode("utf-8")],
-                attrs=dict(
-                    standard_name = "grid_tile_spec",
-                    geometry = "spherical",
-                    north_pole = "0.0 90.0",
-                    projection = "cube_gnomonic",
-                    discretization = "logically_rectangular",
-                    conformal = "FALSE",
-                )
+                [self.tile],
             )
         else:
             tile = None
@@ -142,10 +155,6 @@ class GridObj:
             x = xr.DataArray(
                 data=self.x,
                 dims=["nyp", "nxp"],
-                attrs=dict(
-                    units="degree_east",
-                    standard_name="geographic_longitude",
-                )
             )
         else:
             x = None
@@ -153,10 +162,6 @@ class GridObj:
             y = xr.DataArray(
                 data=self.y,
                 dims=["nyp", "nxp"],
-                attrs=dict(
-                    units="degree_north",
-                    standard_name="geographic_latitude",
-                )
             )
         else:
             y = None
@@ -164,10 +169,6 @@ class GridObj:
             dx = xr.DataArray(
                 data=self.dx,
                 dims=["nyp", "nx"],
-                attrs=dict(
-                    units="meters",
-                    standard_name="grid_edge_x_distance",
-                )
             )
         else:
             dx = None
@@ -175,10 +176,6 @@ class GridObj:
             dy = xr.DataArray(
                 data=self.dy,
                 dims=["ny", "nxp"],
-                attrs=dict(
-                    units="meters",
-                    standard_name="grid_edge_y_distance",
-                )
             )
         else:
             dy = None
@@ -186,10 +183,6 @@ class GridObj:
             area = xr.DataArray(
                 data=self.area,
                 dims=["ny", "nx"],
-                attrs=dict(
-                    units="m2",
-                    standard_name="grid_cell_area",
-                )
             )
         else:
             area = None
@@ -197,10 +190,6 @@ class GridObj:
             angle_dx = xr.DataArray(
                 data=self.angle_dx,
                 dims=["nyp", "nxp"],
-                attrs=dict(
-                    units="degrees_east",
-                    standard_name="grid_vertex_x_angle_WRT_geographic_east",
-                )
             )
         else:
             angle_dx = None
@@ -208,20 +197,12 @@ class GridObj:
             angle_dy = xr.DataArray(
                 data=self.angle_dy,
                 dims=["nyp", "nxp"],
-                attrs=dict(
-                    units="degrees_east",
-                    standard_name="grid_vertex_x_angle_WRT_geographic_east",
-                )
             )
         else:
             angle_dy = None
         if self.arcx is not None:
             arcx = xr.DataArray(
-                [self.arcx.encode("utf-8")],
-                attrs=dict(
-                    standard_name = "grid_edge_x_arc_type",
-                    north_pole = "0.0 90.0",
-                )
+                [self.arcx],
             )
         else:
             arcx = None
@@ -274,5 +255,49 @@ class GridObj:
     """
     def get_variable_list(self) -> List:
         return list(self.grid_data.data_vars)
+    
+    @property
+    def nx(self):
+        if self._nx is None:
+            if self.grid_data is not None:
+                self._nx = self.grid_data.sizes['nx']
+            elif self.area is not None:
+                self._nx = self.area.shape[1]
+            else:
+                pass
+        return self._nx
+        
+    @property
+    def ny(self):
+        if self._ny is None:
+            if self.grid_data is not None:
+                self._ny = self.grid_data.sizes['ny']
+            elif self.area is not None:
+                self._ny = self.area.shape[0]
+            else:
+                pass
+        return self._ny
+        
+    @property
+    def nxp(self):
+        if self._nxp is None:
+            if self.grid_data is not None:
+                self._nxp = self.grid_data.sizes['nxp']
+            elif self.x is not None:
+                self._nxp = self.x.shape[1]
+            else:
+                pass
+        return self._nxp
+        
+    @property
+    def nyp(self):
+        if self._nyp is None:
+            if self.grid_data is not None:
+                self._nyp = self.grid_data.sizes['nyp']
+            elif self.x is not None:
+                self._nyp = self.x.shape[0]
+            else:
+                pass
+        return self._nyp
 
 #TODO: I/O method for passing to the host
