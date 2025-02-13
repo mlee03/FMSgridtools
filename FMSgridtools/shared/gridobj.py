@@ -7,11 +7,6 @@ import xarray as xr
 
 from FMSgridtools.shared.gridtools_utils import check_file_is_there
 
-<<<<<<< HEAD
-=======
-# TODO: Remove direct attributes, use property decorators instead
-
->>>>>>> fix/grid_obj
 """
 GridObj:
 
@@ -22,13 +17,10 @@ class GridObj:
     grid_data: Optional[xr.Dataset] = None
     grid_file: Optional[str] = None
     tile: Optional[str] = None
-<<<<<<< HEAD
-=======
     _nx: Optional[int] = None
     _ny: Optional[int] = None
     _nxp: Optional[int] = None
     _nyp: Optional[int] = None
->>>>>>> fix/grid_obj
     x: Optional[npt.NDArray] = None
     y: Optional[npt.NDArray] = None
     dx: Optional[npt.NDArray] = None
