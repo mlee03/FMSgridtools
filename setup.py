@@ -11,13 +11,13 @@ class CustomInstall(install):
         with open("compile_log.txt", "w") as f:
             subprocess.run(
                 ["cmake", ".."], 
-                cwd="./FRENCTools_lib/cfrenctools/c_build", 
+                cwd="./FREnctools_lib/cfrenctools/c_build", 
                 stdout=f,
                 stderr=subprocess.STDOUT,
             )
             subprocess.run(
                 ["make"], 
-                cwd="./FRENCTools_lib/cfrenctools/c_build", 
+                cwd="./FREnctools_lib/cfrenctools/c_build", 
                 stdout=f,
                 stderr=subprocess.STDOUT,
             )
@@ -48,7 +48,7 @@ setup(
     extras_require=extras_requires,
     name="fmsgridtools",
     license="",
-    packages=find_namespace_packages(include=["FMSgridtools", "FMSgridtools.*", "FRENCTools_lib", "FRENCTools_lib.pyfrenctools.*"]),
+    packages=find_namespace_packages(include=["FMSgridtools", "FMSgridtools.*", "FREnctools_lib", "FREnctools_lib.pyfrenctools.*"]),
     include_package_data=True,
     version="0.0.1",
     zip_safe=False,
