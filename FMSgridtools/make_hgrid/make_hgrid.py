@@ -7,7 +7,7 @@ from typing import Optional
 
 from pyfms import pyFMS, pyFMS_mpp, pyFMS_mpp_domains
 
-from FMSgridtools.shared.gridobj import GridObj
+from FMSgridtools.make_hgrid.hgridobj import HGridObj
 from FMSgridtools.shared.gridtools_utils import check_file_is_there
 from FRENCTools_lib.pyfrenctools.make_hgrid.make_hgrid_util import (
     create_regular_lonlat_grid,
@@ -19,6 +19,7 @@ from FRENCTools_lib.pyfrenctools.make_hgrid.make_hgrid_util import (
     create_gnomonic_cubic_grid_GR,
     create_gnomonic_cubic_grid,
     create_f_plane_grid,
+    fill_cubic_grid_halo,
 )
 from FRENCTools_lib.pyfrenctools.shared.tool_util import get_legacy_grid_size
 
@@ -35,56 +36,6 @@ F_PLANE_GRID = 8
 BETA_PLANE_GRID = 9
 MISSING_VALUE = -9999.
 
-def fill_cubic_grid_halo(
-        nx: int, 
-        ny: int, 
-        halo: int, 
-        data: npt.NDArray[np.float64], 
-        data1_all: npt.NDArray[np.float64],
-        data2_all: npt.NDArray[np.float64],
-        tile: int,
-        ioff: int,
-        joff: int,
-):
-    nxp = nx + ioff
-    nyp = ny + joff
-    nxph = nx + ioff + 2*halo
-    nyph = ny + joff + 2*halo
-
-    for i in range(nxph*nyph):
-        data[i] = MISSING_VALUE
-
-    # first copy computing domain data
-    for j in range (nyp+1):
-        for i in range(nxp+1):
-            data[j*nxph+i] = data1_all[tile*nxp*nyp+(j-1)*nxp+(i-1)]
-
-    ntiles = 6
-
-    if tile%2 == 1:
-        lw = (tile+ntiles-1)%ntiles
-        le = (tile+ntiles+2)%ntiles
-        ls = (tile+ntiles-2)%ntiles
-        ln = (tile+ntiles+1)%ntiles
-        for j in range(nyp+1):
-            data[j*nxph] = data1_all[lw*nxp*nyp+(j-1)*nxp+nx-1]       # west halo
-            data[j*nxph+nxp+1] = data2_all[le*nxp*nyp+ioff*nxp+nyp-j] # east halo
-
-        for i in range(nxp+1):
-            data[i] = data2_all[ls*nxp*nyp+(nxp-i)*nyp+(nx-1)]        # south halo
-            data[(nyp+1)*nxph+i] = data1_all[ln*nxp*nyp+joff*nxp+i-1] # north halo
-    else:
-        lw = (tile+ntiles-2)%ntiles
-        le = (tile+ntiles+1)%ntiles
-        ls = (tile+ntiles-1)%ntiles
-        ln = (tile+ntiles+2)%ntiles
-        for j in range(nyp+1):
-            data[j*nxph] = data2_all[lw*nxp*nyp+(ny-1)*nxp+nyp-j]     # west halo
-            data[j*nxph+nxp+1] = data1_all[le*nxp*nyp+(j-1)*nxp+ioff] # east halo
-
-        for i in range(nxp+1):
-            data[i] = data1_all[ls*nxp*nyp+(ny-1)*nxp+i-1]                # south halo
-            data[(nyp+1)*nxph+i] = data2_all[ln*nxp*nyp+(nxp-i)*nyp+joff] # north halo
 
 @click.command()
 @click.argument('args', nargs=-1)
@@ -188,7 +139,7 @@ def main(
     output_length_angle = 1
     ntiles = 1
     ntiles_global = 1
-    grid_obj = GridObj()
+    grid_obj = HGridObj()
 
     gridname = "horizontal_grid"
     center = "none"
@@ -433,7 +384,8 @@ def main(
         if f_plane_latitude > 90 or f_plane_latitude < -90:
             mpp.pyfms_error("make_hgrid: f_plane_latitude should be between -90 and 90.")
         if f_plane_latitude > ybnds[nybnds-1] or f_plane_latitude < ybnds[0]:
-            print("Warning from make_hgrid: f_plane_latitude is not inside the latitude range of the grid", file=sys.stderr)
+            if mpp.pe() == 0:
+                print("Warning from make_hgrid: f_plane_latitude is not inside the latitude range of the grid", file=sys.stderr)
         if mpp.pe() == 0:
             print(f"make_hgrid: setting geometric factor according to f-plane with f_plane_latitude = {f_plane_latitude}", file=sys.stderr)
     else:
@@ -595,12 +547,12 @@ def main(
                 my_grid_file[n], 
                 nx, 
                 ny, 
-                grid_obj.x[n1], 
-                grid_obj.y[n1], 
-                grid_obj.dx[n2], 
-                grid_obj.dy[n3], 
-                grid_obj.area[n4], 
-                grid_obj.angle_dx[n1], 
+                grid_obj.x[n1:], 
+                grid_obj.y[n1:], 
+                grid_obj.dx[n2:], 
+                grid_obj.dy[n3:], 
+                grid_obj.area[n4:], 
+                grid_obj.angle_dx[n1:], 
                 use_great_circle_algorithm, 
                 use_angular_midpoint,
             )
@@ -734,6 +686,65 @@ def main(
             grid_obj.angle_dx, 
             center,
         )
+
+    pos_c = 0
+    pos_e = 0
+    pos_t = 0
+    pos_n = 0
+    for n in range(ntiles):
+        tilename = "tile" + str(n+1)
+        if ntiles > 1:
+            outfile = grid_name + ".tile" + ".nc" + str(n+1)
+        else:
+            outfile = grid_name + ".nc"
+        
+        if verbose:
+            print(f"Writing out {outfile}", file=sys.stderr)
+        
+        nx = nxl[n]
+        ny = nyl[n]
+        if verbose:
+            print(f"[INFO] Outputting arrays of size nx: {nx} and ny: {ny} for tile: {n}", file=sys.stderr)
+        nxp = nx + 1
+        nyp = nx + 1
+
+        if out_halo == 0:
+            if verbose:
+                print(f"[INFO] START NC XARRAY write out_halo=0 tile number = n: {n} offset = pos_c: {pos_c}", file=sys.stderr)
+                print(f"[INFO] XARRAY: n: {n} x[0]: {grid_obj.x[pos_c]} x[1]: {grid_obj.x[pos_c+1]} x[2]: {grid_obj.x[pos_c+2]} x[3]: {grid_obj.x[pos_c+3]} x[4]: {grid_obj.x[pos_c+4]} x[5]: {grid_obj.x[pos_c+5]} x[10]: {grid_obj.x[pos_c+10]}", file=sys.stderr)
+                if n > 0:
+                    print(f"[INFO] XARRAY: n: {n} x[0]: {grid_obj.x[pos_c]} x[-1]: {grid_obj.x[pos_c-1]} x[-2]: {grid_obj.x[pos_c-2]} x[-3]: {grid_obj.x[pos_c-3]} x[-4]: {grid_obj.x[pos_c-4]} x[-5]: {grid_obj.x[pos_c-5]} x[-10]: {grid_obj.x[pos_c-10]}", file=sys.stderr)
+            grid_obj.x = grid_obj.x[pos_c:]
+            grid_obj.y = grid_obj.y[pos_c:]
+            if output_length_angle:
+                grid_obj.dx = grid_obj.dx[pos_n:]
+                grid_obj.dy = grid_obj.dy[pos_e:]
+                grid_obj.angle_dx = grid_obj.angle_dx[pos_c:]
+                if conformal == "true":
+                    grid_obj.angle_dy = grid_obj.angle_dy[pos_c:]
+            grid_obj.area = grid_obj.area[pos_t:]
+
+        else:
+            tmp = np.empty(shape=(nxp+2*out_halo)*(nyp+2*out_halo), dtype=np.float64)
+            if verbose:
+                print(f"[INFO] INDEX NC write with halo tile number = n: {n}", file=sys.stderr)
+            fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.x, grid_obj.x, n, 1, 1)
+            grid_obj.x = tmp.copy()
+            fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.y, grid_obj.y, n, 1, 1)
+            grid_obj.y = tmp.copy()
+            if output_length_angle:
+                fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.angle_dx, grid_obj.angle_dx, n, 1, 1)
+                grid_obj.angle_dx = tmp.copy()
+                if conformal == "true":
+                    fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.angle_dy, grid_obj.angle_dy, n, 1, 1)
+                    grid_obj.angle_dy = tmp.copy()
+                fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.dx, grid_obj.dy, n, 0, 1)
+                grid_obj.dx = tmp.copy()
+                fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.dy, grid_obj.dx, n, 1, 0)
+                grid_obj.dy = tmp.copy()
+            fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.area, grid_obj.area, n, 0, 0)
+            grid_obj.area = tmp.copy()
+
 
     grid_obj.write_out_grid(filepath="")
 

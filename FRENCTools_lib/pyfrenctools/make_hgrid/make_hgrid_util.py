@@ -12,6 +12,57 @@ from pyfms.data_handling import (
 
 lib = ctypes.CDLL("../../FRENCTools_lib/cfrenctools/c_build/clib.so")
 
+def fill_cubic_grid_halo(
+        nx: int, 
+        ny: int, 
+        halo: int, 
+        data: npt.NDArray[np.float64], 
+        data1_all: npt.NDArray[np.float64],
+        data2_all: npt.NDArray[np.float64],
+        tile: int,
+        ioff: int,
+        joff: int,
+):
+    nxp = nx + ioff
+    nyp = ny + joff
+    nxph = nx + ioff + 2*halo
+    nyph = ny + joff + 2*halo
+
+    for i in range(nxph*nyph):
+        data[i] = MISSING_VALUE
+
+    # first copy computing domain data
+    for j in range (nyp+1):
+        for i in range(nxp+1):
+            data[j*nxph+i] = data1_all[tile*nxp*nyp+(j-1)*nxp+(i-1)]
+
+    ntiles = 6
+
+    if tile%2 == 1:
+        lw = (tile+ntiles-1)%ntiles
+        le = (tile+ntiles+2)%ntiles
+        ls = (tile+ntiles-2)%ntiles
+        ln = (tile+ntiles+1)%ntiles
+        for j in range(nyp+1):
+            data[j*nxph] = data1_all[lw*nxp*nyp+(j-1)*nxp+nx-1]       # west halo
+            data[j*nxph+nxp+1] = data2_all[le*nxp*nyp+ioff*nxp+nyp-j] # east halo
+
+        for i in range(nxp+1):
+            data[i] = data2_all[ls*nxp*nyp+(nxp-i)*nyp+(nx-1)]        # south halo
+            data[(nyp+1)*nxph+i] = data1_all[ln*nxp*nyp+joff*nxp+i-1] # north halo
+    else:
+        lw = (tile+ntiles-2)%ntiles
+        le = (tile+ntiles+1)%ntiles
+        ls = (tile+ntiles-1)%ntiles
+        ln = (tile+ntiles+2)%ntiles
+        for j in range(nyp+1):
+            data[j*nxph] = data2_all[lw*nxp*nyp+(ny-1)*nxp+nyp-j]     # west halo
+            data[j*nxph+nxp+1] = data1_all[le*nxp*nyp+(j-1)*nxp+ioff] # east halo
+
+        for i in range(nxp+1):
+            data[i] = data1_all[ls*nxp*nyp+(ny-1)*nxp+i-1]                # south halo
+            data[(nyp+1)*nxph+i] = data2_all[ln*nxp*nyp+(nxp-i)*nyp+joff] # north halo
+
 def create_regular_lonlat_grid(
         nxbnds: int,
         nybnds: int,
