@@ -7,8 +7,6 @@ import xarray as xr
 
 from FMSgridtools.shared.gridtools_utils import check_file_is_there
 
-# TODO: Remove direct attributes, use property decorators instead
-
 """
 GridObj:
 
@@ -18,19 +16,10 @@ Dataclass for containing basic grid data to be used by other grid objects
 class GridObj:
     grid_data: Optional[xr.Dataset] = None
     grid_file: Optional[str] = None
-    tile: Optional[str] = None
     _nx: Optional[int] = None
     _ny: Optional[int] = None
     _nxp: Optional[int] = None
     _nyp: Optional[int] = None
-    x: Optional[npt.NDArray] = None
-    y: Optional[npt.NDArray] = None
-    dx: Optional[npt.NDArray] = None
-    dy: Optional[npt.NDArray] = None
-    area: Optional[npt.NDArray] = None
-    angle_dx: Optional[npt.NDArray] = None
-    angle_dy: Optional[npt.NDArray] = None
-    arcx: Optional[str] = None
 
     def __post_init__(self):
         if self.grid_data is not None:
@@ -139,81 +128,8 @@ class GridObj:
     grid_data attribute.
     """
     def write_out_grid(self, filepath: str):
-        if self.tile is not None:
-            tile = xr.DataArray(
-                [self.tile],
-            )
-        else:
-            tile = None
-        if self.x is not None:
-            x = xr.DataArray(
-                data=self.x,
-                dims=["nyp", "nxp"],
-            )
-        else:
-            x = None
-        if self.y is not None:
-            y = xr.DataArray(
-                data=self.y,
-                dims=["nyp", "nxp"],
-            )
-        else:
-            y = None
-        if self.dx is not None:
-            dx = xr.DataArray(
-                data=self.dx,
-                dims=["nyp", "nx"],
-            )
-        else:
-            dx = None
-        if self.dy is not None:
-            dy = xr.DataArray(
-                data=self.dy,
-                dims=["ny", "nxp"],
-            )
-        else:
-            dy = None
-        if self.area is not None:
-            area = xr.DataArray(
-                data=self.area,
-                dims=["ny", "nx"],
-            )
-        else:
-            area = None
-        if self.angle_dx is not None:
-            angle_dx = xr.DataArray(
-                data=self.angle_dx,
-                dims=["nyp", "nxp"],
-            )
-        else:
-            angle_dx = None
-        if self.angle_dy is not None:
-            angle_dy = xr.DataArray(
-                data=self.angle_dy,
-                dims=["nyp", "nxp"],
-            )
-        else:
-            angle_dy = None
-        if self.arcx is not None:
-            arcx = xr.DataArray(
-                [self.arcx],
-            )
-        else:
-            arcx = None
-        out_grid_dataset = xr.Dataset(
-            data_vars={
-                "tile": tile,
-                "x": x,
-                "y": y,
-                "dx": dx,
-                "dy": dy,
-                "area": area,
-                "angle_dx": angle_dx,
-                "angle_dy": angle_dy,
-                "arcx": arcx,
-            }
-        )
-        out_grid_dataset.to_netcdf(filepath)
+        if self.grid_data is not None:
+            self.grid_data.to_netcdf(filepath)
 
     """
     get_agrid_lonlat:
@@ -255,10 +171,6 @@ class GridObj:
         if self._nx is None:
             if self.grid_data is not None:
                 self._nx = self.grid_data.sizes['nx']
-            elif self.area is not None:
-                self._nx = self.area.shape[1]
-            else:
-                pass
         return self._nx
         
     @property
@@ -266,10 +178,6 @@ class GridObj:
         if self._ny is None:
             if self.grid_data is not None:
                 self._ny = self.grid_data.sizes['ny']
-            elif self.area is not None:
-                self._ny = self.area.shape[0]
-            else:
-                pass
         return self._ny
         
     @property
@@ -277,10 +185,6 @@ class GridObj:
         if self._nxp is None:
             if self.grid_data is not None:
                 self._nxp = self.grid_data.sizes['nxp']
-            elif self.x is not None:
-                self._nxp = self.x.shape[1]
-            else:
-                pass
         return self._nxp
         
     @property
@@ -288,10 +192,6 @@ class GridObj:
         if self._nyp is None:
             if self.grid_data is not None:
                 self._nyp = self.grid_data.sizes['nyp']
-            elif self.x is not None:
-                self._nyp = self.x.shape[0]
-            else:
-                pass
         return self._nyp
 
 #TODO: I/O method for passing to the host
