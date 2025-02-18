@@ -16,19 +16,6 @@ Dataclass for containing basic grid data to be used by other grid objects
 class GridObj:
     grid_data: Optional[xr.Dataset] = None
     grid_file: Optional[str] = None
-    tile: Optional[str] = None
-    _nx: Optional[int] = None
-    _ny: Optional[int] = None
-    _nxp: Optional[int] = None
-    _nyp: Optional[int] = None
-    x: Optional[npt.NDArray] = None
-    y: Optional[npt.NDArray] = None
-    dx: Optional[npt.NDArray] = None
-    dy: Optional[npt.NDArray] = None
-    area: Optional[npt.NDArray] = None
-    angle_dx: Optional[npt.NDArray] = None
-    angle_dy: Optional[npt.NDArray] = None
-    arcx: Optional[str] = None
 
     def __post_init__(self):
         if self.grid_data is not None:
@@ -88,46 +75,9 @@ class GridObj:
     def from_file(cls, filepath: str) -> "GridObj":
         check_file_is_there(filepath)
         with xr.open_dataset(filepath) as ds:
-            varlist = list(ds.data_vars)
-            _tile = None
-            _x = None
-            _y = None
-            _dx = None
-            _dy = None
-            _area = None
-            _angle_dx = None
-            _angle_dy = None
-            _arcx = None
-            if "tile" in varlist:
-                _tile = ds.tile.values.item().decode('ascii')
-            if "x" in varlist:
-                _x = np.ascontiguousarray(ds.x.values)
-            if "y" in varlist:
-                _y = np.ascontiguousarray(ds.y.values)
-            if "dx" in varlist:
-                _dx = np.ascontiguousarray(ds.dx.values)
-            if "dy" in varlist:
-                _dy = np.ascontiguousarray(ds.dy.values)
-            if "area" in varlist:
-                _area = np.ascontiguousarray(ds.area.values)
-            if "angle_dx" in varlist:
-                _angle_dx = np.ascontiguousarray(ds.angle_dx.values)
-            if "angle_dy" in varlist:
-                _angle_dy = np.ascontiguousarray(ds.angle_dy.values)
-            if "arcx" in varlist:
-                _arcx = ds.arcx.values.item().decode('ascii')
             return cls(
                 grid_data=ds,
                 grid_file=filepath,
-                tile = _tile,
-                x = _x,
-                y = _y,
-                dx = _dx,
-                dy = _dy,
-                area = _area,
-                angle_dx = _angle_dx,
-                angle_dy = _angle_dy,
-                arcx = _arcx,
             )
         
     """
@@ -137,81 +87,8 @@ class GridObj:
     grid_data attribute.
     """
     def write_out_grid(self, filepath: str):
-        if self.tile is not None:
-            tile = xr.DataArray(
-                [self.tile],
-            )
-        else:
-            tile = None
-        if self.x is not None:
-            x = xr.DataArray(
-                data=self.x,
-                dims=["nyp", "nxp"],
-            )
-        else:
-            x = None
-        if self.y is not None:
-            y = xr.DataArray(
-                data=self.y,
-                dims=["nyp", "nxp"],
-            )
-        else:
-            y = None
-        if self.dx is not None:
-            dx = xr.DataArray(
-                data=self.dx,
-                dims=["nyp", "nx"],
-            )
-        else:
-            dx = None
-        if self.dy is not None:
-            dy = xr.DataArray(
-                data=self.dy,
-                dims=["ny", "nxp"],
-            )
-        else:
-            dy = None
-        if self.area is not None:
-            area = xr.DataArray(
-                data=self.area,
-                dims=["ny", "nx"],
-            )
-        else:
-            area = None
-        if self.angle_dx is not None:
-            angle_dx = xr.DataArray(
-                data=self.angle_dx,
-                dims=["nyp", "nxp"],
-            )
-        else:
-            angle_dx = None
-        if self.angle_dy is not None:
-            angle_dy = xr.DataArray(
-                data=self.angle_dy,
-                dims=["nyp", "nxp"],
-            )
-        else:
-            angle_dy = None
-        if self.arcx is not None:
-            arcx = xr.DataArray(
-                [self.arcx],
-            )
-        else:
-            arcx = None
-        out_grid_dataset = xr.Dataset(
-            data_vars={
-                "tile": tile,
-                "x": x,
-                "y": y,
-                "dx": dx,
-                "dy": dy,
-                "area": area,
-                "angle_dx": angle_dx,
-                "angle_dy": angle_dy,
-                "arcx": arcx,
-            }
-        )
-        out_grid_dataset.to_netcdf(filepath)
+        if self.grid_data is not None:
+            self.grid_data.to_netcdf(filepath)
 
     """
     get_agrid_lonlat:
@@ -250,46 +127,30 @@ class GridObj:
     
     @property
     def nx(self):
-        if self._nx is None:
-            if self.grid_data is not None:
-                self._nx = self.grid_data.sizes['nx']
-            elif self.area is not None:
-                self._nx = self.area.shape[1]
-            else:
-                pass
-        return self._nx
+        _nx = None
+        if self.grid_data is not None:
+            _nx = self.grid_data.sizes['nx']
+        return _nx
         
     @property
     def ny(self):
-        if self._ny is None:
-            if self.grid_data is not None:
-                self._ny = self.grid_data.sizes['ny']
-            elif self.area is not None:
-                self._ny = self.area.shape[0]
-            else:
-                pass
-        return self._ny
+        _ny = None
+        if self.grid_data is not None:
+            _ny = self.grid_data.sizes['ny']
+        return _ny
         
     @property
     def nxp(self):
-        if self._nxp is None:
-            if self.grid_data is not None:
-                self._nxp = self.grid_data.sizes['nxp']
-            elif self.x is not None:
-                self._nxp = self.x.shape[1]
-            else:
-                pass
-        return self._nxp
+        _nxp = None
+        if self.grid_data is not None:
+                _nxp = self.grid_data.sizes['nxp']
+        return _nxp
         
     @property
     def nyp(self):
-        if self._nyp is None:
-            if self.grid_data is not None:
-                self._nyp = self.grid_data.sizes['nyp']
-            elif self.x is not None:
-                self._nyp = self.x.shape[0]
-            else:
-                pass
-        return self._nyp
+        _nyp = None
+        if self.grid_data is not None:
+            _nyp = self.grid_data.sizes['nyp']
+        return _nyp
 
 #TODO: I/O method for passing to the host
