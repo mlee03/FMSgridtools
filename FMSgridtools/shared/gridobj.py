@@ -16,10 +16,6 @@ Dataclass for containing basic grid data to be used by other grid objects
 class GridObj:
     grid_data: Optional[xr.Dataset] = None
     grid_file: Optional[str] = None
-    _nx: Optional[int] = None
-    _ny: Optional[int] = None
-    _nxp: Optional[int] = None
-    _nyp: Optional[int] = None
 
     def __post_init__(self):
         if self.grid_data is not None:
@@ -79,46 +75,9 @@ class GridObj:
     def from_file(cls, filepath: str) -> "GridObj":
         check_file_is_there(filepath)
         with xr.open_dataset(filepath) as ds:
-            varlist = list(ds.data_vars)
-            _tile = None
-            _x = None
-            _y = None
-            _dx = None
-            _dy = None
-            _area = None
-            _angle_dx = None
-            _angle_dy = None
-            _arcx = None
-            if "tile" in varlist:
-                _tile = ds.tile.values.item().decode('ascii')
-            if "x" in varlist:
-                _x = np.ascontiguousarray(ds.x.values)
-            if "y" in varlist:
-                _y = np.ascontiguousarray(ds.y.values)
-            if "dx" in varlist:
-                _dx = np.ascontiguousarray(ds.dx.values)
-            if "dy" in varlist:
-                _dy = np.ascontiguousarray(ds.dy.values)
-            if "area" in varlist:
-                _area = np.ascontiguousarray(ds.area.values)
-            if "angle_dx" in varlist:
-                _angle_dx = np.ascontiguousarray(ds.angle_dx.values)
-            if "angle_dy" in varlist:
-                _angle_dy = np.ascontiguousarray(ds.angle_dy.values)
-            if "arcx" in varlist:
-                _arcx = ds.arcx.values.item().decode('ascii')
             return cls(
                 grid_data=ds,
                 grid_file=filepath,
-                tile = _tile,
-                x = _x,
-                y = _y,
-                dx = _dx,
-                dy = _dy,
-                area = _area,
-                angle_dx = _angle_dx,
-                angle_dy = _angle_dy,
-                arcx = _arcx,
             )
         
     """
@@ -168,30 +127,30 @@ class GridObj:
     
     @property
     def nx(self):
-        if self._nx is None:
-            if self.grid_data is not None:
-                self._nx = self.grid_data.sizes['nx']
-        return self._nx
+        _nx = None
+        if self.grid_data is not None:
+            _nx = self.grid_data.sizes['nx']
+        return _nx
         
     @property
     def ny(self):
-        if self._ny is None:
-            if self.grid_data is not None:
-                self._ny = self.grid_data.sizes['ny']
-        return self._ny
+        _ny = None
+        if self.grid_data is not None:
+            _ny = self.grid_data.sizes['ny']
+        return _ny
         
     @property
     def nxp(self):
-        if self._nxp is None:
-            if self.grid_data is not None:
-                self._nxp = self.grid_data.sizes['nxp']
-        return self._nxp
+        _nxp = None
+        if self.grid_data is not None:
+                _nxp = self.grid_data.sizes['nxp']
+        return _nxp
         
     @property
     def nyp(self):
-        if self._nyp is None:
-            if self.grid_data is not None:
-                self._nyp = self.grid_data.sizes['nyp']
-        return self._nyp
+        _nyp = None
+        if self.grid_data is not None:
+            _nyp = self.grid_data.sizes['nyp']
+        return _nyp
 
 #TODO: I/O method for passing to the host
