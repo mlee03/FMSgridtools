@@ -14,14 +14,14 @@ Dataclass for containing basic grid data to be used by other grid objects
 """
 @dataclasses.dataclass
 class GridObj:
-    grid_data: Optional[xr.Dataset] = None
+    dataset: Optional[xr.Dataset] = None
     grid_file: Optional[str] = None
 
     def __post_init__(self):
         if self.grid_file is not None:
             check_file_is_there(self.grid_file)
             with xr.open_dataset(self.grid_file) as ds:
-                self.grid_data = ds
+                self.dataset = ds
 
     """
     from_file:
@@ -35,7 +35,7 @@ class GridObj:
         check_file_is_there(filepath)
         with xr.open_dataset(filepath) as ds:
             return cls(
-                grid_data=ds,
+                dataset=ds,
                 grid_file=filepath,
             )
         
@@ -43,11 +43,11 @@ class GridObj:
     write_out_grid:
 
     This method will generate a netcdf file containing the contents of the
-    grid_data attribute.
+    dataset attribute.
     """
     def write_out_grid(self, filepath: str):
-        if self.grid_data is not None:
-            self.grid_data.to_netcdf(filepath)
+        if self.dataset is not None:
+            self.dataset.to_netcdf(filepath)
 
     """
     get_agrid_lonlat:
@@ -78,100 +78,99 @@ class GridObj:
     """
     get_variable_list:
 
-    This method returns a list of variables contained within the grid_data
-    dataset.
+    This method returns a list of variables contained within the dataset.
     """
     def get_variable_list(self) -> List:
-        return list(self.grid_data.data_vars)
+        return list(self.dataset.data_vars)
     
     @property
     def tile(self):
-        if self.grid_data is not None:
-            return self.grid_data.tile.values.item().decode('ascii')
+        if self.dataset is not None:
+            return self.dataset.tile.values.item().decode('ascii')
         else:
             return None
         
     @property
     def x(self):
-        if self.grid_data is not None:
-            return np.ascontiguousarray(self.grid_data.x.values)
+        if self.dataset is not None:
+            return np.ascontiguousarray(self.dataset.x.values)
         else:
             return None
     
     @property
     def y(self):
-        if self.grid_data is not None:
-            return np.ascontiguousarray(self.grid_data.y.values)
+        if self.dataset is not None:
+            return np.ascontiguousarray(self.dataset.y.values)
         else:
             return None
         
     @property
     def dx(self):
-        if self.grid_data is not None:
-            return np.ascontiguousarray(self.grid_data.dx.values)
+        if self.dataset is not None:
+            return np.ascontiguousarray(self.dataset.dx.values)
         else:
             return None
         
     @property
     def dy(self):
-        if self.grid_data is not None:
-            return np.ascontiguousarray(self.grid_data.dy.values)
+        if self.dataset is not None:
+            return np.ascontiguousarray(self.dataset.dy.values)
         else:
             return None
     
     @property
     def area(self):
-        if self.grid_data is not None:
-            return np.ascontiguousarray(self.grid_data.area.values)
+        if self.dataset is not None:
+            return np.ascontiguousarray(self.dataset.area.values)
         else:
             return None
         
     @property
     def angle_dx(self):
-        if self.grid_data is not None:
-            return np.ascontiguousarray(self.grid_data.angle_dx.values)
+        if self.dataset is not None:
+            return np.ascontiguousarray(self.dataset.angle_dx.values)
         else:
             return None
         
     @property
     def angle_dy(self):
-        if self.grid_data is not None:
-            return np.ascontiguousarray(self.grid_data.angle_dy.values)
+        if self.dataset is not None:
+            return np.ascontiguousarray(self.dataset.angle_dy.values)
         else:
             return None
         
     @property
     def arcx(self):
-        if self.grid_data is not None:
-            return self.grid_data.arcx.values.item().decode('ascii')
+        if self.dataset is not None:
+            return self.dataset.arcx.values.item().decode('ascii')
         else:
             return None
 
     @property
     def nx(self):
-        if self.grid_data is not None:
-            return self.grid_data.sizes['nx']
+        if self.dataset is not None:
+            return self.dataset.sizes['nx']
         else:
             return None
         
     @property
     def ny(self):
-        if self.grid_data is not None:
-            return self.grid_data.sizes['ny']
+        if self.dataset is not None:
+            return self.dataset.sizes['ny']
         else:
             return None
         
     @property
     def nxp(self):
-        if self.grid_data is not None:
-                return self.grid_data.sizes['nxp']
+        if self.dataset is not None:
+                return self.dataset.sizes['nxp']
         else:
             return None
         
     @property
     def nyp(self):
-        if self.grid_data is not None:
-            return self.grid_data.sizes['nyp']
+        if self.dataset is not None:
+            return self.dataset.sizes['nyp']
         else:
             return None
 
