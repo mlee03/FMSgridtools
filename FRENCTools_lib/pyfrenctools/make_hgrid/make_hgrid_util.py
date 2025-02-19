@@ -29,7 +29,7 @@ def fill_cubic_grid_halo(
     nyph = ny + joff + 2*halo
 
     for i in range(nxph*nyph):
-        data[i] = MISSING_VALUE
+        data[i] = -9999.
 
     # first copy computing domain data
     for j in range (nyp+1):
