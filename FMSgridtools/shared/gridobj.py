@@ -18,51 +18,10 @@ class GridObj:
     grid_file: Optional[str] = None
 
     def __post_init__(self):
-        if self.grid_data is not None:
-            varlist = list(self.grid_data.data_vars)
-            if "tile" in varlist:
-                self.tile = self.grid_data.tile.values.item().decode('ascii')
-            if "x" in varlist:
-                self.x = np.ascontiguousarray(self.grid_data.x.values)
-            if "y" in varlist:
-                self.y = np.ascontiguousarray(self.grid_data.y.values)
-            if "dx" in varlist:
-                self.dx = np.ascontiguousarray(self.grid_data.dx.values)
-            if "dy" in varlist:
-                self.dy = np.ascontiguousarray(self.grid_data.dy.values)
-            if "area" in varlist:
-                self.area = np.ascontiguousarray(self.grid_data.area.values)
-            if "angle_dx" in varlist:
-                self.angle_dx = np.ascontiguousarray(self.grid_data.angle_dx.values)
-            if "angle_dy" in varlist:
-                self.angle_dy = np.ascontiguousarray(self.grid_data.angle_dy.values)
-            if "arcx" in varlist:
-                self.arcx = self.grid_data.arcx.values.item().decode('ascii')
-        elif self.grid_file is not None:
+        if self.grid_file is not None:
             check_file_is_there(self.grid_file)
             with xr.open_dataset(self.grid_file) as ds:
                 self.grid_data = ds
-                varlist = list(self.grid_data.data_vars)
-                if "tile" in varlist:
-                    self.tile = self.grid_data.tile.values.item().decode('ascii')
-                if "x" in varlist:
-                    self.x = np.ascontiguousarray(self.grid_data.x.values)
-                if "y" in varlist:
-                    self.y = np.ascontiguousarray(self.grid_data.y.values)
-                if "dx" in varlist:
-                    self.dx = np.ascontiguousarray(self.grid_data.dx.values)
-                if "dy" in varlist:
-                    self.dy = np.ascontiguousarray(self.grid_data.dy.values)
-                if "area" in varlist:
-                    self.area = np.ascontiguousarray(self.grid_data.area.values)
-                if "angle_dx" in varlist:
-                    self.angle_dx = np.ascontiguousarray(self.grid_data.angle_dx.values)
-                if "angle_dy" in varlist:
-                    self.angle_dy = np.ascontiguousarray(self.grid_data.angle_dy.values)
-                if "arcx" in varlist:
-                    self.arcx = self.grid_data.arcx.values.item().decode('ascii')
-        else:
-            pass
 
     """
     from_file:
@@ -126,31 +85,94 @@ class GridObj:
         return list(self.grid_data.data_vars)
     
     @property
-    def nx(self):
-        _nx = None
+    def tile(self):
         if self.grid_data is not None:
-            _nx = self.grid_data.sizes['nx']
-        return _nx
+            return self.grid_data.tile.values.item().decode('ascii')
+        else:
+            return None
+        
+    @property
+    def x(self):
+        if self.grid_data is not None:
+            return np.ascontiguousarray(self.grid_data.x.values)
+        else:
+            return None
+    
+    @property
+    def y(self):
+        if self.grid_data is not None:
+            return np.ascontiguousarray(self.grid_data.y.values)
+        else:
+            return None
+        
+    @property
+    def dx(self):
+        if self.grid_data is not None:
+            return np.ascontiguousarray(self.grid_data.dx.values)
+        else:
+            return None
+        
+    @property
+    def dy(self):
+        if self.grid_data is not None:
+            return np.ascontiguousarray(self.grid_data.dy.values)
+        else:
+            return None
+    
+    @property
+    def area(self):
+        if self.grid_data is not None:
+            return np.ascontiguousarray(self.grid_data.area.values)
+        else:
+            return None
+        
+    @property
+    def angle_dx(self):
+        if self.grid_data is not None:
+            return np.ascontiguousarray(self.grid_data.angle_dx.values)
+        else:
+            return None
+        
+    @property
+    def angle_dy(self):
+        if self.grid_data is not None:
+            return np.ascontiguousarray(self.grid_data.angle_dy.values)
+        else:
+            return None
+        
+    @property
+    def arcx(self):
+        if self.grid_data is not None:
+            return self.grid_data.arcx.values.item().decode('ascii')
+        else:
+            return None
+
+    @property
+    def nx(self):
+        if self.grid_data is not None:
+            return self.grid_data.sizes['nx']
+        else:
+            return None
         
     @property
     def ny(self):
-        _ny = None
         if self.grid_data is not None:
-            _ny = self.grid_data.sizes['ny']
-        return _ny
+            return self.grid_data.sizes['ny']
+        else:
+            return None
         
     @property
     def nxp(self):
-        _nxp = None
         if self.grid_data is not None:
-                _nxp = self.grid_data.sizes['nxp']
-        return _nxp
+                return self.grid_data.sizes['nxp']
+        else:
+            return None
         
     @property
     def nyp(self):
-        _nyp = None
         if self.grid_data is not None:
-            _nyp = self.grid_data.sizes['nyp']
-        return _nyp
+            return self.grid_data.sizes['nyp']
+        else:
+            return None
 
 #TODO: I/O method for passing to the host
