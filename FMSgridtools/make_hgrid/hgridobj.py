@@ -8,7 +8,16 @@ from FMSgridtools.shared.gridtools_utils import check_file_is_there
 from FMSgridtools.shared.gridobj import GridObj
 
 @dataclasses.dataclass
-class HGridObj(GridObj):
+class HGridObj():
+    tile: Optional[str] = None
+    x: Optional[npt.NDArray] = None
+    y: Optional[npt.NDArray] = None
+    dx: Optional[npt.NDArray] = None
+    dy: Optional[npt.NDArray] = None
+    area: Optional[npt.NDArray] = None
+    angle_dx: Optional[npt.NDArray] = None
+    angle_dy: Optional[npt.NDArray] = None
+    arcx: Optional[str] = None
 
     def write_out_hgrid(
             self,
@@ -23,9 +32,6 @@ class HGridObj(GridObj):
             out_halo: Optional[int]=0,
             output_length_angle: Optional[int]=0
     ):
-        tile = None
-        x = None
-        y = None
         if north_pole_tile == "none":
             tile = xr.DataArray(
                 ["tile"],
@@ -68,8 +74,6 @@ class HGridObj(GridObj):
                 standard_name="geographic_longitude",
             )
         )
-        if out_halo > 0:
-            x.attrs["_FillValue"] = -9999.
 
         y = xr.DataArray(
             data=self.y,
@@ -79,8 +83,6 @@ class HGridObj(GridObj):
                 standard_name="geographic_latitude",
             )
         )
-        if out_halo > 0:
-            y.attrs["_FillValue"] = -9999.
 
         if output_length_angle:
             dx = xr.DataArray(
@@ -91,8 +93,7 @@ class HGridObj(GridObj):
                     standard_name="grid_edge_x_distance",
                 )
             )
-            if out_halo > 0:
-                dx.attrs["_FillValue"] = -9999.
+            
             dy = xr.DataArray(
                 data=self.dy,
                 dims=["ny", "nxp"],
@@ -101,8 +102,7 @@ class HGridObj(GridObj):
                     standard_name="grid_edge_y_distance",
                 )
             )
-            if out_halo > 0:
-                dy.attrs["_FillValue"] = -9999.
+                
             angle_dx = xr.DataArray(
                 data=self.angle_dx,
                 dims=["nyp", "nxp"],
@@ -128,7 +128,26 @@ class HGridObj(GridObj):
                 standard_name="grid_cell_area",
             )
         )
+
+        if north_pole_arcx == "none":
+            arcx = xr.DataArray(
+                ["arcx"],
+                attrs=dict(
+                    standard_name="grid_edge_x_arc_type",
+                )
+            )
+        else:
+            arcx = xr.DataArray(
+                ["arcx"],
+                attrs=dict(
+                    standard_name="grid_edge_x_arc_type",
+                    north_pole=north_pole_arcx,
+                )
+            )
         if out_halo > 0:
+            x.attrs["_FillValue"] = -9999.
+            y.attrs["_FillValue"] = -9999.
+            dx.attrs["_FillValue"] = -9999.
+            dy.attrs["_FillValue"] = -9999.
             area.attrs["_FillValue"] = -9999.
-        arcx = xr.
 
