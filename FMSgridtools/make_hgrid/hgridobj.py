@@ -23,18 +23,27 @@ class HGridObj():
             self,
             tilename,
             outfile,
-            north_pole_tile: Optional[str]="none",
-            north_pole_arcx: Optional[str]="none",
-            projection: Optional[str]="none",
-            geometry: Optional[str]="none",
-            discretization: Optional[str]="none",
-            conformal: Optional[str]="none",
-            out_halo: Optional[int]=0,
-            output_length_angle: Optional[int]=0
+            north_pole_tile="none",
+            north_pole_arcx="none",
+            projection="none",
+            geometry="none",
+            discretization="none",
+            conformal="none",
+            out_halo=0,
+            output_length_angle=0
     ):
+        tile = None
+        x = None
+        y = None
+        dx = None
+        dy = None
+        area = None
+        angle_dx = None
+        angle_dy = None
+        arcx = None
         if north_pole_tile == "none":
             tile = xr.DataArray(
-                ["tile"],
+                [tilename],
                 attrs=dict(
                     standard_name="grid_tile_spec",
                     geometry=geometry,
@@ -44,7 +53,7 @@ class HGridObj():
             )
         elif projection == "none":
             tile = xr.DataArray(
-                ["tile"],
+                [tilename],
                 attrs=dict(
                     standard_name="grid_tile_spec",
                     geometry=geometry,
@@ -55,7 +64,7 @@ class HGridObj():
             )
         else:
             tile = xr.DataArray(
-                ["tile"],
+                [tilename],
                 attrs=dict(
                     standard_name="grid_tile_spec",
                     geometry=geometry,
@@ -74,7 +83,7 @@ class HGridObj():
                 standard_name="geographic_longitude",
             )
         )
-
+            
         y = xr.DataArray(
             data=self.y,
             dims=["nyp", "nxp"],
@@ -83,7 +92,7 @@ class HGridObj():
                 standard_name="geographic_latitude",
             )
         )
-
+    
         if output_length_angle:
             dx = xr.DataArray(
                 data=self.dx,
@@ -101,8 +110,7 @@ class HGridObj():
                     units="meters", 
                     standard_name="grid_edge_y_distance",
                 )
-            )
-                
+            )   
             angle_dx = xr.DataArray(
                 data=self.angle_dx,
                 dims=["nyp", "nxp"],
@@ -111,6 +119,10 @@ class HGridObj():
                     standard_name="grid_vertex_x_angle_WRT_geographic_east",
                 )
             )
+            if out_halo > 0:
+                dx.attrs["_FillValue"] = -9999.
+                dy.attrs["_FillValue"] = -9999.
+                angle_dx.attrs["_FillValue"] = -9999.
             if conformal == "true":
                 angle_dy = xr.DataArray(
                     data=self.angle_dy,
@@ -120,6 +132,9 @@ class HGridObj():
                         standard_name="grid_vertex_y_angle_WRT_geographic_north",
                     )
                 )
+                if out_halo > 0:
+                    angle_dy.attrs["_FillValue"] = -9999.
+
         area = xr.DataArray(
             data=self.area,
             dims=["ny", "nx"],
@@ -131,14 +146,14 @@ class HGridObj():
 
         if north_pole_arcx == "none":
             arcx = xr.DataArray(
-                ["arcx"],
+                [self.arcx],
                 attrs=dict(
                     standard_name="grid_edge_x_arc_type",
                 )
             )
         else:
             arcx = xr.DataArray(
-                ["arcx"],
+                [self.arcx],
                 attrs=dict(
                     standard_name="grid_edge_x_arc_type",
                     north_pole=north_pole_arcx,
@@ -147,77 +162,93 @@ class HGridObj():
         if out_halo > 0:
             x.attrs["_FillValue"] = -9999.
             y.attrs["_FillValue"] = -9999.
-            dx.attrs["_FillValue"] = -9999.
-            dy.attrs["_FillValue"] = -9999.
             area.attrs["_FillValue"] = -9999.
 
-    def make_gridobj(self) -> "GridObj":
-        tile = None
-        x = None
-        y = None
-        dx = None
-        dy = None
-        angle_dx = None
-        angle_dy = None
-        area = None
-        arcx = None
-        if self.tile is not None:
-            tile = xr.DataArray(
-                [self.tile]
-            )
-        if self.x is not None:
-            x = xr.DataArray(
-                data=self.x,
-                dims=["nyp", "nxp"],
-            )
-        if self.y is not None:
-            y = xr.DataArray(
-                data=self.y,
-                dims=["nyp", "nxp"],
-            )
-        if self.dx is not None:
-            dx = xr.DataArray(
-                data=self.dx,
-                dims=["nyp", "nx"],
-            )
-        if self.dy is not None:
-            dy = xr.DataArray(
-                data=self.dy,
-                dims=["ny", "nxp"],
-            )
-        if self.angle_dx is not None:
-            angle_dx = xr.DataArray(
-                data=self.angle_dx,
-                dims=["nyp", "nxp"],
-            )
-        if self.angle_dy is not None:
-            angle_dy = xr.DataArray(
-                data=self.angle_dy,
-                dims=["nyp", "nxp"],
-            )
-        if self.area is not None:
-            area = xr.DataArray(
-                data=self.area,
-                dims=["ny", "nx"],
-            )
-        if self.arcx is not None:
-            arcx = xr.DataArray(
-                [self.arcx],
-            )
         dataset = xr.Dataset(
-            data_vars = {
+            data_vars={
                 "tile": tile,
                 "x": x,
                 "y": y,
                 "dx": dx,
                 "dy": dy,
+                "area": area,
                 "angle_dx": angle_dx,
                 "angle_dy": angle_dy,
-                "area": area,
-                "arcx": arcx
+                "arcx": arcx,
             }
         )
+        self.dataset = dataset
+        dataset.to_netcdf(outfile)
 
-        return GridObj(grid_data=dataset)
+    def make_gridobj(self) -> "GridObj":
+        if self.dataset is None:
+            tile = None
+            x = None
+            y = None
+            dx = None
+            dy = None
+            angle_dx = None
+            angle_dy = None
+            area = None
+            arcx = None
+            if self.tile is not None:
+                tile = xr.DataArray(
+                    [self.tile]
+                )
+            if self.x is not None:
+                x = xr.DataArray(
+                    data=self.x,
+                    dims=["nyp", "nxp"],
+                )
+            if self.y is not None:
+                y = xr.DataArray(
+                    data=self.y,
+                    dims=["nyp", "nxp"],
+                )
+            if self.dx is not None:
+                dx = xr.DataArray(
+                    data=self.dx,
+                    dims=["nyp", "nx"],
+                )
+            if self.dy is not None:
+                dy = xr.DataArray(
+                    data=self.dy,
+                    dims=["ny", "nxp"],
+                )
+            if self.angle_dx is not None:
+                angle_dx = xr.DataArray(
+                    data=self.angle_dx,
+                    dims=["nyp", "nxp"],
+                )
+            if self.angle_dy is not None:
+                angle_dy = xr.DataArray(
+                    data=self.angle_dy,
+                    dims=["nyp", "nxp"],
+                )
+            if self.area is not None:
+                area = xr.DataArray(
+                    data=self.area,
+                    dims=["ny", "nx"],
+                )
+            if self.arcx is not None:
+                arcx = xr.DataArray(
+                    [self.arcx],
+                )
+            dataset = xr.Dataset(
+                data_vars = {
+                    "tile": tile,
+                    "x": x,
+                    "y": y,
+                    "dx": dx,
+                    "dy": dy,
+                    "angle_dx": angle_dx,
+                    "angle_dy": angle_dy,
+                    "area": area,
+                    "arcx": arcx
+                }
+            )
+        else:
+            dataset=self.dataset
+        return GridObj(dataset=dataset)
 
 
