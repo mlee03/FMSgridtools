@@ -25,49 +25,29 @@
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
-#include "mosaic_util.h"
-#include "constant.h"
+#include "general_utils_gpu.h"
+#include "globals_gpu.h"
 
-#ifdef use_libMPI
-#include <mpi.h>
-#endif
+const double from_pole_threshold_rad_gpu = 0.0174533;  // 1.0 deg
 
-#define TOLORENCE (1.e-6)
-#define EPSLN8 (1.e-8)
-#define EPSLN10 (1.e-10)
-#define EPSLN15 (1.e-15)
-#define EPSLN30 (1.e-30)
+//reproduce siena was removed
+int rotate_poly_flag_gpu = 0;
+double the_rotation_matrix_gpu[3][3] = { 0 };
 
-const double from_pole_threshold_rad = 0.0174533;  // 1.0 deg
-
-int reproduce_siena = 0;
-int rotate_poly_flag = 0;
-double the_rotation_matrix[3][3] = { 0 };
-
-void set_reproduce_siena_true(void){
-  reproduce_siena = 1;
+#pragma acc routine seq
+void set_rotate_poly_true_gpu(void){
+  rotate_poly_flag_gpu = 1;
+  set_the_rotation_matrix_gpu();
 }
 
-void set_rotate_poly_true(void){
-  rotate_poly_flag = 1;
-  set_the_rotation_matrix();
-}
+struct Node_gpu *nodeList_gpu=NULL;
+int curListPos_gpu=0;
 
-
-
-/***********************************************************
-    void error_handler(char *str)
-    error handler: will print out error message and then abort
-***********************************************************/
-void error_handler(const char *msg)
-{
-  fprintf(stderr, "FATAL Error: %s\n", msg );
-#ifdef use_libMPI
-  MPI_Abort(MPI_COMM_WORLD, -1);
-#else
-  exit(1);
-#endif
-} /* error_handler */
+#pragma acc declare copyin(from_pole_threshold_rad_gpu)
+#pragma acc declare copyin(rotate_poly_flag_gpu)
+#pragma acc declare copyin(nodeList_gpu)
+#pragma acc declare copyin(curListPos_gpu)
+#pragma acc declare copyin(the_rotation_matrix_gpu)
 
 /*********************************************************************
 
@@ -83,75 +63,30 @@ void error_handler(const char *msg)
      array:  array of data points  (must be monotonically increasing)
      ia   :  size of array.
  ********************************************************************/
-int nearest_index(double value, const double *array, int ia)
+int nearest_index_gpu(double value, const double *array, int ia)
 {
   int index, i;
   int keep_going;
 
   for(i=1; i<ia; i++){
     if (array[i] < array[i-1])
-      error_handler("nearest_index: array must be monotonically increasing");
+      printf("ERROR:  nearest_index: array must be monotonically increasing\n");
   }
-  if (value < array[0] )
-    index = 0;
-  else if ( value > array[ia-1])
-    index = ia-1;
-  else
-    {
-      i=0;
-      keep_going = 1;
-      while (i < ia && keep_going) {
-   i = i+1;
-   if (value <= array[i]) {
-     index = i;
-     if (array[i]-value > value-array[i-1]) index = i-1;
-     keep_going = 0;
-   }
+  if (value < array[0] ) index = 0;
+  else if ( value > array[ia-1]) index = ia-1;
+  else {
+    i=0;
+    keep_going = 1;
+    while (i < ia && keep_going) {
+      i = i+1;
+      if (value <= array[i]) {
+        index = i;
+        if (array[i]-value > value-array[i-1]) index = i-1;
+        keep_going = 0;
       }
     }
+  }
   return index;
-
-}
-
-/******************************************************************/
-
-void tokenize(const char * const string, const char *tokens, unsigned int varlen,
-         unsigned int maxvar, char * pstring, unsigned int * const nstr)
-{
-  size_t i, j, nvar, len, ntoken, n;
-  int found;
-
-  nvar = 0; j = 0;
-  len = strlen(string);
-  ntoken = strlen(tokens);
-  /* here we use the fact that C array [][] is contiguous in memory */
-  if(string[0] == 0)error_handler("Error from tokenize: to-be-parsed string is empty");
-
-  for(i = 0; i < len; i ++){
-    if(string[i] != ' ' && string[i] != '\t'){
-      found = 0;
-      for(n=0; n<ntoken; n++) {
-   if(string[i] == tokens[n] ) {
-     found = 1;
-     break;
-   }
-      }
-      if(found) {
-   if( j != 0) { /* remove :: */
-     *(pstring + (nvar++)*varlen + j) = 0;
-     j = 0;
-     if(nvar >= maxvar) error_handler("Error from tokenize: number of variables exceeds limit");
-   }
-      }
-      else {
-        *(pstring + nvar*varlen + j++) = string[i];
-        if(j >= varlen ) error_handler("error from tokenize: variable name length exceeds limit during tokenization");
-      }
-    }
-  }
-  *(pstring + nvar*varlen + j) = 0;
-
-  *nstr = ++nvar;
 
 }
 
@@ -159,7 +94,7 @@ void tokenize(const char * const string, const char *tokens, unsigned int varlen
   double maxval_double(int size, double *data)
   get the maximum value of double array
 *******************************************************************************/
-double maxval_double(int size, const double *data)
+double maxval_double_gpu(int size, const double *data)
 {
   int n;
   double maxval;
@@ -178,7 +113,7 @@ double maxval_double(int size, const double *data)
   double minval_double(int size, double *data)
   get the minimum value of double array
 *******************************************************************************/
-double minval_double(int size, const double *data)
+double minval_double_gpu(int size, const double *data)
 {
   int n;
   double minval;
@@ -196,7 +131,7 @@ double minval_double(int size, const double *data)
   double avgval_double(int size, double *data)
   get the average value of double array
 *******************************************************************************/
-double avgval_double(int size, const double *data)
+double avgval_double_gpu(int size, const double *data)
 {
   int n;
   double avgval;
@@ -214,7 +149,7 @@ double avgval_double(int size, const double *data)
   void latlon2xyz
   Routine to map (lon, lat) to (x,y,z)
 ******************************************************************************/
-void latlon2xyz(int size, const double *lon, const double *lat, double *x, double *y, double *z)
+void latlon2xyz_gpu(int size, const double *lon, const double *lat, double *x, double *y, double *z)
 {
   int n;
 
@@ -230,7 +165,7 @@ void latlon2xyz(int size, const double *lon, const double *lat, double *x, doubl
        void xyz2laton(np, p, xs, ys)
    Transfer cartesian coordinates to spherical coordinates
    ----------------------------------------------------------*/
-void xyz2latlon( int np, const double *x, const double *y, const double *z, double *lon, double *lat)
+void xyz2latlon_gpu( int np, const double *x, const double *y, const double *z, double *lon, double *lat)
 {
 
   double xx, yy, zz;
@@ -246,81 +181,14 @@ void xyz2latlon( int np, const double *x, const double *y, const double *z, doub
     yy /= dist;
     zz /= dist;
 
-    if ( fabs(xx)+fabs(yy)  < EPSLN10 )
-       lon[i] = 0;
-     else
-       lon[i] = atan2(yy, xx);
-     lat[i] = asin(zz);
+    if ( fabs(xx)+fabs(yy)  < EPSLN10 ) lon[i] = 0;
+    else lon[i] = atan2(yy, xx);
+    lat[i] = asin(zz);
 
-     if ( lon[i] < 0.) lon[i] = 2.*M_PI + lon[i];
+    if ( lon[i] < 0.) lon[i] = 2.*M_PI + lon[i];
   }
 
 } /* xyz2latlon */
-
-/*------------------------------------------------------------------------------
-  double box_area(double ll_lon, double ll_lat, double ur_lon, double ur_lat)
-  return the area of a lat-lon grid box. grid is in radians.
-  ----------------------------------------------------------------------------*/
-double box_area(double ll_lon, double ll_lat, double ur_lon, double ur_lat)
-{
-  double dx = ur_lon-ll_lon;
-
-  if(dx > M_PI)  dx = dx - 2.0*M_PI;
-  if(dx < -M_PI) dx = dx + 2.0*M_PI;
-
-  return (dx*(sin(ur_lat)-sin(ll_lat))*RADIUS*RADIUS ) ;
-
-} /* box_area */
-
-
-//TODO: Determine if poly_area_dimensionless can be deleted.
-//  Possibly functions that call it (e.g. get_grid_area_dimensionless)
-// can also be deleted.
-/*------------------------------------------------------------------------------
-  double poly_area(const x[], const y[], int n)
-  obtains area of input polygon by line integrating -sin(lat)d(lon)
-  Vertex coordinates must be in degrees.
-  Vertices must be listed counter-clockwise around polygon.
-  grid is in radians.
-  ----------------------------------------------------------------------------*/
-double poly_area_dimensionless(const double x[], const double y[], int n)
-{
-  double area = 0.0;
-  int    i;
-
-  for (i=0;i<n;i++) {
-    int ip = (i+1) % n;
-    double dx = (x[ip]-x[i]);
-    double lat1, lat2;
-    double dy, dat;
-
-    lat1 = y[ip];
-    lat2 = y[i];
-    if(dx > M_PI)  dx = dx - 2.0*M_PI;
-    if(dx < -M_PI) dx = dx + 2.0*M_PI;
-    if (dx==0.0) continue;
-
-    if ( fabs(lat1-lat2) < SMALL_VALUE) // cheap area calculation along latitude
-      area -= dx*sin(0.5*(lat1+lat2));
-    else {
-      if(reproduce_siena) {
-   area += dx*(cos(lat1)-cos(lat2))/(lat1-lat2);
-      }
-      else {
-   dy = 0.5*(lat1-lat2);
-   dat = sin(dy)/dy;
-   area -= dx*sin(0.5*(lat1+lat2))*dat;
-      }
-    }
-  }
-  if(fabs(area) > HPI) {
-    printf("Error in poly_area_dimensionless: Large values for poly_area_dimensionless: %19.15f\n", area);
-  }
-  if(area < 0)
-    return (-area/(4*M_PI));
-  else
-    return (area/(4*M_PI));
-}
 
 /*------------------------------------------------------------------------------
   double poly_area(const x[], const y[], int n)
@@ -424,7 +292,7 @@ double poly_area_dimensionless(const double x[], const double y[], int n)
   So, I2=\integral dx sin(arctan(tan(lat0)*cos(x-lon0)))  can be shown to give an accurate estimate of grid
   cell areas surrounding the pole without a bump.
    ----------------------------------------------------------------------------*/
-double poly_area_main(const double x[], const double y[], int n) {
+double poly_area_main_gpu(const double x[], const double y[], int n) {
   double area = 0.0;
   int i;
 
@@ -453,24 +321,16 @@ double poly_area_main(const double x[], const double y[], int n) {
     if (fabs(lat1 - lat2) < SMALL_VALUE) /* cheap area calculation along latitude */
       area -= dx * sin(0.5 * (lat1 + lat2));
     else {
-      if (reproduce_siena) {
-        area += dx * (cos(lat1) - cos(lat2)) / (lat1 - lat2);
-      } else {
-        // This expression is a trig identity with the above reproduce_siena case
-        dy = 0.5 * (lat1 - lat2);
-        dat = sin(dy) / dy;
-        area -= dx * sin(0.5 * (lat1 + lat2)) * dat;
-      }
+      dy = 0.5 * (lat1 - lat2);
+      dat = sin(dy) / dy;
+      area -= dx * sin(0.5 * (lat1 + lat2)) * dat;
     }
   }
 
 
-  if (fabs(area) > HPI)
-    printf("WARNING poly_area: Large values for area: %19.15f\n", area);
-  if (area < 0)
-    return -area * RADIUS * RADIUS;
-  else
-    return area * RADIUS * RADIUS;
+  if (fabs(area) > HPI) printf("WARNING poly_area: Large values for area: %19.15f\n", area);
+  if (area < 0) return -area * RADIUS * RADIUS;
+  else return area * RADIUS * RADIUS;
 } /* poly_area_main */
 
 /*
@@ -486,7 +346,7 @@ double poly_area_main(const double x[], const double y[], int n) {
   TODO: The tiling error reported by make_coupler mosaic may be non-zero when
   using this feature. This may be developped in the future.
 */
-double poly_area(const double xo[], const double yo[], int n) {
+double poly_area_gpu(const double xo[], const double yo[], int n) {
   double area_pa = 0.0;
   double area_par = 0.0;
   int pole = 0;
@@ -495,30 +355,31 @@ double poly_area(const double xo[], const double yo[], int n) {
   double xr[8];  // rotated lon
   double yr[8];  // rotated lat
 
-  if (rotate_poly_flag == 0) {
-    area_pa = poly_area_main(xo, yo, n);
+  if (rotate_poly_flag_gpu == 0) {
+    area_pa = poly_area_main_gpu(xo, yo, n);
     return area_pa;
-  } else {
+  }
+  else {
     // anything near enough to the pole gets rotated
-    pole = is_near_pole(yo, n);
-    crosses = crosses_pole(xo, n);
+    pole = is_near_pole_gpu(yo, n);
+    crosses = crosses_pole_gpu(xo, n);
     if (crosses == 1 && pole == 0) {
-      error_handler("crosses == 1 && pole == 0");
+      printf("ERROR poly_area:  crosses == 1 && pole == 0\n");
     }
 
     if (pole == 1) {
       if (n > 8) {
-        error_handler("poly_area: n > 8. n=%d,n");
+        printf("ERROR poly_area: n > 8. n=%d,n\n");
       }
-      rotate_poly(xo, yo, n, xr, yr);
+      rotate_poly_gpu(xo, yo, n, xr, yr);
 
-      int pole2 = is_near_pole(yr, n);
+      int pole2 = is_near_pole_gpu(yr, n);
       if (pole2 == 1) {
-        error_handler("poly_area: pole2 == 1");
+        printf("ERROR poly_area: pole2 == 1\n");
       }
-      area_par = poly_area_main(xr, yr, n);
+      area_par = poly_area_main_gpu(xr, yr, n);
     } else {
-      area_pa = poly_area_main(xo, yo, n);
+      area_pa = poly_area_main_gpu(xo, yo, n);
     }
 
     if (pole == 1) {
@@ -529,126 +390,7 @@ double poly_area(const double xo[], const double yo[], int n) {
   }
 }
 
-/*An alternate implementation of poly_area for future developments. Under construction.*/
-//TODO:
-double poly_area2(const double x[], const double y[], int n)
-{
-  double area = 0.0;
-  double dx,dy,dat,lat1,lat2,avg_y,hdy,da,dxs= 0.0;
-  int    i, ip;
-  int hasBadxm=0, hasBadxp=0;
-  for (i=0;i<n;i++) {
-    ip = (i+1) % n;
-    dx = (x[ip]-x[i]);
-    if(fabs(dx+M_PI) < SMALL_VALUE) hasBadxm=1;
-    if(fabs(dx-M_PI) < SMALL_VALUE) hasBadxp=1;
-    // if(y[i]==-HPI || y[i]==HPI) hasPole=1;
-  }
-  for (i=0;i<n;i++) {
-    ip = (i+1) % n;
-    dx = (x[ip]-x[i]);
-    lat1 = y[ip];
-    lat2 = y[i];
-    dy = lat2 - lat1;
-    hdy = dy*0.5;
-    avg_y = (lat1+lat2)*0.5;
-    if(dx > M_PI)  dx = dx - 2.0*M_PI;
-    if(dx < -M_PI) dx = dx + 2.0*M_PI;
-
-    if ( fabs(hdy) < SMALL_VALUE) // limit to avoid div by 0
-      dat = 1.0;
-    else
-      dat = sin(hdy)/hdy;
-
-    da = -dx*sin(avg_y)*dat;
-    area += da;
-    dxs += dx;
-    if(hasBadxm || hasBadxp) printf("%19.15f,%19.15f,%19.15f,%19.15f\n", dx,dxs,da,area);
-  }
-  /*
-  if(hasPole){
-    printf("Pole cell : %19.15f\n", area);
-  }
-  if(hasBadxm){
-    printf("Trouble dx=-pi cell : %19.15f\n", area);
-    //v_print(x, y, n);
-  }
-  if(hasBadxp){
-    printf("Trouble dx=+pi cell : %19.15f\n", area);
-    //v_print(x, y, n);
-  }
-  */
-  if(fabs(dxs)>SMALL_VALUE && fabs(area) > HPI){
-    printf("Error    : Nonzero gridcell dx sum in poly_area: %19.15f,%19.15f\n", dxs,area);
-    area = fabs(area) - 2.0*M_PI;  //This is equivalent to replacing dx=-pi with dx=pi after fix_lon inserts twin poles at SP
-    //area = fabs(area) - fabs(dxs);  //This is also equivalent to above since fabs(dxs)=2*pi in the case of side passing through SP.
-    printf("Corrected: Nonzero gridcell dx sum in poly_area: %19.15f,%19.15f\n", dxs,area);
-  }
-  if(fabs(area) > HPI) {
-    printf("WARNING poly_area: Large values for poly_area: %19.15f\n", area);
-  }
-  if(area < 0)
-     return -area*RADIUS*RADIUS;
-  else
-     return area*RADIUS*RADIUS;
-} /* poly_area2 */
-/* Note how one of the two cells straddling the SP has a wrong sign for "dx=-pi"
-   producing an excess area of -2pi.
-   Also note how the fix_lon is needed to insert twin poles at SP to correct the
-   contribution of the side passing through the SP to be exactly pi
-  dx                 dx_sum              da                  da_sum
- -0.891607974235719, -0.891607974235719, -0.891519061449037, -0.891519061449037
- -1.329985598742566, -2.221593572978286, -1.329938713571685, -2.221457775020722
-  3.141592653589793,  0.919999080611507,  3.141527168815382,  0.920069393794660
- -0.919999080611507,  0.000000000000000, -0.919927107270490,  0.000142286524170
-Trouble dx=+pi cell :   0.000142286524170
-              209.688               -89.1151
-              158.603                -89.269
-                 82.4               -89.8237
-                262.4               -89.4658
-  0.000000000000000,  0.000000000000000,  0.000000000000000,  0.000000000000000
- -3.141592653589793, -3.141592653589793, -3.141592653589793, -3.141592653589793  if there was no twin pole inserted the contribution would have been wrong
-  0.000000000000000, -3.141592653589793,  0.000000000000000, -3.141592653589793
- -1.329985598742571, -4.471578252332364, -1.329938713571690, -4.471531367161483
- -0.891607974235693, -5.363186226568057, -0.891519061449011, -5.363050428610494
- -0.919999080611529, -6.283185307179586, -0.919927107270511, -6.282977535881005
-Trouble dx=-pi cell :  -6.282977535881005
-                262.4               -89.4658
-                262.4                    -90
-                 82.4                    -90
-                 82.4               -89.8237
-              6.19744                -89.269
-
-*/
-double poly_area_no_adjust(const double x[], const double y[], int n)
-{
-  double area = 0.0;
-  int    i;
-
-  for (i=0;i<n;i++) {
-    int ip = (i+1) % n;
-    double dx = (x[ip]-x[i]);
-    double lat1, lat2;
-
-    lat1 = y[ip];
-    lat2 = y[i];
-    if (dx==0.0) continue;
-
-    if ( fabs(lat1-lat2) < SMALL_VALUE) /* cheap area calculation along latitude */
-      area -= dx*sin(0.5*(lat1+lat2));
-    else
-      area += dx*(cos(lat1)-cos(lat2))/(lat1-lat2);
-  }
-  if(fabs(area) > HPI) {
-    printf("WARNING poly_area_no_adjust: Large values for poly_area_no_adjust: %19.15f\n", area);
-  }
-  if(area < 0)
-     return area*RADIUS*RADIUS;
-  else
-     return area*RADIUS*RADIUS;
-} /* poly_area_no_adjust */
-
-int delete_vtx(double x[], double y[], int n, int n_del)
+int delete_vtx_gpu(double x[], double y[], int n, int n_del)
 {
   for (;n_del<n-1;n_del++) {
     x[n_del] = x[n_del+1];
@@ -658,7 +400,7 @@ int delete_vtx(double x[], double y[], int n, int n_del)
   return (n-1);
 } /* delete_vtx */
 
-int insert_vtx(double x[], double y[], int n, int n_ins, double lon_in, double lat_in)
+int insert_vtx_gpu(double x[], double y[], int n, int n_ins, double lon_in, double lat_in)
 {
   int i;
 
@@ -672,42 +414,43 @@ int insert_vtx(double x[], double y[], int n, int n_ins, double lon_in, double l
   return (n+1);
 } /* insert_vtx */
 
-void v_print(double x[], double y[], int n)
+void v_print_gpu(double x[], double y[], int n)
 {
   int i;
 
   for (i=0;i<n;i++) printf(" %20g   %20g\n", x[i]*R2D, y[i]*R2D);
 } /* v_print */
 
-int fix_lon(double x[], double y[], int n, double tlon)
+int fix_lon_gpu(double x[], double y[], int n, double tlon)
 {
   double x_sum, dx;
   int i, nn = n, pole = 0;
 
-  for (i=0;i<nn;i++) if (fabs(y[i])>=HPI-TOLORENCE) pole = 1;
+  for (i=0;i<nn;i++) if (fabs(y[i])>=HPI-TOLERANCE) pole = 1;
   if (0&&pole) {
     printf("fixing pole cell\n");
-    v_print(x, y, nn);
+    v_print_gpu(x, y, nn);
     printf("---------");
   }
 
   /* all pole points must be paired */
   /* The reason is poly_area() function needs a contribution equal to the angle (in radians)
      between the sides that connect to the pole. */
-  for (i=0;i<nn;i++) if (fabs(y[i])>=HPI-TOLORENCE) {
-    int im=(i+nn-1)%nn, ip=(i+1)%nn;
+  for (i=0;i<nn;i++) if (fabs(y[i])>=HPI-TOLERANCE) {
+      int im=(i+nn-1)%nn, ip=(i+1)%nn;
 
-    if (y[im]==y[i] && y[ip]==y[i]) {
-      nn = delete_vtx(x, y, nn, i);
-      i--;
-    } else if (y[im]!=y[i] && y[ip]!=y[i]) {
-      nn = insert_vtx(x, y, nn, i, x[i], y[i]);
-      i++;
-    }
+      if (y[im]==y[i] && y[ip]==y[i]) {
+        nn = delete_vtx_gpu(x, y, nn, i);
+        i--;
+      }
+      else if (y[im]!=y[i] && y[ip]!=y[i]) {
+        nn = insert_vtx_gpu(x, y, nn, i, x[i], y[i]);
+        i++;
+      }
   }
   /* first of pole pair has longitude of previous vertex */
   /* second of pole pair has longitude of subsequent vertex */
-  for (i=0;i<nn;i++) if (fabs(y[i])>=HPI-TOLORENCE) {
+  for (i=0;i<nn;i++) if (fabs(y[i])>=HPI-TOLERANCE) {
     int im=(i+nn-1)%nn, ip=(i+1)%nn;
 
     if (y[im]!=y[i]) x[i] = x[im];
@@ -725,8 +468,8 @@ int fix_lon(double x[], double y[], int n, double tlon)
       double x2=x[i];
       double ypole= HPI;
       if(y[i]<0.0) ypole = -HPI ;
-      nn = insert_vtx(x, y, nn, i, x2, ypole);
-      nn = insert_vtx(x, y, nn, i, x1, ypole);
+      nn = insert_vtx_gpu(x, y, nn, i, x2, ypole);
+      nn = insert_vtx_gpu(x, y, nn, i, x1, ypole);
       break;
     }
   }
@@ -744,8 +487,8 @@ int fix_lon(double x[], double y[], int n, double tlon)
   else if (dx >  M_PI) for (i=0;i<nn;i++) x[i] -= TPI;
 
   if (0&&pole) {
-    printf("area=%g\n", poly_area(x, y,nn));
-    v_print(x, y, nn);
+    printf("area=%g\n", poly_area_gpu(x, y,nn));
+    v_print_gpu(x, y, nn);
     printf("---------");
   }
 
@@ -753,29 +496,8 @@ int fix_lon(double x[], double y[], int n, double tlon)
 } /* fix_lon */
 
 
-/*------------------------------------------------------------------------------
-  double great_circle_distance()
-  computes distance between two points along a great circle
-  (the shortest distance between 2 points on a sphere)
-  returned in units of meter
-  ----------------------------------------------------------------------------*/
-double great_circle_distance(double *p1, double *p2)
-{
-  double dist, beta;
-
-  /* This algorithm is not accurate for small distance
-  dist = RADIUS*ACOS(SIN(p1[1])*SIN(p2[1]) + COS(p1[1])*COS(p2[1])*COS(p1[0]-p2[0]));
-  */
-  beta = 2.*asin( sqrt( sin((p1[1]-p2[1])/2.)*sin((p1[1]-p2[1])/2.) +
-                               cos(p1[1])*cos(p2[1])*(sin((p1[0]-p2[0])/2.)*sin((p1[0]-p2[0])/2.)) ) );
-  dist = RADIUS*beta;
-  return dist;
-
-} /* great_circle_distance */
-
-
 /* Compute the great circle area of a polygon on a sphere */
-double great_circle_area(int n, const double *x, const double *y, const double *z) {
+double great_circle_area_gpu(int n, const double *x, const double *y, const double *z) {
   int i;
   double pnt0[3], pnt1[3], pnt2[3];
   double sum, area;
@@ -795,7 +517,7 @@ double great_circle_area(int n, const double *x, const double *y, const double *
     pnt2[2] = z[(i+2)%n];
 
     /* compute angle for pnt1 */
-    sum += spherical_angle(pnt1, pnt2, pnt0);
+    sum += spherical_angle_gpu(pnt1, pnt2, pnt0);
 
   }
   area = (sum - (n-2.)*M_PI) * RADIUS* RADIUS;
@@ -812,15 +534,10 @@ double great_circle_area(int n, const double *x, const double *y, const double *
           \
            p2
  -----------------------------------------------------------------------------*/
-double spherical_angle(const double *v1, const double *v2, const double *v3)
+double spherical_angle_gpu(const double *v1, const double *v2, const double *v3)
 {
   double angle;
-#ifndef HAVE_LONG_DOUBLE_WIDER
   double px, py, pz, qx, qy, qz, ddd;
-#else
-  long double px, py, pz, qx, qy, qz, ddd;
-
-#endif
 
   /* vector product between v1 and v2 */
   px = v1[1]*v2[2] - v1[2]*v2[1];
@@ -832,75 +549,28 @@ double spherical_angle(const double *v1, const double *v2, const double *v3)
   qz = v1[0]*v3[1] - v1[1]*v3[0];
 
   ddd = (px*px+py*py+pz*pz)*(qx*qx+qy*qy+qz*qz);
-  if ( ddd <= 0.0 )
-    angle = 0. ;
+  if ( ddd <= 0.0 ) angle = 0. ;
   else {
     ddd = (px*qx+py*qy+pz*qz) / sqrt(ddd);
     if( fabs(ddd-1) < EPSLN30 ) ddd = 1;
     if( fabs(ddd+1) < EPSLN30 ) ddd = -1;
     if ( ddd>1. || ddd<-1. ) {
       /*FIX (lmh) to correctly handle co-linear points (angle near pi or 0) */
-      if (ddd < 0.)
-   angle = M_PI;
-      else
-   angle = 0.;
+      if (ddd < 0.) angle = M_PI;
+      else angle = 0.;
     }
     else
-      angle = acosl( ddd );
+      angle = acos( ddd );
   }
 
   return angle;
 } /* spherical_angle */
 
-/*------------------------------------------------------------------------------
-  double spherical_excess_area(p_lL, p_uL, p_lR, p_uR)
-  get the surface area of a cell defined as a quadrilateral
-  on the sphere. Area is computed as the spherical excess
-  [area units are m^2]
-  ----------------------------------------------------------------------------*/
-double spherical_excess_area(const double* p_ll, const double* p_ul,
-              const double* p_lr, const double* p_ur, double radius)
-{
-  double area, ang1, ang2, ang3, ang4;
-  double v1[3], v2[3], v3[3];
-
-  /*   S-W: 1   */
-  latlon2xyz(1, p_ll, p_ll+1, v1, v1+1, v1+2);
-  latlon2xyz(1, p_lr, p_lr+1, v2, v2+1, v2+2);
-  latlon2xyz(1, p_ul, p_ul+1, v3, v3+1, v3+2);
-  ang1 = spherical_angle(v1, v2, v3);
-
-  /*   S-E: 2   */
-  latlon2xyz(1, p_lr, p_lr+1, v1, v1+1, v1+2);
-  latlon2xyz(1, p_ur, p_ur+1, v2, v2+1, v2+2);
-  latlon2xyz(1, p_ll, p_ll+1, v3, v3+1, v3+2);
-  ang2 = spherical_angle(v1, v2, v3);
-
-  /*   N-E: 3   */
-  latlon2xyz(1, p_ur, p_ur+1, v1, v1+1, v1+2);
-  latlon2xyz(1, p_ul, p_ul+1, v2, v2+1, v2+2);
-  latlon2xyz(1, p_lr, p_lr+1, v3, v3+1, v3+2);
-  ang3 = spherical_angle(v1, v2, v3);
-
-  /*   N-W: 4   */
-  latlon2xyz(1, p_ul, p_ul+1, v1, v1+1, v1+2);
-  latlon2xyz(1, p_ur, p_ur+1, v2, v2+1, v2+2);
-  latlon2xyz(1, p_ll, p_ll+1, v3, v3+1, v3+2);
-  ang4 = spherical_angle(v1, v2, v3);
-
-  area = (ang1 + ang2 + ang3 + ang4 - 2.*M_PI) * radius* radius;
-
-  return area;
-
-} /* spherical_excess_area */
-
-
 /*----------------------------------------------------------------------
     void vect_cross(e, p1, p2)
     Perform cross products of 3D vectors: e = P1 X P2
     -------------------------------------------------------------------*/
-
-void vect_cross(const double *p1, const double *p2, double *e )
+void vect_cross_gpu(const double *p1, const double *p2, double *e )
 {
 
   e[0] = p1[1]*p2[2] - p1[2]*p2[1];
@@ -914,62 +584,16 @@ void vect_cross(const double *p1, const double *p2, double *e )
     double* vect_cross(p1, p2)
     return cross products of 3D vectors: = P1 X P2
     -------------------------------------------------------------------*/
-
-double dot(const double *p1, const double *p2)
+double dot_gpu(const double *p1, const double *p2)
 {
 
   return( p1[0]*p2[0] + p1[1]*p2[1] + p1[2]*p2[2] );
 
 }
 
-
-double metric(const double *p) {
+double metric_gpu(const double *p) {
   return (sqrt(p[0]*p[0] + p[1]*p[1]+p[2]*p[2]) );
 }
-
-
-/* ----------------------------------------------------------------
-   make a unit vector
-   --------------------------------------------------------------*/
-void normalize_vect(double *e)
-{
-  double pdot;
-  int k;
-
-  pdot = e[0]*e[0] + e[1] * e[1] + e[2] * e[2];
-  pdot = sqrt( pdot );
-
-  for(k=0; k<3; k++) e[k] /= pdot;
-}
-
-
-/*------------------------------------------------------------------
-  void unit_vect_latlon(int size, lon, lat, vlon, vlat)
-
-  calculate unit vector for latlon in cartesian coordinates
-
-  ---------------------------------------------------------------------*/
-void unit_vect_latlon(int size, const double *lon, const double *lat, double *vlon, double *vlat)
-{
-  double sin_lon, cos_lon, sin_lat, cos_lat;
-  int n;
-
-  for(n=0; n<size; n++) {
-    sin_lon = sin(lon[n]);
-    cos_lon = cos(lon[n]);
-    sin_lat = sin(lat[n]);
-    cos_lat = cos(lat[n]);
-
-    vlon[3*n] = -sin_lon;
-    vlon[3*n+1] =  cos_lon;
-    vlon[3*n+2] =  0.;
-
-    vlat[3*n]   = -sin_lat*cos_lon;
-    vlat[3*n+1] = -sin_lat*sin_lon;
-    vlat[3*n+2] =  cos_lat;
-  }
-} /* unit_vect_latlon */
-
 
 /* Intersect a line and a plane
    Intersects between the plane ( three points ) (entries in counterclockwise order)
@@ -979,12 +603,13 @@ void unit_vect_latlon(int size, const double *lon, const double *lat, double *vl
    of the intersection.
    NOTE: the intersection doesn't have to be inside the tri or line for this to return true
 */
-int intersect_tri_with_line(const double *plane, const double *l1, const double *l2, double *p,
-             double *t) {
+int intersect_tri_with_line_gpu(const double *plane, const double *l1, const double *l2, double *p,
+                                double *t)
+{
 
-  long double M[3*3], inv_M[3*3];
-  long double V[3];
-  long double X[3];
+  double M[3*3], inv_M[3*3];
+  double V[3];
+  double X[3];
   int is_invert=0;
 
   const double *pnt0=plane;
@@ -994,13 +619,12 @@ int intersect_tri_with_line(const double *plane, const double *l1, const double 
   /* To do intersection just solve the set of linear equations for both
      Setup M
   */
+
   M[0]=l1[0]-l2[0]; M[1]=pnt1[0]-pnt0[0]; M[2]=pnt2[0]-pnt0[0];
   M[3]=l1[1]-l2[1]; M[4]=pnt1[1]-pnt0[1]; M[5]=pnt2[1]-pnt0[1];
   M[6]=l1[2]-l2[2]; M[7]=pnt1[2]-pnt0[2]; M[8]=pnt2[2]-pnt0[2];
-
-
   /* Invert M */
-  is_invert = invert_matrix_3x3(M,inv_M);
+  is_invert = invert_matrix_3x3_gpu(M,inv_M);
   if (!is_invert) return 0;
 
   /* Set variable holding vector */
@@ -1009,7 +633,7 @@ int intersect_tri_with_line(const double *plane, const double *l1, const double 
   V[2]=l1[2]-pnt0[2];
 
   /* Calculate solution */
-  mult(inv_M, V, X);
+  mult_gpu(inv_M, V, X);
 
   /* Get answer out */
   *t=X[0];
@@ -1019,8 +643,8 @@ int intersect_tri_with_line(const double *plane, const double *l1, const double 
   return 1;
 }
 
-
-void mult(long double m[], long double v[], long double out_v[]) {
+void mult_gpu(double m[], double v[], double out_v[])
+{
 
   out_v[0]=m[0]*v[0]+m[1]*v[1]+m[2]*v[2];
   out_v[1]=m[3]*v[0]+m[4]*v[1]+m[5]*v[2];
@@ -1028,20 +652,17 @@ void mult(long double m[], long double v[], long double out_v[]) {
 
 }
 
-
 /* returns 1 if matrix is inverted, 0 otherwise */
-int invert_matrix_3x3(long double m[], long double m_inv[]) {
+int invert_matrix_3x3_gpu(double m[], double m_inv[])
+{
 
-
-  const long double det =  m[0] * (m[4]*m[8] - m[5]*m[7])
+  const double det =  m[0] * (m[4]*m[8] - m[5]*m[7])
                      -m[1] * (m[3]*m[8] - m[5]*m[6])
                      +m[2] * (m[3]*m[7] - m[4]*m[6]);
-#ifdef test_invert_matrix_3x3
-  printf("det = %Lf\n", det);
-#endif
-  if (fabsl(det) < EPSLN15 ) return 0;
 
-  const long double deti = 1.0/det;
+  if (fabs(det) < EPSLN15 ) return 0;
+
+  const double deti = 1.0/det;
 
   m_inv[0] = (m[4]*m[8] - m[5]*m[7]) * deti;
   m_inv[1] = (m[2]*m[7] - m[1]*m[8]) * deti;
@@ -1058,42 +679,37 @@ int invert_matrix_3x3(long double m[], long double m_inv[]) {
   return 1;
 }
 
-#ifndef MAXNODELIST
-#define MAXNODELIST 100
-#endif
 
-struct Node *nodeList=NULL;
-int curListPos=0;
 
-void rewindList(void)
+void rewindList_gpu(void)
 {
   int n;
 
-  curListPos = 0;
-  if(!nodeList) nodeList = (struct Node *)malloc(MAXNODELIST*sizeof(struct Node));
-  for(n=0; n<MAXNODELIST; n++) initNode(nodeList+n);
+  curListPos_gpu = 0;
+  if(!nodeList_gpu) nodeList_gpu = (struct Node_gpu *)malloc(MAXNODELIST*sizeof(struct Node_gpu));
+  for(n=0; n<MAXNODELIST; n++) initNode_gpu(nodeList_gpu+n);
 
 }
 
-struct Node *getNext()
+struct Node_gpu *getNext_gpu()
 {
-  struct Node *temp=NULL;
+  struct Node_gpu *temp=NULL;
   int n;
 
-  if(!nodeList) {
-    nodeList = (struct Node *)malloc(MAXNODELIST*sizeof(struct Node));
-    for(n=0; n<MAXNODELIST; n++) initNode(nodeList+n);
+  if(!nodeList_gpu) {
+    nodeList_gpu = (struct Node_gpu *)malloc(MAXNODELIST*sizeof(struct Node_gpu));
+    for(n=0; n<MAXNODELIST; n++) initNode_gpu(nodeList_gpu+n);
   }
 
-  temp = nodeList+curListPos;
-  curListPos++;
-  if(curListPos > MAXNODELIST) error_handler("getNext: curListPos >= MAXNODELIST");
+  temp = nodeList_gpu+curListPos_gpu;
+  curListPos_gpu++;
+  if(curListPos_gpu > MAXNODELIST) printf("ERROR getNext_gpu: curListPos_gpu >= MAXNODELIST\n");
 
   return (temp);
 }
 
 
-void initNode(struct Node *node)
+void initNode_gpu(struct Node_gpu *node)
 {
     node->x = 0;
     node->y = 0;
@@ -1102,33 +718,33 @@ void initNode(struct Node *node)
     node->intersect = 0;
     node->inbound = 0;
     node->isInside = 0;
-    node->Next = NULL;
+    node->Next_gpu = NULL;
     node->initialized=0;
 
 }
 
-void addEnd(struct Node *list, double x, double y, double z, int intersect, double u, int inbound, int inside)
+void addEnd_gpu(struct Node_gpu *list, double x, double y, double z, int intersect, double u, int inbound, int inside)
 {
 
-  struct Node *temp=NULL;
+  struct Node_gpu *temp=NULL;
 
-  if(list == NULL) error_handler("addEnd: list is NULL");
+  if(list == NULL) printf("ERROR addEnd: list is NULL\n");
 
   if(list->initialized) {
 
     /* (x,y,z) might already in the list when intersect is true and u=0 or 1 */
       temp = list;
       while (temp) {
-        if(samePoint(temp->x, temp->y, temp->z, x, y, z)) return;
-        temp=temp->Next;
+        if(samePoint_gpu(temp->x, temp->y, temp->z, x, y, z)) return;
+        temp=temp->Next_gpu;
       }
     temp = list;
-    while(temp->Next)
-      temp=temp->Next;
+    while(temp->Next_gpu)
+      temp=temp->Next_gpu;
 
     /* Append at the end of the list.  */
-    temp->Next = getNext();
-    temp = temp->Next;
+    temp->Next_gpu = getNext_gpu();
+    temp = temp->Next_gpu;
   }
   else {
     temp = list;
@@ -1146,15 +762,15 @@ void addEnd(struct Node *list, double x, double y, double z, int intersect, doub
 
 /* return 1 if the point (x,y,z) is added in the list, return 0 if it is already in the list */
 
-int addIntersect(struct Node *list, double x, double y, double z, int intersect, double u1, double u2, int inbound,
+int addIntersect_gpu(struct Node_gpu *list, double x, double y, double z, int intersect, double u1, double u2, int inbound,
        int is1, int ie1, int is2, int ie2)
 {
 
   double u1_cur, u2_cur;
   int    i1_cur, i2_cur;
-  struct Node *temp=NULL;
+  struct Node_gpu *temp=NULL;
 
-  if(list == NULL) error_handler("addEnd: list is NULL");
+  if(list == NULL) printf("ERROR addEnd: list is NULL\n");
 
   /* first check to make sure this point is not in the list */
   u1_cur = u1;
@@ -1175,13 +791,13 @@ int addIntersect(struct Node *list, double x, double y, double z, int intersect,
     while(temp) {
       if( temp->u == u1_cur && temp->subj_index == i1_cur) return 0;
       if( temp->u_clip == u2_cur && temp->clip_index == i2_cur) return 0;
-      if( !temp->Next ) break;
-      temp=temp->Next;
+      if( !temp->Next_gpu ) break;
+      temp=temp->Next_gpu;
     }
 
     /* Append at the end of the list.  */
-    temp->Next = getNext();
-    temp = temp->Next;
+    temp->Next_gpu = getNext_gpu();
+    temp = temp->Next_gpu;
   }
   else {
     temp = list;
@@ -1203,9 +819,9 @@ int addIntersect(struct Node *list, double x, double y, double z, int intersect,
 }
 
 
-int length(struct Node *list)
+int length_gpu(struct Node_gpu *list)
 {
-   struct Node *cur_ptr=NULL;
+   struct Node_gpu *cur_ptr=NULL;
    int count=0;
 
    cur_ptr=list;
@@ -1213,14 +829,14 @@ int length(struct Node *list)
    while(cur_ptr)
    {
      if(cur_ptr->initialized ==0) break;
-      cur_ptr=cur_ptr->Next;
+      cur_ptr=cur_ptr->Next_gpu;
       count++;
    }
    return(count);
 }
 
 /* two points are the same if there are close enough */
-int samePoint(double x1, double y1, double z1, double x2, double y2, double z2)
+int samePoint_gpu(double x1, double y1, double z1, double x2, double y2, double z2)
 {
     if( fabs(x1-x2) > EPSLN10 || fabs(y1-y2) > EPSLN10 || fabs(z1-z2) > EPSLN10 )
       return 0;
@@ -1230,7 +846,7 @@ int samePoint(double x1, double y1, double z1, double x2, double y2, double z2)
 
 
 
-int sameNode(struct Node node1, struct Node node2)
+int sameNode_gpu(struct Node_gpu node1, struct Node_gpu node2)
 {
   if( node1.x == node2.x && node1.y == node2.y && node1.z==node2.z )
     return 1;
@@ -1239,37 +855,37 @@ int sameNode(struct Node node1, struct Node node2)
 }
 
 
-void addNode(struct Node *list, struct Node inNode)
+void addNode_gpu(struct Node_gpu *list, struct Node_gpu inNode_gpu)
 {
 
-  addEnd(list, inNode.x, inNode.y, inNode.z, inNode.intersect, inNode.u, inNode.inbound, inNode.isInside);
+  addEnd_gpu(list, inNode_gpu.x, inNode_gpu.y, inNode_gpu.z, inNode_gpu.intersect, inNode_gpu.u, inNode_gpu.inbound, inNode_gpu.isInside);
 
 }
 
-struct Node *getNode(struct Node *list, struct Node inNode)
+struct Node_gpu *getNode_gpu(struct Node_gpu *list, struct Node_gpu inNode_gpu)
 {
-  struct Node *thisNode=NULL;
-  struct Node *temp=NULL;
+  struct Node_gpu *thisNode_gpu=NULL;
+  struct Node_gpu *temp=NULL;
 
   temp = list;
   while( temp ) {
-    if( sameNode( *temp, inNode ) ) {
-      thisNode = temp;
+    if( sameNode_gpu( *temp, inNode_gpu ) ) {
+      thisNode_gpu = temp;
       temp = NULL;
       break;
     }
-    temp = temp->Next;
+    temp = temp->Next_gpu;
   }
 
-  return thisNode;
+  return thisNode_gpu;
 }
 
-struct Node *getNextNode(struct Node *list)
+struct Node_gpu *getNextNode_gpu(struct Node_gpu *list)
 {
-  return list->Next;
+  return list->Next_gpu;
 }
 
-void copyNode(struct Node *node_out, struct Node node_in)
+void copyNode_gpu(struct Node_gpu *node_out, struct Node_gpu node_in)
 {
 
   node_out->x = node_in.x;
@@ -1278,30 +894,30 @@ void copyNode(struct Node *node_out, struct Node node_in)
   node_out->u = node_in.u;
   node_out->intersect = node_in.intersect;
   node_out->inbound   = node_in.inbound;
-  node_out->Next = NULL;
+  node_out->Next_gpu = NULL;
   node_out->initialized = node_in.initialized;
   node_out->isInside = node_in.isInside;
 }
 
-void printNode(struct Node *list, char *str)
+void printNode_gpu(struct Node_gpu *list, char *str)
 {
-  struct Node *temp;
+  struct Node_gpu *temp;
 
-  if(list == NULL) error_handler("printNode: list is NULL");
+  if(list == NULL) printf("ERROR printNode_gpu: list is NULL\n");
   if(str) printf("  %s \n", str);
   temp = list;
   while(temp) {
     if(temp->initialized ==0) break;
     printf(" (x, y, z, interset, inbound, isInside) = (%19.15f,%19.15f,%19.15f,%d,%d,%d)\n",
       temp->x, temp->y, temp->z, temp->intersect, temp->inbound, temp->isInside);
-    temp = temp->Next;
+    temp = temp->Next_gpu;
   }
   printf("\n");
 }
 
-int intersectInList(struct Node *list, double x, double y, double z)
+int intersectInList_gpu(struct Node_gpu *list, double x, double y, double z)
 {
-  struct Node *temp;
+  struct Node_gpu *temp;
   int found=0;
 
   temp = list;
@@ -1311,9 +927,9 @@ int intersectInList(struct Node *list, double x, double y, double z)
       found = 1;
       break;
     }
-    temp=temp->Next;
+    temp=temp->Next_gpu;
   }
-  if (!found) error_handler("intersectInList: point (x,y,z) is not found in the list");
+  if (!found) printf("ERROR intersectInList: point (x,y,z) is not found in the list\n");
   if( temp->intersect == 2 )
     return 1;
   else
@@ -1326,11 +942,11 @@ int intersectInList(struct Node *list, double x, double y, double z)
    after (x2,y2,z2) is an intersection, if u is greater than the u value of the intersection,
    insert after, otherwise insert before
 */
-void insertIntersect(struct Node *list, double x, double y, double z, double u1, double u2, int inbound,
+void insertIntersect_gpu(struct Node_gpu *list, double x, double y, double z, double u1, double u2, int inbound,
                      double x2, double y2, double z2)
 {
-  struct Node *temp1=NULL, *temp2=NULL;
-  struct Node *temp;
+  struct Node_gpu *temp1=NULL, *temp2=NULL;
+  struct Node_gpu *temp;
   double u_cur;
   int found=0;
 
@@ -1341,15 +957,15 @@ void insertIntersect(struct Node *list, double x, double y, double z, double u1,
       found = 1;
       break;
     }
-    temp1=temp1->Next;
+    temp1=temp1->Next_gpu;
   }
-  if (!found) error_handler("inserAfter: point (x,y,z) is not found in the list");
+  if (!found) printf("ERROR inserAfter: point (x,y,z) is not found in the list\n");
 
   /* when u = 0 or u = 1, set the grid point to be the intersection point to solve truncation error isuse */
   u_cur = u1;
   if(u1 == 1) {
     u_cur = 0;
-    temp1 = temp1->Next;
+    temp1 = temp1->Next_gpu;
     if(!temp1) temp1 = list;
   }
   if(u_cur==0) {
@@ -1364,12 +980,12 @@ void insertIntersect(struct Node *list, double x, double y, double z, double u1,
 
   /* when u2 != 0 and u2 !=1, can decide if one end of the point is outside depending on inbound value */
   if(u2 != 0 && u2 != 1) {
-    if(inbound == 1) { /* goes outside, then temp1->Next is an outside point */
+    if(inbound == 1) { /* goes outside, then temp1->Next_gpu is an outside point */
       /* find the next non-intersect point */
-      temp2 = temp1->Next;
+      temp2 = temp1->Next_gpu;
       if(!temp2) temp2 = list;
       while(temp2->intersect) {
-         temp2=temp2->Next;
+         temp2=temp2->Next_gpu;
          if(!temp2) temp2 = list;
       }
 
@@ -1380,7 +996,7 @@ void insertIntersect(struct Node *list, double x, double y, double z, double u1,
     }
   }
 
-  temp2 = temp1->Next;
+  temp2 = temp1->Next_gpu;
   while ( temp2 ) {
     if( temp2->intersect == 1 ) {
       if( temp2->u > u_cur ) {
@@ -1390,11 +1006,11 @@ void insertIntersect(struct Node *list, double x, double y, double z, double u1,
     else
       break;
     temp1 = temp2;
-    temp2 = temp2->Next;
+    temp2 = temp2->Next_gpu;
   }
 
   /* assign value */
-  temp = getNext();
+  temp = getNext_gpu();
   temp->x = x;
   temp->y = y;
   temp->z = z;
@@ -1403,14 +1019,14 @@ void insertIntersect(struct Node *list, double x, double y, double z, double u1,
   temp->inbound = inbound;
   temp->isInside = 1;
   temp->initialized = 1;
-  temp1->Next = temp;
-  temp->Next = temp2;
+  temp1->Next_gpu = temp;
+  temp->Next_gpu = temp2;
 
 }
 
-double gridArea(struct Node *grid) {
+double gridArea_gpu(struct Node_gpu *grid) {
   double x[20], y[20], z[20];
-  struct Node *temp=NULL;
+  struct Node_gpu *temp=NULL;
   double area;
   int n;
 
@@ -1421,35 +1037,35 @@ double gridArea(struct Node *grid) {
     y[n] = temp->y;
     z[n] = temp->z;
     n++;
-    temp = temp->Next;
+    temp = temp->Next_gpu;
   }
 
-  area = great_circle_area(n, x, y, z);
+  area = great_circle_area_gpu(n, x, y, z);
 
   return area;
 
 }
 
-int isIntersect(struct Node node) {
+int isIntersect_gpu(struct Node_gpu node) {
 
   return node.intersect;
 
 }
 
 
-int getInbound( struct Node node )
+int getInbound_gpu( struct Node_gpu node )
 {
   return node.inbound;
 }
 
-struct Node *getLast(struct Node *list)
+struct Node_gpu *getLast_gpu(struct Node_gpu *list)
 {
-  struct Node *temp1;
+  struct Node_gpu *temp1;
 
   temp1 = list;
   if( temp1 ) {
-    while( temp1->Next ) {
-      temp1 = temp1->Next;
+    while( temp1->Next_gpu ) {
+      temp1 = temp1->Next_gpu;
     }
   }
 
@@ -1457,24 +1073,24 @@ struct Node *getLast(struct Node *list)
 }
 
 
-int getFirstInbound( struct Node *list, struct Node *nodeOut)
+int getFirstInbound_gpu( struct Node_gpu *list, struct Node_gpu *nodeOut)
 {
-  struct Node *temp=NULL;
+  struct Node_gpu *temp=NULL;
 
   temp=list;
 
   while(temp) {
     if( temp->inbound == 2 ) {
-      copyNode(nodeOut, *temp);
+      copyNode_gpu(nodeOut, *temp);
       return 1;
     }
-    temp=temp->Next;
+    temp=temp->Next_gpu;
   }
 
   return 0;
 }
 
-void getCoordinate(struct Node node, double *x, double *y, double *z)
+void getCoordinate_gpu(struct Node_gpu node, double *x, double *y, double *z)
 {
 
 
@@ -1484,7 +1100,7 @@ void getCoordinate(struct Node node, double *x, double *y, double *z)
 
 }
 
-void getCoordinates(struct Node *node, double *p)
+void getCoordinates_gpu(struct Node_gpu *node, double *p)
 {
 
 
@@ -1494,7 +1110,7 @@ void getCoordinates(struct Node *node, double *p)
 
 }
 
-void setCoordinate(struct Node *node, double x, double y, double z)
+void setCoordinate_gpu(struct Node_gpu *node, double x, double y, double z)
 {
 
 
@@ -1508,16 +1124,16 @@ void setCoordinate(struct Node *node, double x, double y, double z)
    this will also set some inbound value of the points in list1
 */
 
-void setInbound(struct Node *interList, struct Node *list)
+void setInbound_gpu(struct Node_gpu *interList, struct Node_gpu *list)
 {
 
-  struct Node *temp1=NULL, *temp=NULL;
-  struct Node *temp1_prev=NULL, *temp1_next=NULL;
+  struct Node_gpu *temp1=NULL, *temp=NULL;
+  struct Node_gpu *temp1_prev=NULL, *temp1_next=NULL;
   int prev_is_inside, next_is_inside;
 
   /* for each point in interList, search through list to decide the inbound value the interList point */
   /* For each inbound point, the prev node should be outside and the next is inside. */
-  if(length(interList) == 0) return;
+  if(length_gpu(interList) == 0) return;
 
   temp = interList;
 
@@ -1529,28 +1145,28 @@ void setInbound(struct Node *interList, struct Node *list)
       temp1_prev = NULL;
       temp1_next = NULL;
       while(temp1) {
-   if(sameNode(*temp1, *temp)) {
-     if(!temp1_prev) temp1_prev = getLast(list);
-     temp1_next = temp1->Next;
+   if(sameNode_gpu(*temp1, *temp)) {
+     if(!temp1_prev) temp1_prev = getLast_gpu(list);
+     temp1_next = temp1->Next_gpu;
      if(!temp1_next) temp1_next = list;
      break;
    }
    temp1_prev = temp1;
-   temp1 = temp1->Next;
+   temp1 = temp1->Next_gpu;
       }
-      if(!temp1_next) error_handler("Error from create_xgrid.c: temp is not in list1");
+      if(!temp1_next) printf("ERROR from create_xgrid.c: temp is not in list1\n");
       if( temp1_prev->isInside == 0 && temp1_next->isInside == 1)
    temp->inbound = 2;   /* go inside */
       else
    temp->inbound = 1;
     }
-    temp=temp->Next;
+    temp=temp->Next_gpu;
   }
 }
 
-int isInside(struct Node *node) {
+int isInside_gpu(struct Node_gpu *node) {
 
-  if(node->isInside == -1) error_handler("Error from mosaic_util.c: node->isInside is not set");
+  if(node->isInside == -1) printf("ERROR from mosaic_util.c: node->isInside is not set\n");
   return(node->isInside);
 
 }
@@ -1558,12 +1174,12 @@ int isInside(struct Node *node) {
 /*  #define debug_test_create_xgrid */
 
 /* check if node is inside polygon list or not */
- int insidePolygon( struct Node *node, struct Node *list)
+ int insidePolygon_gpu( struct Node_gpu *node, struct Node_gpu *list)
 {
   int i, ip, is_inside;
   double pnt0[3], pnt1[3], pnt2[3];
   double anglesum;
-  struct Node *p1=NULL, *p2=NULL;
+  struct Node_gpu *p1=NULL, *p2=NULL;
 
   anglesum = 0;
 
@@ -1572,7 +1188,7 @@ int isInside(struct Node *node) {
   pnt0[2] = node->z;
 
   p1 = list;
-  p2 = list->Next;
+  p2 = list->Next_gpu;
   is_inside = 0;
 
 
@@ -1583,10 +1199,10 @@ int isInside(struct Node *node) {
     pnt2[0] = p2->x;
     pnt2[1] = p2->y;
     pnt2[2] = p2->z;
-    if(samePoint(pnt0[0], pnt0[1], pnt0[2], pnt1[0], pnt1[1], pnt1[2])) return 1;
-    anglesum += spherical_angle(pnt0, pnt2, pnt1);
-    p1 = p1->Next;
-    p2 = p2->Next;
+    if(samePoint_gpu(pnt0[0], pnt0[1], pnt0[2], pnt1[0], pnt1[1], pnt1[2])) return 1;
+    anglesum += spherical_angle_gpu(pnt0, pnt2, pnt1);
+    p1 = p1->Next_gpu;
+    p2 = p2->Next_gpu;
     if(p2==NULL)p2 = list;
   }
 
@@ -1595,15 +1211,11 @@ int isInside(struct Node *node) {
   else
     is_inside = 0;
 
-#ifdef debug_test_create_xgrid
-  printf("anglesum-2PI is %19.15f, is_inside = %d\n", anglesum- 2*M_PI, is_inside);
-#endif
-
   return is_inside;
 
 }
 
-int inside_a_polygon(double *lon1, double *lat1, int *npts, double *lon2, double *lat2)
+int inside_a_polygon_gpu(double *lon1, double *lat1, int *npts, double *lon2, double *lat2)
 {
 
   double x2[20], y2[20], z2[20];
@@ -1611,64 +1223,51 @@ int inside_a_polygon(double *lon1, double *lat1, int *npts, double *lon2, double
   double min_x2, max_x2, min_y2, max_y2, min_z2, max_z2;
   int isinside, i;
 
-  struct Node *grid1=NULL, *grid2=NULL;
+  struct Node_gpu *grid1=NULL, *grid2=NULL;
 
   /* first convert to cartesian grid */
-  latlon2xyz(*npts, lon2, lat2, x2, y2, z2);
-  latlon2xyz(1, lon1, lat1, &x1, &y1, &z1);
+  latlon2xyz_gpu(*npts, lon2, lat2, x2, y2, z2);
+  latlon2xyz_gpu(1, lon1, lat1, &x1, &y1, &z1);
 
-  max_x2 = maxval_double(*npts, x2);
+  max_x2 = maxval_double_gpu(*npts, x2);
   if(x1 >= max_x2+RANGE_CHECK_CRITERIA) return 0;
-  min_x2 = minval_double(*npts, x2);
+  min_x2 = minval_double_gpu(*npts, x2);
   if(min_x2 >= x1+RANGE_CHECK_CRITERIA) return 0;
 
-  max_y2 = maxval_double(*npts, y2);
+  max_y2 = maxval_double_gpu(*npts, y2);
   if(y1 >= max_y2+RANGE_CHECK_CRITERIA) return 0;
-  min_y2 = minval_double(*npts, y2);
+  min_y2 = minval_double_gpu(*npts, y2);
   if(min_y2 >= y1+RANGE_CHECK_CRITERIA) return 0;
 
-  max_z2 = maxval_double(*npts, z2);
+  max_z2 = maxval_double_gpu(*npts, z2);
   if(z1 >= max_z2+RANGE_CHECK_CRITERIA) return 0;
-  min_z2 = minval_double(*npts, z2);
+  min_z2 = minval_double_gpu(*npts, z2);
   if(min_z2 >= z1+RANGE_CHECK_CRITERIA) return 0;
 
 
-  /* add x2,y2,z2 to a Node */
-  rewindList();
-  grid1 = getNext();
-  grid2 = getNext();
+  /* add x2,y2,z2 to a Node_gpu */
+  rewindList_gpu();
+  grid1 = getNext_gpu();
+  grid2 = getNext_gpu();
 
-  addEnd(grid1, x1, y1, z1, 0, 0, 0, -1);
-  for(i=0; i<*npts; i++) addEnd(grid2, x2[i], y2[i], z2[i], 0, 0, 0, -1);
+  addEnd_gpu(grid1, x1, y1, z1, 0, 0, 0, -1);
+  for(i=0; i<*npts; i++) addEnd_gpu(grid2, x2[i], y2[i], z2[i], 0, 0, 0, -1);
 
-  isinside = insidePolygon(grid1, grid2);
-
-  return isinside;
-
-}
-
-#ifndef __AIX
-int inside_a_polygon_(double *lon1, double *lat1, int *npts, double *lon2, double *lat2)
-{
-
-  int isinside;
-
-  isinside = inside_a_polygon(lon1, lat1, npts, lon2, lat2);
+  isinside = insidePolygon_gpu(grid1, grid2);
 
   return isinside;
 
 }
-#endif
 
 /*
   is_near_pole() reuturns 1 if a polygon has any point with a latitude
   within a threshold from the CGS poles (i.e. near +- Pi/2).
    Otherwise returns 0.
 */
-int is_near_pole(const double y[], int n) {
+int is_near_pole_gpu(const double y[], int n) {
   int pole = 0;
   for (int i = 0; i < n; i++) {
-    if ((fabs(y[i]) + from_pole_threshold_rad) > M_PI_2 ) {
+    if ((fabs(y[i]) + from_pole_threshold_rad_gpu) > M_PI_2 ) {
       pole = 1;
       break;
     }
@@ -1681,7 +1280,7 @@ int is_near_pole(const double y[], int n) {
   sides of a pole. i.e. if the longitudes are seperated by about Pi. Note, for realistic
   data (not huge polygons), if crosses_pole() reutrns 1, so should is_near_pole().
 */
-int crosses_pole(const double x[] , int n) {
+int crosses_pole_gpu(const double x[] , int n) {
   int has_cl = 0;
   for (int i = 0; i < n; i++) {
     int im = (i + n - 1) % n;
@@ -1696,33 +1295,34 @@ int crosses_pole(const double x[] , int n) {
 }
 
 /*
-  Set the_rotation_matrix  global variable.
+  Set the_rotation_matrix_gpu  global variable.
   The rotation is 45 degrees and about the vector with orign at
   earths center and the direction <0,1,1>/SQRT(2).  I.e. a big
   rotation away from the pole if what is being rotaed is near a pole.
   For rotation matricies formulas and examples, see F.S.Hill, Computer
   Graphics Using OpenGL, @nd ed., Chapter 5.3.
 */
-void set_the_rotation_matrix() {
-  static const double is2 = 1.0 /M_SQRT2;
+void set_the_rotation_matrix_gpu() {
+  double is2 = 1.0 /M_SQRT2;
 
-  static const double m00 = 0;
-  static const double m01 = - is2;
-  static const double m02 = is2;
-  static const double m11 = 1.0/2;
-  static const double m12 = 0.5;
+  double m00 = 0;
+  double m01 = - is2;
+  double m02 = is2;
+  double m11 = 1.0/2;
+  double m12 = 0.5;
 
-  static const double m[3][3] = { {m00, m01, m02}, {m02, m11, m12},{m01, m12, m11} };
+  double m[3][3] = { {m00, m01, m02}, {m02, m11, m12},{m01, m12, m11} };
 
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
-      the_rotation_matrix[i][j] = m[i][j];
+      the_rotation_matrix_gpu[i][j] = m[i][j];
     }
   }
+#pragma acc data update device(the_rotation_matrix_gpu[:3][:3])
 }
 
 /* Rotate point given the passed in rotation matrix  */
-void rotate_point(double rv[], double rmat [][3]) {
+void rotate_point_gpu(double rv[], double rmat [][3]) {
   double v[3];
 
   for (int i = 0; i < 3; i++) {
@@ -1738,14 +1338,185 @@ void rotate_point(double rv[], double rmat [][3]) {
 
 /*
   Rotate polygon defined by x[], y[] points and store in xr[], yr[]*/
-void rotate_poly(const double x[], const double y[], const int n, double xr[], double yr[]) {
+void rotate_poly_gpu(const double x[], const double y[], const int n, double xr[], double yr[]) {
   double sv[2]; //a rotated lat/lon
   double rv[3]; //rotated xyz point
   for (int i = 0; i < n; i++) {
-    latlon2xyz(1, &x[i], &y[i], &rv[0], &rv[1], &rv[2]);
-    rotate_point(rv, the_rotation_matrix);
-    xyz2latlon(1, &rv[0], &rv[1], &rv[2], &sv[0], &sv[1]);
+    latlon2xyz_gpu(1, &x[i], &y[i], &rv[0], &rv[1], &rv[2]);
+    rotate_point_gpu(rv, the_rotation_matrix_gpu);
+    xyz2latlon_gpu(1, &rv[0], &rv[1], &rv[2], &sv[0], &sv[1]);
     xr[i] = sv[0];
     yr[i] = sv[1];
   }
+}
+
+void pimod_gpu(double x[],int nn)
+{
+  for (int i=0;i<nn;i++) {
+    if      (x[i] < -M_PI) x[i] += TPI;
+    else if (x[i] >  M_PI) x[i] -= TPI;
+  }
+}
+
+/*******************************************************************************
+ int inside_edge(double x0, double y0, double x1, double y1, double x, double y)
+ determine a point(x,y) is inside or outside a given edge with vertex,
+ (x0,y0) and (x1,y1). return 1 if inside and 0 if outside. <y1-y0, -(x1-x0)> is
+ the outward edge normal from vertex <x0,y0> to <x1,y1>. <x-x0,y-y0> is the vector
+ from <x0,y0> to <x,y>.
+ if Inner produce <x-x0,y-y0>*<y1-y0, -(x1-x0)> > 0, outside, otherwise inside.
+ inner product value = 0 also treate as inside.
+*******************************************************************************/
+int inside_edge_gpu(double x0, double y0, double x1, double y1, double x, double y)
+{
+   const double SMALL = 1.e-12;
+   double product;
+
+   product = ( x-x0 )*(y1-y0) + (x0-x1)*(y-y0);
+   return (product<=SMALL) ? 1:0;
+
+ }; /* inside_edge */
+
+/* Intersects between the line a and the seqment s
+   where both line and segment are great circle lines on the sphere represented by
+   3D cartesian points.
+   [sin sout] are the ends of a line segment
+   returns true if the lines could be intersected, false otherwise.
+   inbound means the direction of (a1,a2) go inside or outside of (q1,q2,q3)
+*/
+int line_intersect_2D_3D_gpu(double *a1, double *a2, double *q1, double *q2, double *q3,
+                             double *intersect, double *u_a, double *u_q, int *inbound){
+
+  /* Do this intersection by reprsenting the line a1 to a2 as a plane through the
+     two line points and the origin of the sphere (0,0,0). This is the
+     definition of a great circle arc.
+  */
+  double plane[9];
+  double plane_p[2];
+  double u;
+  double p1[3], v1[3], v2[3];
+  double c1[3], c2[3], c3[3];
+  double coincident, sense, norm;
+  int    i;
+  int is_inter1, is_inter2;
+
+  *inbound = 0;
+
+  /* first check if any vertices are the same */
+  if(samePoint_gpu(a1[0], a1[1], a1[2], q1[0], q1[1], q1[2])) {
+    *u_a = 0;
+    *u_q = 0;
+    intersect[0] = a1[0];
+    intersect[1] = a1[1];
+    intersect[2] = a1[2];
+    return 1;
+   }
+   else if (samePoint_gpu(a1[0], a1[1], a1[2], q2[0], q2[1], q2[2])) {
+    *u_a = 0;
+    *u_q = 1;
+    intersect[0] = a1[0];
+    intersect[1] = a1[1];
+    intersect[2] = a1[2];
+    return 1;
+  }
+   else if(samePoint_gpu(a2[0], a2[1], a2[2], q1[0], q1[1], q1[2])) {
+    *u_a = 1;
+    *u_q = 0;
+    intersect[0] = a2[0];
+    intersect[1] = a2[1];
+    intersect[2] = a2[2];
+    return 1;
+   }
+   else if (samePoint_gpu(a2[0], a2[1], a2[2], q2[0], q2[1], q2[2])) {
+    *u_a = 1;
+    *u_q = 1;
+    intersect[0] = a2[0];
+    intersect[1] = a2[1];
+    intersect[2] = a2[2];
+    return 1;
+  }
+
+
+  /* Load points defining plane into variable (these are supposed to be in counterclockwise order) */
+  plane[0]=q1[0];
+  plane[1]=q1[1];
+  plane[2]=q1[2];
+  plane[3]=q2[0];
+  plane[4]=q2[1];
+  plane[5]=q2[2];
+  plane[6]=0.0;
+  plane[7]=0.0;
+  plane[8]=0.0;
+  /* Intersect the segment with the plane */
+  is_inter1 = intersect_tri_with_line_gpu(plane, a1, a2, plane_p, u_a);
+
+  if(!is_inter1)
+     return 0;
+
+  if(fabs(*u_a) < EPSLN8) *u_a = 0;
+  if(fabs(*u_a-1) < EPSLN8) *u_a = 1;
+
+  if( (*u_a < 0) || (*u_a > 1) ) return 0;
+
+  /* Load points defining plane into variable (these are supposed to be in counterclockwise order) */
+  plane[0]=a1[0];
+  plane[1]=a1[1];
+  plane[2]=a1[2];
+  plane[3]=a2[0];
+  plane[4]=a2[1];
+  plane[5]=a2[2];
+  plane[6]=0.0;
+  plane[7]=0.0;
+  plane[8]=0.0;
+
+  /* Intersect the segment with the plane */
+  is_inter2 = intersect_tri_with_line_gpu(plane, q1, q2, plane_p, u_q);
+
+  if(!is_inter2)
+     return 0;
+
+  if(fabs(*u_q) < EPSLN8) *u_q = 0;
+  if(fabs(*u_q-1) < EPSLN8) *u_q = 1;
+
+  if( (*u_q < 0) || (*u_q > 1) ) return 0;
+
+  u =*u_a;
+
+  /* The two planes are coincidental */
+  vect_cross_gpu(a1, a2, c1);
+  vect_cross_gpu(q1, q2, c2);
+  vect_cross_gpu(c1, c2, c3);
+  coincident = metric_gpu(c3);
+
+  if(fabs(coincident) < EPSLN30) return 0;
+
+  /* Calculate point of intersection */
+  intersect[0]=a1[0] + u*(a2[0]-a1[0]);
+  intersect[1]=a1[1] + u*(a2[1]-a1[1]);
+  intersect[2]=a1[2] + u*(a2[2]-a1[2]);
+
+  norm = metric_gpu( intersect );
+  for(i = 0; i < 3; i ++) intersect[i] /= norm;
+
+  /* when u_q =0 or u_q =1, the following could not decide the inbound value */
+  if(*u_q != 0 && *u_q != 1){
+    p1[0] = a2[0]-a1[0];
+    p1[1] = a2[1]-a1[1];
+    p1[2] = a2[2]-a1[2];
+    v1[0] = q2[0]-q1[0];
+    v1[1] = q2[1]-q1[1];
+    v1[2] = q2[2]-q1[2];
+    v2[0] = q3[0]-q2[0];
+    v2[1] = q3[1]-q2[1];
+    v2[2] = q3[2]-q2[2];
+
+    vect_cross_gpu(v1, v2, c1);
+    vect_cross_gpu(v1, p1, c2);
+
+    sense = dot_gpu(c1, c2);
+    *inbound = 1;
+    if(sense > 0) *inbound = 2; /* v1 going into v2 in CCW sense */
+  }
+
+  return 1;
 }

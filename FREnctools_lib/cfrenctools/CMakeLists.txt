@@ -8,6 +8,18 @@ list(APPEND c_source_files
   make_hgrid/create_lonlat_grid.c
   make_mosaic/get_contact.c
   make_topog/topog.c
+  shared/create_xgrid.c
+  shared/create_xgrid_gpu.c
+  shared/create_xgrid_utils_gpu.c
+  shared/general_utils_gpu.c
+  shared/gradient_c2l.c
+  shared/interp.c
+  shared/mosaic_util.c
+  shared/mpp.c
+  shared/mpp_domain.c
+  shared/mpp_io.c
+  shared/read_mosaic.c
+  shared/tool_util.c
 )
 
 execute_process(
