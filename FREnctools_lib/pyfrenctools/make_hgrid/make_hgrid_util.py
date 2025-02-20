@@ -827,7 +827,7 @@ def create_f_plane_grid(
         xbnds_p,
         ybnds_p,
         nlon_p,
-        nlat_t,
+        nlat_p,
         dlon_p,
         dlat_p,
         use_legacy_c,

@@ -23,7 +23,6 @@
 #include <math.h>
 #include <unistd.h>
 #include <time.h>
-#include "config.h"
 #include "constant.h"
 #include "mosaic_util.h"
 #include "read_mosaic.h"
@@ -790,13 +789,13 @@ void print_provenance_gv_gca(int fid, const char *history, char *grid_version, i
     mpp_def_global_att(fid, "grid_version", grid_version);
   }
 
-  mpp_def_global_att(fid, "code_release_version", PACKAGE_VERSION);  // from autotools config.h
+  //mpp_def_global_att(fid, "code_release_version", PACKAGE_VERSION);  // from autotools config.h
 
   if (gca_flag != 0) {
     mpp_def_global_att(fid, "great_circle_algorithm", "TRUE");
   }
 
-  mpp_def_global_att(fid, "git_hash", GIT_HEADHASH);
+  //mpp_def_global_att(fid, "git_hash", GIT_HEADHASH);
 
   mpp_def_global_att(fid, "creationtime", crTimeStringNoNL);
 
