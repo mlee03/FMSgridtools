@@ -14,12 +14,14 @@ class CustomInstall(install):
                 cwd="./FREnctools_lib/cfrenctools/c_build", 
                 stdout=f,
                 stderr=subprocess.STDOUT,
+                check=True,
             )
             subprocess.run(
                 ["make"], 
                 cwd="./FREnctools_lib/cfrenctools/c_build", 
                 stdout=f,
                 stderr=subprocess.STDOUT,
+                check=True,
             )
         install.run(self)
 
