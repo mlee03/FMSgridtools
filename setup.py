@@ -35,6 +35,7 @@ extras_requires = {
 
 requirements: List[str] = [
     "click",
+    "gitpython",
     "h5netcdf",
     "h5py",
     "numpy",
