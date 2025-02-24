@@ -35,6 +35,7 @@ extras_requires = {
 
 requirements: List[str] = [
     "click",
+    "gitpython",
     "h5netcdf",
     "h5py",
     "numpy",
@@ -57,8 +58,8 @@ setup(
     cmdclass={'install': CustomInstall},
     entry_points={
         "console_scripts": [
-            "fmsgridtools make_hgrid = fmsgridtools.make_grid.hgrid.make_hgrid:main",
-            "make_topog = fmsgridtools.make_topog.make_topog:make_topog",
+            "fmsgridtools make_hgrid = FMSgridtools.make_hgrid.make_hgrid:main",
+            "fmsgridtools make_topog = fmsgridtools.make_topog.make_topog:make_topog",
         ]
     },
 )
