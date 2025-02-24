@@ -96,8 +96,7 @@ def create_regular_lonlat_grid(
     nlat_p, nlat_t = setarray_Cint32(nlat)
     dlon_p, dlon_t = setarray_Cdouble(dlon)
     dlat_p, dlat_t = setarray_Cdouble(dlat)
-    use_legacy_c = ctypes.c_int(use_legacy)
-    use_legacy_t = ctypes.POINTER(ctypes.c_int)
+    use_legacy_c, use_legacy_t = setscalar_Cint32(use_legacy)
     isc_c, isc_t = setscalar_Cint32(isc)
     iec_c, iec_t = setscalar_Cint32(iec)
     jsc_c, jsc_t = setscalar_Cint32(jsc)
@@ -109,8 +108,7 @@ def create_regular_lonlat_grid(
     area_p, area_t = setarray_Cdouble(area)
     angle_dx_p, angle_dx_t = setarray_Cdouble(angle_dx)
     center_c, center_t = set_Cchar(center)
-    use_great_circle_algorithm_c = ctypes.c_int(use_great_circle_algorithm)
-    use_great_circle_algorithm_t = ctypes.POINTER(ctypes.c_int)
+    use_great_circle_algorithm_c, use_great_circle_algorithm_t = setscalar_Cint32(use_great_circle_algorithm)
 
     _create_regular_lonlat_grid.argtypes = [
         nxbnds_t,
@@ -196,8 +194,7 @@ def create_tripolar_grid(
     nlat_p, nlat_t = setarray_Cint32(nlat)
     dlon_p, dlon_t = setarray_Cdouble(dlon)
     dlat_p, dlat_t = setarray_Cdouble(dlat)
-    use_legacy_c = ctypes.c_int(use_legacy)
-    use_legacy_t = ctypes.POINTER(ctypes.c_int)
+    use_legacy_c, use_legacy_t = setscalar_Cint32(use_legacy)
     lat_join_in_c, lat_join_in_t = setscalar_Cdouble(lat_join_in)
     isc_c, isc_t = setscalar_Cint32(isc)
     iec_c, iec_t = setscalar_Cint32(iec)
@@ -210,10 +207,8 @@ def create_tripolar_grid(
     area_p, area_t = setarray_Cdouble(area)
     angle_dx_p, angle_dx_t = setarray_Cdouble(angle_dx)
     center_c, center_t = set_Cchar(center)
-    verbose_c = ctypes.c_int(verbose)
-    verbose_t = ctypes.POINTER(ctypes.c_int)
-    use_great_circle_algorithm_c = ctypes.c_int(use_great_circle_algorithm)
-    use_great_circle_algorithm_t = ctypes.POINTER(ctypes.c_int)
+    verbose_c, verbose_t = setscalar_Cint32(verbose)
+    use_great_circle_algorithm_c, use_great_circle_algorithm_t = setscalar_Cint32(use_great_circle_algorithm)
 
     _create_tripolar_grid.argtypes = [
         nxbnds_t,
@@ -292,8 +287,7 @@ def create_grid_from_file(
     dy_p, dy_t = setarray_Cdouble(dy)
     area_p, area_t = setarray_Cdouble(area)
     angle_dx_p, angle_dx_t = setarray_Cdouble(angle_dx)
-    use_great_circle_algorithm_c = ctypes.c_int(use_great_circle_algorithm)
-    use_great_circle_algorithm_t = ctypes.c_int
+    use_great_circle_algorithm_c, use_great_circle_algorithm_t = setscalar_Cint32(use_great_circle_algorithm)
     use_angular_midpoint_c = ctypes.c_int(use_angular_midpoint)
     use_angular_midpoint_t = ctypes.c_int
 
@@ -432,8 +426,7 @@ def create_spectral_grid(
     dy_p, dy_t = setarray_Cdouble(dy)
     area_p, area_t = setarray_Cdouble(area)
     angle_dx_p, angle_dx_t = setarray_Cdouble(angle_dx)
-    use_great_circle_algorithm_c = ctypes.c_int(use_great_circle_algorithm)
-    use_great_circle_algorithm_t = ctypes.c_int
+    use_great_circle_algorithm_c, use_great_circle_algorithm_t = setscalar_Cint32(use_great_circle_algorithm)
 
     _create_spectral_grid.argtypes = [
         nlon_t,
@@ -537,7 +530,7 @@ def create_gnomonic_cubic_grid_GR(
         angle_dx: npt.NDArray[np.float64],
         angle_dy: npt.NDArray[np.float64],
         shift_fac: float,
-        do_schmidt: int,
+        do_schmidt: bool,
         do_cube_transform: int,
         stretch_factor: float,
         target_lon: float,
