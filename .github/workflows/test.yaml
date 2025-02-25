@@ -1,0 +1,32 @@
+name: Install package and run pytests 
+
+on: [push, pull_request]
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/noaa-gfdl/fre-cli:miniconda24.7.1_gcc14.2.0
+      env:
+        NetCDF_INCLUDE_DIRS: "/opt/views/view/include/"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+      - name: Set up conda environment 
+        run: |
+          # sets CONDA to wherever it may be on the image
+          source /root/.bashrc
+          # create env
+          conda create -y --name FMSgridtools cmake pip pytest
+          # add to path
+          echo "$CONDA/envs/FMSgridtools/bin" >> $GITHUB_PATH
+      - name: Install FMSgridtools package
+        run: |
+          source /root/.bashrc
+          export PATH="$PATH:$CONDA/envs/FMSgridtools/bin"
+          which cmake
+          $CONDA/envs/FMSgridtools/bin/pip install .
+          cat compile_log.txt
+      - name: Run pytest (just link test for now)
+        run: pytest tests/shared/test_libs.py 
