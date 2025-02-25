@@ -2,7 +2,7 @@ import pytest
 import os
 import numpy as np
 from click.testing import CliRunner
-from FMSgridtools.shared.gridobj import GridObj
+from FMSgridtools.shared.mosaicobj import MosaicObj
 
 gridfiles = [f'grid.tile{x}.nc' for x in range(6)]
 gridtiles = [f'tile{x}' for x in range(6)]
