@@ -23,7 +23,6 @@
 #include <math.h>
 #include <unistd.h>
 #include <time.h>
-//#include "config.h"
 #include "constant.h"
 #include "mosaic_util.h"
 #include "read_mosaic.h"
