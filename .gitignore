@@ -22,3 +22,9 @@ MANIFEST
 *.nc
 *.pyc
 *__pycache__
+CMakeCache.txt
+*.so
+FRENCTools_lib/cfrenctools/CMakeFiles/
+FRENCTools_lib/cfrenctools/c_build/
+Makefile
+compile_log.txt
