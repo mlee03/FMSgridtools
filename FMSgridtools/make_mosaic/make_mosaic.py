@@ -170,10 +170,8 @@ def make_solo_mosaic(
         grid_data = {}
         for tile in gridtiles:
             grid_data[tile] = {}
-            xvals = mosaic.grid_dict[tile].x
-            grid_data[tile]['x'] = xvals
-            yvals = mosaic.grid_dict[tile].y
-            grid_data[tile]['y'] = yvals
+            grid_data[tile]['x'] = mosaic.grid_dict[tile].x
+            grid_data[tile]['y'] = mosaic.grid_dict[tile].y
             nxp = mosaic.grid_dict[tile].x.shape
             grid_data[tile]['nxp'] = nxp[1]
             nyp = mosaic.grid_dict[tile].y.shape
@@ -213,7 +211,7 @@ def make_solo_mosaic(
         print(f"NOTE: There are {ncontact} contacts\n")
 
         if ncontact > 0:
-            mosaic = MosaicObj(mosaic_name,
+            mosaic = MosaicObj(mosaic_name=mosaic_name,
                                gridlocation=dir,
                                gridfiles=tilefiles,
                                gridtiles=np.asarray(gridtiles),
