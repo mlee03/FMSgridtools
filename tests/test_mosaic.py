@@ -25,8 +25,8 @@ def test_getntiles():
     assert ntiles == 6
 
 def test_getgridfiles():
-    mosaic2 = MosaicObj(mosaic_file=output)
-    assert mosaic2.gridfiles == gridfiles
+    mosaic = MosaicObj(mosaic_file=output)
+    assert mosaic.gridfiles == gridfiles
     os.remove(output)
 
 def test_solo_mosaic():

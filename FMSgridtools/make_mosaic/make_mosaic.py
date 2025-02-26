@@ -4,6 +4,7 @@ import xarray as xr
 import numpy as np
 from FMSgridtools.shared.gridobj import GridObj
 from FMSgridtools.shared.mosaicobj import MosaicObj
+from FMSgridtools.make_mosaic.regionalgridobj import RegionalGridObj
 
 ATMOS_MOSAIC_HELP = "specify the atmosphere mosaic information \
     This file contains list of tile files which specify \
@@ -254,16 +255,9 @@ def make_regional_mosaic(
         yt = global_m.grid_dict[f'tile{tile}'].y
         yarr = yt[round(2*j_min - 2):round(2*j_min - 2 + 2*ny+1), round(2*i_min - 2):round(2*i_min - 2 + 2*nx+1)]
 
-        tile = xr.DataArray(data=f'tile{tile}', attrs=dict(standard_name="grid_tile_spec")).astype('|S255')
-        x = xr.DataArray(data=xarr, dims=["nyp", "nxp"], attrs=dict(
-            standard_name="geographic_longitude", units="degree_east"))
-        y = xr.DataArray(data=yarr, dims=["nyp", "nxp"], attrs=dict(
-            standard_name="geographic_latitude", units="degree_north"))
-
-        out_grid = xr.Dataset(data_vars={"tile": tile, "x": x, "y": y})
-
-        grid = GridObj(out_grid)
-        grid.write_out_grid(f"regional_grid.tile{tile}.nc")
+        regional_grid = RegionalGridObj(tile, xarr,
+                                        yarr)
+        regional_grid.write_out_regional_grid(f"regional_grid.tile{tile}.nc")
 
         print("\nCongratulations: You have successfully run make_regional_mosaic")
 
