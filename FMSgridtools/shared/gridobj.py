@@ -20,8 +20,7 @@ class GridObj:
     def __post_init__(self):
         if self.grid_file is not None:
             check_file_is_there(self.grid_file)
-            with xr.open_dataset(self.grid_file) as ds:
-                self.dataset = ds
+            self.dataset = xr.open_dataset(self.grid_file)
 
     """
     from_file:
@@ -33,11 +32,10 @@ class GridObj:
     @classmethod
     def from_file(cls, filepath: str) -> "GridObj":
         check_file_is_there(filepath)
-        with xr.open_dataset(filepath) as ds:
-            return cls(
-                dataset=ds,
-                grid_file=filepath,
-            )
+        return cls(
+            dataset=xr.open_dataset(filepath),
+            grid_file=filepath,
+        )
         
     """
     write_out_grid:
