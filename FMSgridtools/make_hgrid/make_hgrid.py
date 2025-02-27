@@ -535,7 +535,7 @@ MISSING_VALUE = -9999.
     help=("Will print out running time message when this option is set. "
           "Otherwise the run will be silent when there is no error.")
 )
-def main(
+def make_hgrid(
     grid_type: str,
     my_grid_file: Optional[str],
     nxbnds: int,
@@ -1255,4 +1255,4 @@ def main(
     # End of main
 
     if __name__ == "__main__":
-        main()
+        make_hgrid()

@@ -41,6 +41,7 @@ requirements: List[str] = [
     "numpy",
     "xarray",
     "netCDF4",
+    "pyfms @ git+https://github.com/fmalatino/pyFMS.git"
 ]
 
 setup(
@@ -58,7 +59,7 @@ setup(
     cmdclass={'install': CustomInstall},
     entry_points={
         "console_scripts": [
-            "fmsgridtools make_hgrid = FMSgridtools.make_hgrid.make_hgrid:main",
+            "make_hgrid = FMSgridtools.make_hgrid.make_hgrid:make_hgrid",
             "fmsgridtools make_topog = fmsgridtools.make_topog.make_topog:make_topog",
         ]
     },
