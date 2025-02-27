@@ -24,7 +24,6 @@ class MosaicObj:
         if self.mosaic_file is not None and self.gridfiles is None:
             check_file_is_there(self.mosaic_file)
             self.dataset = xr.open_dataset(self.mosaic_file)
-
             self.gridfiles = self.get_gridfiles()
 
     def get_gridfiles(self) -> List:
@@ -43,11 +42,13 @@ class MosaicObj:
                   unable to return number of tiles")
 
     def griddict(self) -> Dict:
-        i = 1
-        for file in self.gridfiles:
-            self.grid_dict[f'tile{i}'] = GridObj.from_file(file)
-            i+=1
-
+        if self.gridtiles is None: 
+            gridtiles = [tile.decode('ascii') for tile in self.dataset.gridtiles.values]
+            for i in range(self.get_ntiles()): 
+                self.grid_dict[gridtiles[i]] = GridObj.from_file(self.gridfiles[i]) 
+        else: 
+            for i in range(len(self.gridfiles)): 
+                self.grid_dict[self.gridtiles[i]] = GridObj.from_file(self.gridfiles[i]) 
 
     def write_out_mosaic(self, outfile:str):
         if self.mosaic_name is not None:
@@ -100,5 +101,33 @@ class MosaicObj:
                         "gridtiles": gridtiles,
                         "contacts": contacts,
                         "contact_index": contact_index})
+
+        out.to_netcdf(outfile)
+
+    def write_out_regional_mosaic(self, outfile:str):
+        if self.mosaic_name is not None:
+            mosaic = xr.DataArray(data=self.mosaic_name,
+                    attrs=dict(
+                        standard_name="grid_mosaic_spec",
+                        contact_regions="contacts",
+                        children="gridtiles",
+                        grid_descriptor="")).astype('|S255')
+        else:
+            mosaic = None
+        if self.gridfiles is not None:
+            gridfiles = xr.DataArray(
+                        data=self.gridfiles, dims=["ntiles"]).astype('|S255')
+        else:
+            gridfiles = None
+        if self.gridtiles is not None:
+            gridtiles = xr.DataArray(
+                        data=self.gridtiles, dims=["ntiles"]).astype('|S255')
+        else:
+            gridtiles = None
+
+        out = xr.Dataset(
+            data_vars={"mosaic": mosaic,
+                        "gridfiles": gridfiles,
+                        "gridtiles": gridtiles})
 
         out.to_netcdf(outfile)
