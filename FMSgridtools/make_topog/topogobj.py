@@ -13,8 +13,10 @@ import ctypes
 class TopogObj():
     output_name: str = None
     ntiles: int = None
-    nx: dict = dataclasses.field(default_factory=dict) 
-    ny: dict = dataclasses.field(default_factory=dict)
+    x_tile: dict = dataclasses.field(default_factory=dict) 
+    y_tile: dict = dataclasses.field(default_factory=dict)
+    nx_tile: dict = dataclasses.field(default_factory=dict) 
+    ny_tile: dict = dataclasses.field(default_factory=dict)
     x_refine: int = None
     y_refine: int = None
     scale_factor: float = None
@@ -33,20 +35,24 @@ class TopogObj():
         self.depth_attrs["units"] = "meters"
 
         # make sure nx/ny dicts are given
-        if self.nx is None or self.ny is None:
+        if self.x_tile is None or self.y_tile is None:
             raise ValueError("No nx/ny dictionaries provided, cannot construct TopogObj")
+        # get number of x/y points
+        for tileName in self.x_tile.keys():
+            self.nx_tile[tileName] = self.x_tile[tileName].shape[0]
+            self.ny_tile[tileName] = self.y_tile[tileName].shape[1]
 
         # adjust nx/ny for refinements and scaling factor
         if self.x_refine is not None:
             print(f"updating nx for x refine value of {self.x_refine}")
-            self.nx.update((tname, val/self.x_refine) for tname, val in self.nx.items()) 
+            self.x_tile.update((tname, val/self.x_refine) for tname, val in self.x_tile.items()) 
         if self.y_refine is not None:
-            print(f"updating ny for y refine value of {self.y_refine}")
-            self.ny.update((tname, val/self.y_refine) for tname, val in self.ny.items()) 
+            print(f"updating y for y refine value of {self.y_refine}")
+            self.y_tile.update((tname, val/self.y_refine) for tname, val in self.y_tile.items()) 
         if self.scale_factor is not None:
-            print(f"updating nx/ny for scale factor value of {self.scale_factor}")
-            self.nx.update((tname, val*self.scale_factor) for tname, val in self.nx.items()) 
-            self.ny.update((tname, val*self.scale_factor) for tname, val in self.ny.items()) 
+            print(f"updating x/y for scale factor value of {self.scale_factor}")
+            self.x_tile.update((tname, val*self.scale_factor) for tname, val in self.x_tile.items()) 
+            self.y_tile.update((tname, val*self.scale_factor) for tname, val in self.y_tile.items())
 
         # set up coordinates and dimensions based off tile count and nx/ny values
         # if single tile exclude tile number in variable name
@@ -89,6 +95,8 @@ class TopogObj():
         self.dataset.to_netcdf(self.output_name)
 
     def make_topog_realistic( self,
+        x_vals_tile: dict = None,
+        y_vals_tile: dict = None,
         topog_file: str = None,
         topog_field: str = None,
         vgrid_file: str = None,
@@ -109,15 +117,12 @@ class TopogObj():
         on_grid: bool = None,
         dont_change_landmask: bool = None,
         dont_adjust_topo: bool = None,
-        dont_open_very_this_cell: bool = None):
+        open_very_this_cell: bool = None):
 
         # first load the C library (this will be replaced with a different method)
         frenct_lib = ctypes.cdll.LoadLibrary("./FREnctools_lib/cfrenctools/c_build/clib.so")
         # get the C function we need
         generate_realistic_c = frenct_lib.create_realistic_topog
-        # TODO init pyFMS, create object, create mpp object based on shared object file
-        
-
         
         ## py
         # void create_realistic_topog(int nx_dst, int ny_dst, const double *x_dst, const double *y_dst, const char *vgrid_file,
@@ -131,7 +136,7 @@ class TopogObj():
 			    #int *num_levels, domain2D domain, int debug, int use_great_circle_algorithm,
                 #int on_grid )
         generate_realistic_c.argtypes = [ ctypes.c_int, ctypes.c_int,                        # nx_dst, ny_dst
-                                          ctypes.c_void_p, ctypes.c_void_p,                  # x_dst, y_dst
+                                          ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int),                  # x_dst, y_dst
                                           ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, # vgrid_file, topog_file, topog_field
                                           ctypes.c_double, ctypes.c_int,                     # scale_factor, tripolar_grid, 
                                           ctypes.c_int, ctypes.c_int,                        # cyclic_x, cyclic_y
@@ -144,7 +149,7 @@ class TopogObj():
                                           ctypes.c_void_p, ctypes.c_int, ctypes.c_int,       # domain, debug, use_great_circle_algo 
                                           ctypes.c_int ]                                     # on_grid
                                           
-        # TODO io done in C for now
+        # TODO io is done in C for now
         # if optional vgrid file is provided, read in the dimension and zeta values
         #if(vgrid_file is not None):
             #check_file_is_there(vgrid_file)
@@ -168,15 +173,73 @@ class TopogObj():
         ## check required arguments 
         if topog_file is None:
             raise ValueError("No argument given for topog_file") 
-        check_file_is_there(topog_file)
+        #check_file_is_there(topog_file)
         if topog_field is None:
             raise ValueError("No argument given for topog_field")
         
         # generate data for each tile
         self.depth_vals = {}
-        for tileName in list(self.nx.keys()):
-            # placeholder data for now
-            self.depth_vals[f"depth_{tileName}"] = np.full( (int(self.ny[tileName]), int(self.nx[tileName])), bottom_depth)
+        for tileName in list(self.nx_tile.keys()):
+            # create temp array for depth output 
+            _depth_temp = np.zeros( (self.ny_tile[tileName], self.nx_tile[tileName]) )
+            # number of grid points
+            _nx_dst = self.nx_tile[tileName]
+            _ny_dst = self.ny_tile[tileName]
+            # get x/y values from grid objs
+            _x_dst = self.x_tile[tileName] 
+            _y_dst = self.y_tile[tileName] 
+            # TODO one of these should be set by 'get_boundary_type' c routine
+            _tripolar_grid = 0 
+            _cyclic_x = 0
+            _cyclic_y = 0
+            # passed in flags (convert to ints) 
+            _fill_first_row = bool_to_int(fill_first_row)
+            _filter_topog = bool_to_int(filter_topog)
+            _num_filter_pass = bool_to_int(num_filter_pass)
+            _smooth_topo_allow_deepening = bool_to_int(smooth_topo_allow_deepening)
+            _round_shallow = bool_to_int(round_shallow)
+            _fill_shadow = bool_to_int(fill_shallow)
+            _deepen_shallow = bool_to_int(deepen_shallow)
+            _full_cell = bool_to_int(full_cell)
+            _flat_bottom = bool_to_int(flat_bottom)
+            _dont_adjust_topo = bool_to_int(dont_adjust_topo)
+            _dont_fill_isolated_cells = bool_to_int(dont_fill_isolated_cells)
+            _dont_change_landmask = bool_to_int(dont_change_landmask)
+            _open_very_this_cell = bool_to_int(open_very_this_cell)
+            _on_grid = bool_to_int(on_grid)
+            # anything else
+            _kmt_min = 0 if kmt_min is None else kmt_min
+            _min_thickness = 0 if min_thickness is None else min_thickness
+            _fraction_full_cell = fraction_full_cell # double
+            _debug = bool_to_int(True)
+            _vgrid_file = None if vgrid_file is None else vgrid_file.encode('utf-8')
+            # TODO this is usally determined by checking the grid files, but doesn't seem commonly used
+            _use_great_circle_algorithm = bool_to_int(False)
+            # init return values for output arrays
+            _depth = np.zeros((_nx_dst, _ny_dst))
+            _num_levels = np.zeros((_nx_dst, _ny_dst), dtype=int)
+
+            # TODO mpp set up
+            # TODO data adjustments/set up done in make_topog.c prior to the c call
+
+            print(f"Calling generate_realistic with nx: {self.nx_tile[tileName]}, ny: {self.ny_tile[tileName]}")
+            generate_realistic_c( _nx_dst, _ny_dst,
+                                  _x_dst.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
+                                  _y_dst.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
+                                  _vgrid_file, topog_file.encode('utf-8'), topog_field.encode('utf-8'),
+                                  self.scale_factor,
+                                  _tripolar_grid, _cyclic_x, _cyclic_y,
+                                  _fill_first_row, _filter_topog, _num_filter_pass,
+                                  _smooth_topo_allow_deepening, _round_shallow, _fill_shadow,
+                                  _deepen_shallow, _full_cell, _flat_bottom,
+                                  _dont_adjust_topo, _dont_fill_isolated_cells, _dont_change_landmask,
+                                  _kmt_min, _min_thickness, _open_very_this_cell,
+                                  _fraction_full_cell, _depth.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                                  _num_levels.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
+                                  None, _debug, _use_great_circle_algorithm, on_grid )
+                
+            self.depth_vals[f"depth_{tileName}"] = _depth 
+        self.__data_is_generated = True
 
     def make_rectangular_basin(self, bottom_depth: float = None):
         self.depth_vals = {}
@@ -222,3 +285,10 @@ class TopogObj():
         dome_embayment_south: float = None,
         dome_embayment_depth: float = None):
         pass
+    
+
+def bool_to_int(bool_val):
+    if(bool_val):
+        return 1
+    else:
+        return 0

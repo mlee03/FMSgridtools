@@ -378,6 +378,8 @@ void create_realistic_topog(int nx_dst, int ny_dst, const double *x_dst, const d
 
   /* read the vertical grid when vgrid_file is defined */
   if( vgrid_file ) {
+    if(debug)
+      printf("opening vgrid file...");
     fid = mpp_open(vgrid_file, MPP_READ);
     nzv = mpp_get_dimlen(fid, "nzv");
     if( (nzv-1)%2 ) mpp_error("topog: size of dimension nzv should be 2*nk+1, where nk is the number of model vertical level");

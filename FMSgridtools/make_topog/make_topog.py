@@ -95,7 +95,7 @@ TOPOG_FILE_OPT_HELP="Specific to 'realistic' topog_type option; path to a netCDF
               type = float,
               default = 0.2,
               help = "")
-@click.option("--dont_open_very_this_cell",
+@click.option("--open_very_this_cell",
               is_flag = True,
               help = "")
 @click.option("--min_thickness",
@@ -221,7 +221,7 @@ def make_topog(
     kmt_min : Optional[int] = None,
     dont_adjust_topo : Optional[bool] = None,
     fraction_full_cell : Optional[float] = None,
-    dont_open_very_this_cell : Optional[bool] = None,
+    open_very_this_cell : Optional[bool] = None,
     min_thickness : Optional[float] = None,
     rotate_poly : Optional[bool] = None,
     on_grid : Optional[bool] = None,
@@ -259,20 +259,23 @@ def make_topog(
     # get all the data we need to generate topographies
     _ntiles = inputMosaicObj.get_ntiles()
     inputMosaicObj.griddict()
-    nx_tile = {}
-    ny_tile = {}
+    x_tile = {}
+    y_tile = {}
     for tileName in inputMosaicObj.grid_dict.keys():
-        nx_tile[tileName] = inputMosaicObj.grid_dict[tileName].x.shape[0]
-        ny_tile[tileName] = inputMosaicObj.grid_dict[tileName].x.shape[1]
+        x_tile[tileName] = inputMosaicObj.grid_dict[tileName].x
+        y_tile[tileName] = inputMosaicObj.grid_dict[tileName].y
 
     # create new TopogStruct for output
-    topogOut = TopogObj(output_name=output, ntiles=_ntiles, global_attrs=prov_attrs, nx = nx_tile, ny = ny_tile,
+    topogOut = TopogObj(output_name=output, ntiles=_ntiles, global_attrs=prov_attrs, x_tile = x_tile, y_tile = y_tile,
                         x_refine=x_refine, y_refine=y_refine, scale_factor=scale_factor)
 
     if (topog_type == "realistic"):
-        topogOut.make_topog_realistic(num_filter_pass, flat_bottom, fill_first_row,
-                                    filter_topog, round_shallow, fill_shallow,
-                                    deepen_shallow, smooth_topo_allow_deepening, vgrid_file)
+        topogOut.make_topog_realistic(
+            x_tile, y_tile, topog_file, topog_field, vgrid_file,
+            num_filter_pass, kmt_min, min_depth, min_thickness, fraction_full_cell, 
+            flat_bottom, fill_first_row, filter_topog, round_shallow, fill_shallow,
+            deepen_shallow, smooth_topo_allow_deepening, full_cell, dont_fill_isolated_cells,
+            on_grid, dont_change_landmask, dont_adjust_topo, open_very_this_cell)
     elif (topog_type == "rectangular_basin"):
         topogOut.make_rectangular_basin(bottom_depth)
     elif (topog_type == "gaussian"):
