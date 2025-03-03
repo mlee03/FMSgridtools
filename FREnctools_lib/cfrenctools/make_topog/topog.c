@@ -349,6 +349,84 @@ void set_depth(int nx, int ny, const double *xbnd, const double *ybnd, double al
 }; /* set_depth */
 
 /*********************************************************************
+   void create_realistic_topog_wrapper( )
+   wrapper for the original C routine, added for FMSgridtools
+   same arguments as create_realistic_topog but domain argument is removed
+ ********************************************************************/
+void create_realistic_topog_wrapper(int nx_dst, int ny_dst, const double *x_dst, const double *y_dst, const char *vgrid_file,
+			    const char* topog_file, const char* topog_field, double scale_factor,
+          int tripolar_grid, int cyclic_x, int cyclic_y,
+			    int fill_first_row, int filter_topog, int num_filter_pass,
+			    int smooth_topo_allow_deepening, int round_shallow, int fill_shallow,
+			    int deepen_shallow, int full_cell, int flat_bottom, int adjust_topo,
+			    int fill_isolated_cells, int dont_change_landmask, int kmt_min, double min_thickness,
+			    int open_very_this_cell, double fraction_full_cell, double *depth,
+			    int *num_levels, int debug, int use_great_circle_algorithm,
+          int on_grid, int x_refine, int y_refine)
+{
+  int nx, ny, layout[2], isc, iec, jsc, jec, nxc, nyc, ni, i, j;
+  double *gdata=NULL, *tmp=NULL, *depth_tmp=NULL;
+  int *num_levels_tmp=NULL;
+  double *x=NULL, *y=NULL;
+  size_t start[4], nread[4], nwrite[4];
+  domain2D domain;
+
+  // define the domain and compute bounds
+  mpp_define_layout( nx_dst, ny_dst, mpp_npes(), layout);
+  mpp_define_domain2d( nx_dst, ny_dst, layout, 0, 0, &domain);
+  mpp_get_compute_domain2d( domain, &isc, &iec, &jsc, &jec);
+  nxc = iec - isc + 1;
+  nyc = jec - jsc + 1;
+
+  // allocate x/y, depth, num_levels, and tmp values for given PE
+  x   = (double *)malloc((nxc+1)*(nyc+1)*sizeof(double));
+  y   = (double *)malloc((nxc+1)*(nyc+1)*sizeof(double));
+  depth_tmp = (double *)malloc(nxc*nyc*sizeof(double));
+  if(vgrid_file) num_levels_tmp = (int* )malloc(nxc*nyc*sizeof(int));
+  //tmp = (double *)malloc((nxc*x_refine+1)*(nyc*y_refine+1)*sizeof(double));
+
+  // adjust the starting coordinates for set refinement values
+  start[0] = jsc*y_refine; start[1] = isc*x_refine;
+  nread[0] = nyc*y_refine+1; nread[1] = nxc*x_refine+1;
+  ni       = nxc*x_refine+1;
+
+  // read in x vals from grid file (not needed, read in python)
+  /*
+  g_fid = mpp_open(tile_files[n], MPP_READ);
+  //vid = mpp_get_varid(g_fid, "x");
+  mpp_get_var_value_block(g_fid, vid, start, nread, tmp);
+  */
+ 
+  // set x values with adjusted indices from refinement value and domain
+  for(j = 0; j < nyc+1; j++)
+    for(i = 0; i < nxc+1; i++)
+      x[j*(nxc+1)+i] = x_dst[(j*y_refine)*ni+i*x_refine];
+
+  // read in y vals from grid file (not needed, read in python)
+  /*
+  vid = mpp_get_varid(g_fid, "y");
+  mpp_get_var_value_block( g_fid, vid, start, nread, tmp);
+  mpp_close(g_fid);
+  */
+
+  // set x values with adjusted indices from refinement value and domain
+  for(j = 0; j < nyc+1; j++)
+    for(i = 0; i < nxc+1; i++)
+      y[j*(nxc+1)+i] = y_dst[(j*y_refine)*ni+i*x_refine];
+
+  // call the routine to generate depth and num_levels values
+  create_realistic_topog(nx_dst, ny_dst, x, y, vgrid_file,
+			    topog_file, topog_field,scale_factor, tripolar_grid, cyclic_x, cyclic_y,
+			    fill_first_row, filter_topog, num_filter_pass,
+			    smooth_topo_allow_deepening, round_shallow, fill_shallow,
+			    deepen_shallow, full_cell, flat_bottom, adjust_topo,
+			    fill_isolated_cells, dont_change_landmask, kmt_min,min_thickness,
+			    open_very_this_cell,fraction_full_cell,depth,
+			    num_levels, domain, debug, use_great_circle_algorithm, on_grid);
+
+}
+
+/*********************************************************************
    void create_realistic_topog( )
    reading data from source data file topog_file and remap it onto current grid
  ********************************************************************/

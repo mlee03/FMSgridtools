@@ -256,7 +256,7 @@ def make_topog(
     # read in object fields from file
     inputMosaicObj = MosaicObj(mosaic_file=mosaic) 
 
-    # get all the data we need to generate topographies
+    # get number of tiles and create dicts for x/y data 
     _ntiles = inputMosaicObj.get_ntiles()
     inputMosaicObj.griddict()
     x_tile = {}
@@ -266,9 +266,11 @@ def make_topog(
         y_tile[tileName] = inputMosaicObj.grid_dict[tileName].y
 
     # create new TopogStruct for output
-    topogOut = TopogObj(output_name=output, ntiles=_ntiles, global_attrs=prov_attrs, x_tile = x_tile, y_tile = y_tile,
-                        x_refine=x_refine, y_refine=y_refine, scale_factor=scale_factor)
+    topogOut = TopogObj(mosaic_filename=mosaic, output_name=output, ntiles=_ntiles, global_attrs=prov_attrs,
+                        x_tile = x_tile, y_tile = y_tile, x_refine=x_refine, y_refine=y_refine,
+                        scale_factor=scale_factor)
 
+    # generate the topography data using the given topog_type algorithm 
     if (topog_type == "realistic"):
         topogOut.make_topog_realistic(
             x_tile, y_tile, topog_file, topog_field, vgrid_file,
