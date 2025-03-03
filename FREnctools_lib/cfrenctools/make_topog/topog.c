@@ -368,8 +368,12 @@ void create_realistic_topog_wrapper(int nx_dst, int ny_dst, const double *x_dst,
   double *gdata=NULL, *tmp=NULL, *depth_tmp=NULL;
   int *num_levels_tmp=NULL;
   double *x=NULL, *y=NULL;
-  size_t start[4], nread[4], nwrite[4];
+  //size_t start[4], nread[4], nwrite[4];
   domain2D domain;
+
+  // initialize mpp
+  mpp_init(NULL, NULL);
+  mpp_domain_init();
 
   // define the domain and compute bounds
   mpp_define_layout( nx_dst, ny_dst, mpp_npes(), layout);
@@ -378,6 +382,14 @@ void create_realistic_topog_wrapper(int nx_dst, int ny_dst, const double *x_dst,
   nxc = iec - isc + 1;
   nyc = jec - jsc + 1;
 
+  if(debug) {
+    if(mpp_root_pe() == mpp_pe()) printf("***\tmpp domain created with %d pes, nx=%d ny=%d\t***\n", mpp_npes(), nx_dst, ny_dst);
+    printf("i indices=%d:%d\n",isc, iec);
+    printf("j indices=%d:%d\n",jsc, jec);
+    printf("x_refine=%d\ty_refine=%d\n", x_refine, y_refine);
+    printf("nxc=%d\tnyc=%d\n\n", nxc, nyc);
+  }
+
   // allocate x/y, depth, num_levels, and tmp values for given PE
   x   = (double *)malloc((nxc+1)*(nyc+1)*sizeof(double));
   y   = (double *)malloc((nxc+1)*(nyc+1)*sizeof(double));
@@ -385,10 +397,10 @@ void create_realistic_topog_wrapper(int nx_dst, int ny_dst, const double *x_dst,
   if(vgrid_file) num_levels_tmp = (int* )malloc(nxc*nyc*sizeof(int));
   //tmp = (double *)malloc((nxc*x_refine+1)*(nyc*y_refine+1)*sizeof(double));
 
-  // adjust the starting coordinates for set refinement values
-  start[0] = jsc*y_refine; start[1] = isc*x_refine;
-  nread[0] = nyc*y_refine+1; nread[1] = nxc*x_refine+1;
-  ni       = nxc*x_refine+1;
+  // these were related to reading in the input grid data, so no longer needed  
+  //start[0] = jsc*y_refine; start[1] = isc*x_refine;
+  //nread[0] = nyc*y_refine+1; nread[1] = nxc*x_refine+1;
+  //ni       = nxc*x_refine+1;
 
   // read in x vals from grid file (not needed, read in python)
   /*
@@ -414,6 +426,8 @@ void create_realistic_topog_wrapper(int nx_dst, int ny_dst, const double *x_dst,
     for(i = 0; i < nxc+1; i++)
       y[j*(nxc+1)+i] = y_dst[(j*y_refine)*ni+i*x_refine];
 
+  if(debug) printf("x/y data values set successfully\n");
+
   // call the routine to generate depth and num_levels values
   create_realistic_topog(nx_dst, ny_dst, x, y, vgrid_file,
 			    topog_file, topog_field,scale_factor, tripolar_grid, cyclic_x, cyclic_y,
@@ -423,6 +437,9 @@ void create_realistic_topog_wrapper(int nx_dst, int ny_dst, const double *x_dst,
 			    fill_isolated_cells, dont_change_landmask, kmt_min,min_thickness,
 			    open_very_this_cell,fraction_full_cell,depth,
 			    num_levels, domain, debug, use_great_circle_algorithm, on_grid);
+  
+  mpp_domain_end();
+  mpp_end();
 
 }
 
