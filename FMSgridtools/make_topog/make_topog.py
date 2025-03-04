@@ -277,7 +277,7 @@ def make_topog(
             num_filter_pass, kmt_min, min_depth, min_thickness, fraction_full_cell, 
             flat_bottom, fill_first_row, filter_topog, round_shallow, fill_shallow,
             deepen_shallow, smooth_topo_allow_deepening, full_cell, dont_fill_isolated_cells,
-            on_grid, dont_change_landmask, dont_adjust_topo, open_very_this_cell)
+            on_grid, dont_change_landmask, dont_adjust_topo, open_very_this_cell, inputMosaicObj.gridfiles)
     elif (topog_type == "rectangular_basin"):
         topogOut.make_rectangular_basin(bottom_depth)
     elif (topog_type == "gaussian"):

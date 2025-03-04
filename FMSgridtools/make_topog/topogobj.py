@@ -46,8 +46,8 @@ class TopogObj():
             raise ValueError("No nx/ny dictionaries provided, cannot construct TopogObj")
         # get number of x/y points
         for tileName in self.x_tile.keys():
-            self.nx_tile[tileName] = self.x_tile[tileName].shape[0]
-            self.ny_tile[tileName] = self.y_tile[tileName].shape[1]
+            self.nx_tile[tileName] = self.x_tile[tileName].shape[1]
+            self.ny_tile[tileName] = self.x_tile[tileName].shape[0]
 
         # adjust nx/ny for refinements and scaling factor
         # TODO usage of mpp domains for indices makes this hard to adjust outside the C code
@@ -131,7 +131,8 @@ class TopogObj():
         on_grid: bool = None,
         dont_change_landmask: bool = None,
         dont_adjust_topo: bool = None,
-        open_very_this_cell: bool = None):
+        open_very_this_cell: bool = None,
+        grid_filenames: str = None):
 
         # first load the C library (this will be replaced with a different method eventually)
         frenct_lib = ctypes.cdll.LoadLibrary("./FREnctools_lib/cfrenctools/c_build/clib.so")
@@ -150,7 +151,8 @@ class TopogObj():
                                           ctypes.c_int, ctypes.c_double, ctypes.c_int,       # kmt_min, min_thickness, open_very_this_cell,
                                           ctypes.c_double, ctypes.c_void_p, ctypes.c_void_p, # fraction_full_cell, depth, num_levels
                                           ctypes.c_int, ctypes.c_int,                        # debug, use_great_circle_algo 
-                                          ctypes.c_int, ctypes.c_int, ctypes.c_int ]         # on_grid, x_refine, y_refine
+                                          ctypes.c_int, ctypes.c_int, ctypes.c_int,          # on_grid, x_refine, y_refine
+                                          ctypes.c_char_p ]                                  # tile_names
         get_boundary_type_c.argtypes = [ctypes.c_char_p, ctypes.c_int, ctypes.POINTER(ctypes.c_int),
                                         ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int)]
                                           
@@ -195,6 +197,7 @@ class TopogObj():
         
         # generate data for each tile
         self.depth_vals = {}
+        i = 0
         for tileName in list(self.nx_tile.keys()):
             # create temp array for depth output 
             _depth_temp = np.zeros( (self.ny_tile[tileName], self.nx_tile[tileName]) )
@@ -229,6 +232,9 @@ class TopogObj():
             _fraction_full_cell = fraction_full_cell # double
             _debug = bool_to_int(True)
             _vgrid_file = None if vgrid_file is None else vgrid_file.encode('utf-8')
+            # get the name of the grid file for the current tile
+            _grid_filename = grid_filenames[i].encode('utf-8') 
+            i = i + 1
             # TODO this is usally determined by checking the grid files, but doesn't seem commonly used
             _use_great_circle_algorithm = bool_to_int(False)
             # init return values for output arrays
@@ -249,7 +255,8 @@ class TopogObj():
                                   _kmt_min, _min_thickness, _open_very_this_cell,
                                   _fraction_full_cell, _depth.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                                   _num_levels.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
-                                   _debug, _use_great_circle_algorithm, on_grid, self.x_refine, self.y_refine )
+                                   _debug, _use_great_circle_algorithm, on_grid, self.x_refine, self.y_refine,
+                                   _grid_filename)
                 
             self.depth_vals[f"depth_{tileName}"] = _depth 
         self.__data_is_generated = True
