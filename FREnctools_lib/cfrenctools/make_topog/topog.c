@@ -381,9 +381,9 @@ void create_realistic_topog_wrapper(int nx_dst, int ny_dst, const double *x_dst,
     nread[i] = 0;
   }
 
-  // ???
-  nx_dst /= 2;
-  ny_dst /= 2;
+  // apply refinements 
+  nx_dst /= x_refine;
+  ny_dst /= y_refine;
 
   // define the domain and compute bounds
   mpp_define_layout( nx_dst, ny_dst, mpp_npes(), layout);
