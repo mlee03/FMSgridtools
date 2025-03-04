@@ -46,8 +46,8 @@ class TopogObj():
             raise ValueError("No nx/ny dictionaries provided, cannot construct TopogObj")
         # get number of x/y points
         for tileName in self.x_tile.keys():
-            self.nx_tile[tileName] = self.x_tile[tileName].shape[1]
-            self.ny_tile[tileName] = self.x_tile[tileName].shape[0]
+            self.nx_tile[tileName] = self.x_tile[tileName].shape[1] - 1
+            self.ny_tile[tileName] = self.x_tile[tileName].shape[0] - 1
 
         # adjust nx/ny for refinements and scaling factor
         # TODO usage of mpp domains for indices makes this hard to adjust outside the C code
@@ -235,11 +235,12 @@ class TopogObj():
             # get the name of the grid file for the current tile
             _grid_filename = grid_filenames[i].encode('utf-8') 
             i = i + 1
-            # TODO this is usally determined by checking the grid files, but doesn't seem commonly used
+            # TODO might be able to get rid of this as an arg
+            # this should be determined by the grid files 
             _use_great_circle_algorithm = bool_to_int(False)
             # init return values for output arrays
-            _depth = np.zeros((_nx_dst, _ny_dst))
-            _num_levels = np.zeros((_nx_dst, _ny_dst), dtype=int)
+            _depth = np.zeros( (int(_ny_dst/self.y_refine), int(_nx_dst/self.x_refine)) )
+            _num_levels = np.zeros( (int(_ny_dst/self.y_refine), int(_nx_dst/self.x_refine)), dtype=int)
 
             print(f"Calling generate_realistic with nx: {self.nx_tile[tileName]}, ny: {self.ny_tile[tileName]}")
             generate_realistic_c( _nx_dst, _ny_dst,
