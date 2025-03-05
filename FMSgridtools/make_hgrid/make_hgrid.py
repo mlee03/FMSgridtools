@@ -1,4 +1,5 @@
 import sys
+import os
 import xarray as xr
 import ctypes
 import numpy as np
@@ -606,102 +607,106 @@ def make_hgrid(
     discretization = "logically_rectangular"
     conformal = "true"
 
-    pyfms = pyFMS(clibFMS_path="")
+    fms_file = "input.nml"
+    with open(fms_file, "x") as file:
+        file.write("")
+
+    pyfms = pyFMS(clibFMS_path="./pyFMS/cFMS/libcFMS/.libs/libcFMS.so")
     mpp = pyFMS_mpp(clibFMS=pyfms.clibFMS)
     mpp_domains = pyFMS_mpp_domains(clibFMS=pyfms.clibFMS)
 
     if(mpp.npes() > 1):
         mpp.pyfms_error(errortype=2, errormsg="make_hgrid: make_hgrid must be run one processor, contact developer")
 
-    # if xbnds is not None:
-    #     xbnds = np.fromstring(xbnds, dtype=np.float64, sep=',')
-    #     nxbnds1 = xbnds.size
-    # if ybnds is not None:
-    #     ybnds = np.fromstring(ybnds, dtype=np.float64, sep=',')
-    #     nybnds1 = ybnds.size
-    # if nlon is not None:
-    #     nlon = np.fromstring(nlon, dtype=int, sep=',')
-    #     nxbnds2 = nlon.size
-    # if nlat is not None:
-    #     nlat = np.fromstring(nlat, dtype=int, sep=',')
-    #     nybnds2 = nlat.size
-    # if dlon is not None:
-    #     dx_bnds = np.fromstring(dlon, dtype=np.float64, sep=',')
-    #     nxbnds3 = dx_bnds.size
-    # if dlat is not None:
-    #     dy_bnds = np.fromstring(dlat, dtype=np.float64, sep=',')
-    #     nybnds3 = dy_bnds.size
-    # if stretch_factor != 0.0:
-    #     present_stretch_factor = 1
-    # if target_lon != 0.0:
-    #     present_target_lon = 1
-    # if target_lat != 0.0:
-    #     present_target_lat = 1
-    # if refine_ratio is not None:
-    #     refine_ratio = np.fromstring(refine_ratio, dtype=int, sep=',')
-    #     num_nest_args = refine_ratio.size
-    # if parent_tile is not None:
-    #     parent_tile = np.fromstring(refine_ratio, dtype=int, sep=',')
-    #     num_nest_args = parent_tile.size
-    # if istart_nest is not None:
-    #     istart_nest = np.fromstring(istart_nest, dtype=int, sep=',')
-    #     num_nest_args = istart_nest.size 
-    # if iend_nest is not None:
-    #     iend_nest = np.fromstring(iend_nest, dtype=int, sep=',')
-    #     num_nest_args = iend_nest.size
-    # if jstart_nest is not None:
-    #     jstart_nest = np.fromstring(jstart_nest, dtype=int, sep=',')
-    #     num_nest_args = jstart_nest.size
-    # if jend_nest is not None:
-    #     jend_nest = np.fromstring(jend_nest, dtype=int, sep=',')
-    #     num_nest_args = jend_nest.size
-    # if angular_midpoint:
-    #     use_angular_midpoint = 1
-    # if my_grid_file is not None:
-    #     my_grid_file = np.array(my_grid_file.split(','))
-    #     ntiles_file = my_grid_file.size
+    if xbnds is not None:
+        xbnds = np.fromstring(xbnds, dtype=np.float64, sep=',')
+        nxbnds1 = xbnds.size
+    if ybnds is not None:
+        ybnds = np.fromstring(ybnds, dtype=np.float64, sep=',')
+        nybnds1 = ybnds.size
+    if nlon is not None:
+        nlon = np.fromstring(nlon, dtype=int, sep=',')
+        nxbnds2 = nlon.size
+    if nlat is not None:
+        nlat = np.fromstring(nlat, dtype=int, sep=',')
+        nybnds2 = nlat.size
+    if dlon is not None:
+        dx_bnds = np.fromstring(dlon, dtype=np.float64, sep=',')
+        nxbnds3 = dx_bnds.size
+    if dlat is not None:
+        dy_bnds = np.fromstring(dlat, dtype=np.float64, sep=',')
+        nybnds3 = dy_bnds.size
+    if stretch_factor != 0.0:
+        present_stretch_factor = 1
+    if target_lon != 0.0:
+        present_target_lon = 1
+    if target_lat != 0.0:
+        present_target_lat = 1
+    if refine_ratio is not None:
+        refine_ratio = np.fromstring(refine_ratio, dtype=int, sep=',')
+        num_nest_args = refine_ratio.size
+    if parent_tile is not None:
+        parent_tile = np.fromstring(refine_ratio, dtype=int, sep=',')
+        num_nest_args = parent_tile.size
+    if istart_nest is not None:
+        istart_nest = np.fromstring(istart_nest, dtype=int, sep=',')
+        num_nest_args = istart_nest.size 
+    if iend_nest is not None:
+        iend_nest = np.fromstring(iend_nest, dtype=int, sep=',')
+        num_nest_args = iend_nest.size
+    if jstart_nest is not None:
+        jstart_nest = np.fromstring(jstart_nest, dtype=int, sep=',')
+        num_nest_args = jstart_nest.size
+    if jend_nest is not None:
+        jend_nest = np.fromstring(jend_nest, dtype=int, sep=',')
+        num_nest_args = jend_nest.size
+    if angular_midpoint:
+        use_angular_midpoint = 1
+    if my_grid_file is not None:
+        my_grid_file = np.array(my_grid_file.split(','))
+        ntiles_file = my_grid_file.size
 
     # TODO: rotate_poly?
 
-    # if mpp.pe() == 0 and verbose:
-    #     print(f"==>NOTE: the grid type is {grid_type}")
+    if mpp.pe() == 0 and verbose:
+        print(f"==>NOTE: the grid type is {grid_type}")
 
-    # if grid_type == "regular_lonlat_grid":
-    #     my_grid_type = REGULAR_LONLAT_GRID
-    # elif grid_type == "tripolar_grid":
-    #     my_grid_type = TRIPOLAR_GRID
-    # elif grid_type == "from_file":
-    #     my_grid_type = FROM_FILE
-    # elif grid_type == "simple_cartesian_grid":
-    #     my_grid_type = SIMPLE_CARTESIAN_GRID
-    # elif grid_type == "spectral_grid":
-    #     my_grid_type = SPECTRAL_GRID
-    # elif grid_type == "conformal_cubic_grid":
-    #     my_grid_type = CONFORMAL_CUBIC_GRID
-    # elif grid_type == "gnomonic_ed":
-    #     my_grid_type = GNOMONIC_ED
-    # elif grid_type == "f_plane_grid":
-    #     my_grid_type = F_PLANE_GRID
-    # elif grid_type == "beta_plane_grid":
-    #     my_grid_type = BETA_PLANE_GRID
-    # else:
-    #     mpp.pyfms_error(errotype=2, errormsg="make_hgrid: only grid_type = 'regular_lonlat_grid', 'tripolar_grid', 'from_file', 'gnomonic_ed', 'conformal_cubic_grid', 'simple_cartesian_grid', 'spectral_grid', 'f_plane_grid' and 'beta_plane_grid' is implemented")
+    if grid_type == "regular_lonlat_grid":
+        my_grid_type = REGULAR_LONLAT_GRID
+    elif grid_type == "tripolar_grid":
+        my_grid_type = TRIPOLAR_GRID
+    elif grid_type == "from_file":
+        my_grid_type = FROM_FILE
+    elif grid_type == "simple_cartesian_grid":
+        my_grid_type = SIMPLE_CARTESIAN_GRID
+    elif grid_type == "spectral_grid":
+        my_grid_type = SPECTRAL_GRID
+    elif grid_type == "conformal_cubic_grid":
+        my_grid_type = CONFORMAL_CUBIC_GRID
+    elif grid_type == "gnomonic_ed":
+        my_grid_type = GNOMONIC_ED
+    elif grid_type == "f_plane_grid":
+        my_grid_type = F_PLANE_GRID
+    elif grid_type == "beta_plane_grid":
+        my_grid_type = BETA_PLANE_GRID
+    else:
+        mpp.pyfms_error(errotype=2, errormsg="make_hgrid: only grid_type = 'regular_lonlat_grid', 'tripolar_grid', 'from_file', 'gnomonic_ed', 'conformal_cubic_grid', 'simple_cartesian_grid', 'spectral_grid', 'f_plane_grid' and 'beta_plane_grid' is implemented")
         
-    # if my_grid_type != GNOMONIC_ED and out_halo != 0:
-    #     mpp.pyfms_error(errortype=2, errormsg="make_hgrid: out_halo should not be set when grid_type = gnomonic_ed")
-    # if out_halo != 0 and out_halo != 1:
-    #     mpp.pyfms_error(errortype=2, errormsg="make_hgrid: out_halo should be 0 or 1")
+    if my_grid_type != GNOMONIC_ED and out_halo != 0:
+        mpp.pyfms_error(errortype=2, errormsg="make_hgrid: out_halo should not be set when grid_type = gnomonic_ed")
+    if out_halo != 0 and out_halo != 1:
+        mpp.pyfms_error(errortype=2, errormsg="make_hgrid: out_halo should be 0 or 1")
 
-    # if my_grid_type != GNOMONIC_ED and do_schmidt:
-    #     mpp.pyfms_error(errortype=2, errormsg="make_hgrid: --do_schmidt should not be set when grid_type is not 'gnomonic_ed'")
+    if my_grid_type != GNOMONIC_ED and do_schmidt:
+        mpp.pyfms_error(errortype=2, errormsg="make_hgrid: --do_schmidt should not be set when grid_type is not 'gnomonic_ed'")
 
-    # if my_grid_type != GNOMONIC_ED and do_cube_transform:
-    #     mpp.pyfms_error(errortype=2, errormsg="make_hgrid: --do_cube_transform should not be set when grid_type is not 'gnomonic_ed'")
+    if my_grid_type != GNOMONIC_ED and do_cube_transform:
+        mpp.pyfms_error(errortype=2, errormsg="make_hgrid: --do_cube_transform should not be set when grid_type is not 'gnomonic_ed'")
 
-    # if do_cube_transform and do_schmidt:
-    #     mpp.pyfms_error(errortype=2, errormsg="make_hgrid: both --do_cube_transform and --do_schmidt are set")
+    if do_cube_transform and do_schmidt:
+        mpp.pyfms_error(errortype=2, errormsg="make_hgrid: both --do_cube_transform and --do_schmidt are set")
     
-    # use_legacy = False
+    use_legacy = False
 
     """
     Command line argument check
@@ -1251,6 +1256,8 @@ def make_hgrid(
     #     print("generate_grid is run successfully")
 
     pyfms.pyfms_end()
+
+    os.remove(fms_file)
     
 
     # End of main

@@ -2,8 +2,8 @@ import ctypes as ct
 from dataclasses import dataclass
 from typing import Optional
 import xarray as xr
-from gridtools.shared.gridtools_utils import check_file_is_there
-from gridtools.shared.gridobj import GridObj
+from FMSgridtools.shared.gridtools_utils import check_file_is_there
+from FMSgridtools.shared.gridobj import GridObj
 
 @dataclass
 class XGridObj() :
