@@ -6,6 +6,11 @@ import subprocess
 from setuptools import setup, find_namespace_packages
 from setuptools.command.install import install
 
+def local_pkg(name: str, relative_path: str) -> str:
+    """Returns an absolute path to a local package."""
+    path = f"{name} @ file://{Path(os.path.abspath(__file__)).parent / relative_path}"
+    return path
+
 class CustomInstall(install):
     def run(self):
         with open("compile_log.txt", "w") as f:
@@ -41,7 +46,7 @@ requirements: List[str] = [
     "numpy",
     "xarray",
     "netCDF4",
-    "pyfms @ git+https://github.com/fmalatino/pyFMS.git"
+    local_pkg("pyfms", "pyFMS")
 ]
 
 setup(
@@ -52,7 +57,7 @@ setup(
     extras_require=extras_requires,
     name="fmsgridtools",
     license="",
-    packages=find_namespace_packages(include=["FMSgridtools", "FMSgridtools.*", "FREnctools_lib", "FREnctools_lib.pyfrenctools.*"]),
+    packages=find_namespace_packages(include=["FMSgridtools", "FMSgridtools.*", "FREnctools_lib", "FREnctools_lib.*" ]),
     include_package_data=True,
     version="0.0.1",
     zip_safe=False,

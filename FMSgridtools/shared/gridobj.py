@@ -10,18 +10,20 @@ from FMSgridtools.shared.gridtools_utils import check_file_is_there
 """
 GridObj:
 
-Dataclass for containing basic grid data to be used by other grid objects
+Class for containing basic grid data to be used by other grid objects
 """
-@dataclasses.dataclass
-class GridObj:
-    dataset: Optional[xr.Dataset] = None
-    grid_file: Optional[str] = None
 
-    def __post_init__(self):
-        if self.grid_file is not None:
+class GridObj:
+
+    def __init__(
+            self, 
+            dataset: Optional[xr.Dataset] = None, 
+            grid_file: Optional[str] = None
+    ):
+        if grid_file is not None:
             check_file_is_there(self.grid_file)
-            with xr.open_dataset(self.grid_file) as ds:
-                self.dataset = ds
+            self.grid_file = grid_file
+            self.dataset = xr.open_dataset(self.grid_file)
 
     """
     from_file:
@@ -33,11 +35,10 @@ class GridObj:
     @classmethod
     def from_file(cls, filepath: str) -> "GridObj":
         check_file_is_there(filepath)
-        with xr.open_dataset(filepath) as ds:
-            return cls(
-                dataset=ds,
-                grid_file=filepath,
-            )
+        return cls(
+            dataset=xr.open_dataset(filepath),
+            grid_file=filepath,
+        )
         
     """
     write_out_grid:

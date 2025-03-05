@@ -2,7 +2,7 @@ import numpy as np
 import numpy.typing as npt
 import ctypes
 
-from pyfms.data_handling import (
+from pyfms.pyfms_data_handling import (
     setscalar_Cint32,
     setscalar_Cdouble,
     setarray_Cdouble,
@@ -10,7 +10,7 @@ from pyfms.data_handling import (
     set_Cchar,
 )
 
-lib = ctypes.CDLL("../../FRENCTools_lib/cfrenctools/c_build/clib.so")
+lib = ctypes.CDLL("./FREnctools_lib/cfrenctools/c_build/clib.so")
 
 def fill_cubic_grid_halo(
         nx: int, 
