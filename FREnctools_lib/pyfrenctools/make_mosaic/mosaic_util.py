@@ -1,27 +1,28 @@
 import ctypes
 import dataclasses
 import numpy as np
+import pyfrenctools
 import numpy.typing as npt
 from typing import Optional
 
 @dataclasses.dataclass
 class Contact:
-    tile1: Optional[int] = None
-    tile2: Optional[int] = None
-    nxp1: Optional[int] = None
-    nxp2: Optional[int] = None
-    nyp1: Optional[int] = None
-    nyp2: Optional[int] = None
-    x1: Optional[npt.NDArray] = None
-    x2: Optional[npt.NDArray] = None
-    y1: Optional[npt.NDArray] = None
-    y2: Optional[npt.NDArray] = None
+    tile1: int
+    tile2: int
+    nxp1: int
+    nxp2: int
+    nyp1: int
+    nyp2: int
+    x1: npt.NDArray
+    x2: npt.NDArray
+    y1: npt.NDArray
+    y2: npt.NDArray
     periodx: Optional[int] = None
     periody: Optional[int] = None
 
-    def align_contact(self, lib_file:str) -> int:
+    def align_contact(self) -> int:
 
-        clibrary = ctypes.CDLL(lib_file)
+        clibrary = pyfrenctools.cfrenctools.LIB().lib
 
         #acquire function signature
         find_align = clibrary.get_align_contact

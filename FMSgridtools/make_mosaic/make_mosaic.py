@@ -139,7 +139,7 @@ def make_solo_mosaic(
         mosaic_name,
         tile_file,
         periodx,
-        periody):
+        periody) -> None:
         """Generates mosaic information between tiles. The mosaic, information includes:
         list of tile files, list of contact region,
         specified by index, contact type."""
@@ -190,7 +190,7 @@ def make_solo_mosaic(
                         grid_data[f'tile{n}']['y'],
                         grid_data[f'tile{m}']['y'],
                         periodx, periody)
-                count, istart1, iend1, jstart1, jend1, istart2, iend2, jstart2, jend2  = contact.align_contact(lib_file)
+                count, istart1, iend1, jstart1, jend1, istart2, iend2, jstart2, jend2  = contact.align_contact()
 
                 if count > 0:
                     contacts.append(f"{mosaic_name}:tile{n}::{mosaic_name}:tile{m}")
@@ -221,7 +221,7 @@ def make_solo_mosaic(
 
 def make_regional_mosaic(
         global_mosaic,
-        regional_file):
+        regional_file) -> None:
         """ Generates a horizontal grid and solo mosaic for a regional output.
         The created grid and solo mosaic could be used to regrid regional
         output data onto regular lat-lon grid."""
