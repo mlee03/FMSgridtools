@@ -289,6 +289,8 @@ void set_regular_lonlat_grid( int nxp, int nyp, int isc, int iec, int jsc, int j
 {
   long n, i, j;
   double lon[4], lat[4];
+  
+  double test;
 
   n = 0;
   for(j=0; j<nyp; j++) {
@@ -298,6 +300,7 @@ void set_regular_lonlat_grid( int nxp, int nyp, int isc, int iec, int jsc, int j
     }
   }
   /* zonal length */
+  printf("at zonal length\n");
   n = 0;
   for(j=jsc; j<=jec+1; j++) {
     for(i=isc; i<=iec; i++ ) {
@@ -306,6 +309,7 @@ void set_regular_lonlat_grid( int nxp, int nyp, int isc, int iec, int jsc, int j
   }
 
   /* meridinal length */
+  printf("at meridinal length\n");
   n = 0;
   for(j=jsc; j<=jec; j++) {
     for(i=isc; i<=iec+1; i++ ) {
@@ -314,6 +318,7 @@ void set_regular_lonlat_grid( int nxp, int nyp, int isc, int iec, int jsc, int j
   }
 
   /* cell area */
+  printf("at cell area\n");
   if(use_great_circle_algorithm) {
     double *x_rad=NULL, *y_rad=NULL;
     int nx, ny;
@@ -322,6 +327,7 @@ void set_regular_lonlat_grid( int nxp, int nyp, int isc, int iec, int jsc, int j
     ny = nyp-1;
 
     /* since make_hgrid is limited to be run on 1 processor, we could assume nx = iec-isc+1 and ny=jec-jsc+1 */
+    printf("at setup of x_rad, y_rad");
     x_rad  = (double *)malloc(nxp*nyp*sizeof(double));
     y_rad  = (double *)malloc(nxp*nyp*sizeof(double));
     for(i=0; i<nxp*nyp; i++){
@@ -342,6 +348,7 @@ void set_regular_lonlat_grid( int nxp, int nyp, int isc, int iec, int jsc, int j
   }
 
   /* rotation angle */
+  printf("at rotation angle\n");
   n = 0;
   for(j=jsc; j<=jec+1; j++) {
     for(i=isc; i<=iec+1; i++ ) angle[n++] = 0;

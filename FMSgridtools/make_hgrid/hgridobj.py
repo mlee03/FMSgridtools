@@ -7,17 +7,17 @@ import xarray as xr
 from FMSgridtools.shared.gridtools_utils import check_file_is_there
 from FMSgridtools.shared.gridobj import GridObj
 
-@dataclasses.dataclass
 class HGridObj():
-    tile: Optional[str] = None
-    x: Optional[npt.NDArray] = None
-    y: Optional[npt.NDArray] = None
-    dx: Optional[npt.NDArray] = None
-    dy: Optional[npt.NDArray] = None
-    area: Optional[npt.NDArray] = None
-    angle_dx: Optional[npt.NDArray] = None
-    angle_dy: Optional[npt.NDArray] = None
-    arcx: Optional[str] = None
+    def __init__(self):
+        self.tile = ""
+        self.x = None
+        self.y = None
+        self.dx = None
+        self.dy = None
+        self.area = None
+        self.angle_dx = None
+        self.angle_dy = None
+        self.arcx = ""
 
     def write_out_hgrid(
             self,

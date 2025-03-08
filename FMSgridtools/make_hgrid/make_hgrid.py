@@ -62,7 +62,7 @@ fmsgridtools make_hgrid --grid_type (see types supported below) (string)
                         --jend_nest jend_nest(1),...jend_nest(nests-1)
                         --use_great_circle_algorithm (bool)
                         --out_halo #
-                        --output_length_angle (bool)
+                        --no_output_length_angle (bool)
 
 The available options for grid_type are:
     1. 'from_file':
@@ -509,7 +509,7 @@ MISSING_VALUE = -9999.
          gnomonic_ed.",
 )
 @click.option(
-    "--output_length_angle",
+    "--no_output_length_angle",
     is_flag=True, 
     default=False,
     help="When specified, will not output length(dx,dy) and angle \
@@ -570,7 +570,7 @@ def make_hgrid(
     halo: int,
     use_great_circle_algorithm: bool,
     out_halo: int,
-    output_length_angle: bool,
+    no_output_length_angle: bool,
     angular_midpoint: bool,
     rotate_poly: bool,
     verbose: bool,
@@ -593,6 +593,7 @@ def make_hgrid(
     present_stretch_factor = 0
     present_target_lon = 0
     present_target_lat = 0
+    output_length_angle = 1
     ntiles = 1
     ntiles_global = 1
     ntiles_file = 0
@@ -621,47 +622,74 @@ def make_hgrid(
     if xbnds is not None:
         xbnds = np.fromstring(xbnds, dtype=np.float64, sep=',')
         nxbnds1 = xbnds.size
+    else:
+        xbnds = np.empty(shape=100, dtype=np.float64, order="C")
+
     if ybnds is not None:
         ybnds = np.fromstring(ybnds, dtype=np.float64, sep=',')
         nybnds1 = ybnds.size
+    else:
+        ybnds = np.empty(shape=100, dtype=np.float64, order="C")
+    
     if nlon is not None:
-        nlon = np.fromstring(nlon, dtype=int, sep=',')
+        nlon = np.fromstring(nlon, dtype=np.int32, sep=',')
         nxbnds2 = nlon.size
+
     if nlat is not None:
-        nlat = np.fromstring(nlat, dtype=int, sep=',')
+        nlat = np.fromstring(nlat, dtype=np.int32, sep=',')
         nybnds2 = nlat.size
+
     if dlon is not None:
         dx_bnds = np.fromstring(dlon, dtype=np.float64, sep=',')
         nxbnds3 = dx_bnds.size
+    else:
+        dx_bnds = np.zeros(shape=100, dtype=np.float64, order="C")
+        
     if dlat is not None:
         dy_bnds = np.fromstring(dlat, dtype=np.float64, sep=',')
         nybnds3 = dy_bnds.size
+    else:
+        dy_bnds = np.zeros(shape=100, dtype=np.float64, order="C")
+
     if stretch_factor != 0.0:
         present_stretch_factor = 1
+
     if target_lon != 0.0:
         present_target_lon = 1
+
     if target_lat != 0.0:
         present_target_lat = 1
+
     if refine_ratio is not None:
-        refine_ratio = np.fromstring(refine_ratio, dtype=int, sep=',')
+        refine_ratio = np.fromstring(refine_ratio, dtype=np.int32, sep=',')
         num_nest_args = refine_ratio.size
+
     if parent_tile is not None:
-        parent_tile = np.fromstring(refine_ratio, dtype=int, sep=',')
+        parent_tile = np.fromstring(refine_ratio, dtype=np.int32, sep=',')
         num_nest_args = parent_tile.size
+
     if istart_nest is not None:
-        istart_nest = np.fromstring(istart_nest, dtype=int, sep=',')
-        num_nest_args = istart_nest.size 
+        istart_nest = np.fromstring(istart_nest, dtype=np.int32, sep=',')
+        num_nest_args = istart_nest.size
+
     if iend_nest is not None:
-        iend_nest = np.fromstring(iend_nest, dtype=int, sep=',')
+        iend_nest = np.fromstring(iend_nest, dtype=np.int32, sep=',')
         num_nest_args = iend_nest.size
+
     if jstart_nest is not None:
-        jstart_nest = np.fromstring(jstart_nest, dtype=int, sep=',')
+        jstart_nest = np.fromstring(jstart_nest, dtype=np.int32, sep=',')
         num_nest_args = jstart_nest.size
+
     if jend_nest is not None:
-        jend_nest = np.fromstring(jend_nest, dtype=int, sep=',')
+        jend_nest = np.fromstring(jend_nest, dtype=np.int32, sep=',')
         num_nest_args = jend_nest.size
+
+    if no_output_length_angle:
+        output_length_angle = 0
+
     if angular_midpoint:
         use_angular_midpoint = 1
+
     if my_grid_file is not None:
         my_grid_file = np.array(my_grid_file.split(','))
         ntiles_file = my_grid_file.size
@@ -706,43 +734,44 @@ def make_hgrid(
     if do_cube_transform and do_schmidt:
         mpp.pyfms_error(errortype=2, errormsg="make_hgrid: both --do_cube_transform and --do_schmidt are set")
     
-    use_legacy = False
+    use_legacy = 0
 
     """
     Command line argument check
     """
 
-    # if my_grid_type == REGULAR_LONLAT_GRID or my_grid_type == TRIPOLAR_GRID or my_grid_type == F_PLANE_GRID or my_grid_type == BETA_PLANE_GRID:
-    #     nxbnds = nxbnds0
-    #     nybnds = nybnds0
-    #     if nxbnds < 2 or nybnds < 2:
-    #         mpp.pyfms_error(errortype=2, errormsg="make_hgrid: grid type is 'regular_lonlat_grid', 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', both nxbnds and nybnds should be no less than 2")
-    #     if nxbnds != nxbnds1:
-    #         mpp.pyfms_error(errortype=2, errormsg="make_hgrid: grid type is 'regular_lonlat_grid, 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', nxbnds does not match number of entry in xbnds")
-    #     if nybnds != nybnds1:
-    #         mpp.pyfms_error(errortype=2, errormsg="make_hgrid: grid type is 'regular_lonlat_grid, 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', nybnds does not match number of entry in ybnds")
+    if my_grid_type == REGULAR_LONLAT_GRID or my_grid_type == TRIPOLAR_GRID or my_grid_type == F_PLANE_GRID or my_grid_type == BETA_PLANE_GRID:
+        nxbnds = nxbnds0
+        nybnds = nybnds0
+        if nxbnds < 2 or nybnds < 2:
+            mpp.pyfms_error(errortype=2, errormsg="make_hgrid: grid type is 'regular_lonlat_grid', 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', both nxbnds and nybnds should be no less than 2")
+        if nxbnds != nxbnds1:
+            mpp.pyfms_error(errortype=2, errormsg="make_hgrid: grid type is 'regular_lonlat_grid, 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', nxbnds does not match number of entry in xbnds")
+        if nybnds != nybnds1:
+            mpp.pyfms_error(errortype=2, errormsg="make_hgrid: grid type is 'regular_lonlat_grid, 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', nybnds does not match number of entry in ybnds")
         
-    #     num_specify = 0
-    #     if nxbnds2 > 0 and nybnds2 > 0:
-    #         num_specify += 1
-    #     if nxbnds3 > 0 and nybnds3 > 0:
-    #         num_specify += 1
-    #         use_legacy = True
+        num_specify = 0
+        if nxbnds2 > 0 and nybnds2 > 0:
+            num_specify += 1
+        if nxbnds3 > 0 and nybnds3 > 0:
+            num_specify += 1
+            use_legacy = 1
+            print(f"use_legacy = {use_legacy}")
         
-    #     if num_specify == 0:
-    #         mpp.pyfms_error(errortype=2, errormsg="make_hgrid: grid type is 'regular_lonlat_grid', 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', need to specify one of the pair --nlon --nlat or --dlon --dlat")
-    #     if num_specify == 2:
-    #         mpp.pyfms_error(errortype=2, errormsg="make_hgrid: grid type is 'regular_lonlat_grid', 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', can not specify both --nlon --nlat and --dlon --dlat")
-    #     if use_legacy:
-    #         if nxbnds != nxbnds3:
-    #             mpp.pfms_error(errortype=2, errormsg="make_hgrid: grid type is 'tripolar_grid', 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', nxbnds does not match number of entry in dlon")
-    #         if nybnds != nybnds3:
-    #             mpp.pyfms_error(errortype=2, errormsg="make_hgrid: grid type is 'tripolar_grid', 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', nybnds does not match number of entry in dlat")
-    #     else:
-    #         if nxbnds != nxbnds2+1:
-    #             mpp.pyfms_error(errortype=2, errormsg="make_hgrid: grid type is 'tripolar_grid', 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', nxbnds does not match number of entry in nlon")
-    #         if nybnds != nybnds2+1:
-    #             mpp.pyfms_error(errortype=2, errormsg="make_hgrid: grid type is 'tripolar_grid', 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', nybnds does not match number of entry in nlat")
+        if num_specify == 0:
+            mpp.pyfms_error(errortype=2, errormsg="make_hgrid: grid type is 'regular_lonlat_grid', 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', need to specify one of the pair --nlon --nlat or --dlon --dlat")
+        if num_specify == 2:
+            mpp.pyfms_error(errortype=2, errormsg="make_hgrid: grid type is 'regular_lonlat_grid', 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', can not specify both --nlon --nlat and --dlon --dlat")
+        if use_legacy:
+            if nxbnds != nxbnds3:
+                mpp.pfms_error(errortype=2, errormsg="make_hgrid: grid type is 'tripolar_grid', 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', nxbnds does not match number of entry in dlon")
+            if nybnds != nybnds3:
+                mpp.pyfms_error(errortype=2, errormsg="make_hgrid: grid type is 'tripolar_grid', 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', nybnds does not match number of entry in dlat")
+        else:
+            if nxbnds != nxbnds2+1:
+                mpp.pyfms_error(errortype=2, errormsg="make_hgrid: grid type is 'tripolar_grid', 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', nxbnds does not match number of entry in nlon")
+            if nybnds != nybnds2+1:
+                mpp.pyfms_error(errortype=2, errormsg="make_hgrid: grid type is 'tripolar_grid', 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', nybnds does not match number of entry in nlat")
 
     # if my_grid_type == CONFORMAL_CUBIC_GRID or my_grid_type == GNOMONIC_ED:
     #     ntiles = 6
@@ -860,130 +889,131 @@ def make_hgrid(
     # else:
     #     mpp.pyfms_error(errortype=2, errormsg="make_hgrid: passed grid type is not implemented")
 
-    # if verbose:
-    #     print(f"[INFO] make_hgrid.c Number of tiles (ntiles): {ntiles}", file=sys.stderr)
-    #     print(f"[INFO] make_hgrid.c Number of global tiles (ntiles_global): {ntiles_global}", file=sys.stderr)
+    if verbose:
+        print(f"[INFO] make_hgrid: Number of tiles (ntiles): {ntiles}", file=sys.stderr)
+        print(f"[INFO] make_hgrid: Number of global tiles (ntiles_global): {ntiles_global}", file=sys.stderr)
 
-    # nxl = np.empty(shape=ntiles, dtype=np.int32)
-    # nyl = np.empty(shape=ntiles, dtype=np.int32)
+    nxl = np.empty(shape=ntiles, dtype=np.int32)
+    nyl = np.empty(shape=ntiles, dtype=np.int32)
 
     """
     Get super grid size
     """
-    # if use_legacy:
-    #     nxl[0] = get_legacy_grid_size(nxbnds, xbnds, dx_bnds)
-    #     nyl[0] = get_legacy_grid_size(nybnds, ybnds, dy_bnds)
-    # elif my_grid_type == GNOMONIC_ED or my_grid_file == CONFORMAL_CUBIC_GRID:
-    #     for n in range(ntiles_global):
-    #         nxl[n] = nlon[0]
-    #         nyl[n] = nxl[n]
-    #         if nest_grids and parent_tile[0] == 0:
-    #             nxl[n] *= refine_ratio[0]
-    #             nyl[n] *= refine_ratio[0]
+    if use_legacy:
+        nxl[0] = get_legacy_grid_size(nxbnds, xbnds, dx_bnds)
+        nyl[0] = get_legacy_grid_size(nybnds, ybnds, dy_bnds)
+    elif my_grid_type == GNOMONIC_ED or my_grid_file == CONFORMAL_CUBIC_GRID:
+        for n in range(ntiles_global):
+            nxl[n] = nlon[0]
+            nyl[n] = nxl[n]
+            if nest_grids and parent_tile[0] == 0:
+                nxl[n] *= refine_ratio[0]
+                nyl[n] *= refine_ratio[0]
 
-    #     for n in range(ntiles_global, ntiles):
-    #         nn = n - ntiles_global
-    #         nxl[n] = (iend_nest[nn] - istart_nest[nn] + 1) * refine_ratio[nn]
-    #         nyl[n] = (jend_nest[nn] - jstart_nest[nn] + 1) * refine_ratio[nn]
-    # elif my_grid_type == FROM_FILE:
-    #     for n in range(ntiles_global):
-    #         nxl[n] = nlon[n]
-    #         nyl[n] = nlat[n]
-    # else:
-    #     nxl[0] = 0
-    #     nyl[0] = 0
-    #     for n in range(nxbnds - 1):
-    #         nxl[0] += nlon[n]
-    #     for n in range(nybnds - 1):
-    #         nyl[0] += nlat[n]
+        for n in range(ntiles_global, ntiles):
+            nn = n - ntiles_global
+            nxl[n] = (iend_nest[nn] - istart_nest[nn] + 1) * refine_ratio[nn]
+            nyl[n] = (jend_nest[nn] - jstart_nest[nn] + 1) * refine_ratio[nn]
+    elif my_grid_type == FROM_FILE:
+        for n in range(ntiles_global):
+            nxl[n] = nlon[n]
+            nyl[n] = nlat[n]
+    else:
+        nxl[0] = 0
+        nyl[0] = 0
+        for n in range(nxbnds - 1):
+            nxl[0] += nlon[n]
+        for n in range(nybnds - 1):
+            nyl[0] += nlat[n]
 
-    # nx = nxl[0]
-    # ny = nyl[0]
-    # nxp = nx + 1
-    # nyp = ny + 1
+    nx = nxl[0]
+    ny = nyl[0]
+    nxp = nx + 1
+    nyp = ny + 1
 
-    # if center == "none" and center == "c_cell" and center == "t_cell":
-    #     mpp.pyfms_error(errortype=2, errormsg="make_hgrid: center should be 'none', 'c_cell' or 't_cell' ")
+    if center == "none" and center == "c_cell" and center == "t_cell":
+        mpp.pyfms_error(errortype=2, errormsg="make_hgrid: center should be 'none', 'c_cell' or 't_cell' ")
 
-    # # --non_length_angle should only be set when grid_type == GNOMONIC_ED
-    # if not output_length_angle and my_grid_type != GNOMONIC_ED:
-    #     mpp.pyfms_error(errortype=2, errormsg="make_hgrid: --no_length_angle is set but grid_type is not 'gnomonic_ed'")
+    # --non_length_angle should only be set when grid_type == GNOMONIC_ED
+    if not output_length_angle and my_grid_type != GNOMONIC_ED:
+        mpp.pyfms_error(errortype=2, errormsg="make_hgrid: --no_length_angle is set but grid_type is not 'gnomonic_ed'")
 
     """
     Create grid information
     """
 
-    # for n_nest in range(ntiles):
-    #     print(f"[INFO] tile: {n_nest}, {nxl[n_nest]}, {nyl[n_nest]}, ntiles: {ntiles}", file=sys.stderr)
+    for n_nest in range(ntiles):
+        print(f"[INFO] tile: {n_nest}, {nxl[n_nest]}, {nyl[n_nest]}, ntiles: {ntiles}", file=sys.stderr)
 
-    # size1 = ctypes.c_ulong(0)
-    # size2 = ctypes.c_ulong(0)
-    # size3 = ctypes.c_ulong(0)
-    # size4 = ctypes.c_long(0)
+    size1 = ctypes.c_ulong(0)
+    size2 = ctypes.c_ulong(0)
+    size3 = ctypes.c_ulong(0)
+    size4 = ctypes.c_long(0)
 
-    # if my_grid_type == FROM_FILE:
-    #     for n in range(ntiles_global):
-    #         size1.value += (nlon[n] + 1) * (nlat[n] + 1)
-    #         size2.value += (nlon[n] + 1) * (nlat[n] + 1 + 1)
-    #         size3.value += (nlon[n] + 1 +1) * (nlat[n] + 1)
-    #         size4.value += (nlon[n] + 1) * (nlat[n] + 1)
-    # else:
-    #     size1 = ctypes.c_ulong(nxp * nyp * ntiles_global)
-    #     size2 = ctypes.c_ulong(nxp * (nyp + 1) * ntiles_global)
-    #     size3 = ctypes.c_ulong((nxp + 1) * nyp * ntiles_global)
-    #     size4 = ctypes.c_ulong(nxp * nyp * ntiles_global)
+    if my_grid_type == FROM_FILE:
+        for n in range(ntiles_global):
+            size1.value += (nlon[n] + 1) * (nlat[n] + 1)
+            size2.value += (nlon[n] + 1) * (nlat[n] + 1 + 1)
+            size3.value += (nlon[n] + 1 +1) * (nlat[n] + 1)
+            size4.value += (nlon[n] + 1) * (nlat[n] + 1)
+    else:
+        size1 = ctypes.c_ulong(nxp * nyp * ntiles_global)
+        size2 = ctypes.c_ulong(nxp * (nyp + 1) * ntiles_global)
+        size3 = ctypes.c_ulong((nxp + 1) * nyp * ntiles_global)
+        size4 = ctypes.c_ulong(nxp * nyp * ntiles_global)
 
-    # if not (nest_grids == 1 and parent_tile[0] == 0):
-    #     for n_nest  in range(ntiles_global, ntiles_global+nest_grids):
-    #         if verbose:
-    #             print(f"[INFO] Adding memory size for nest {n_nest}, nest_grids: {nest_grids}", file=sys.stderr)
-    #         size1.value += (nxl[n_nest]+1) * (nyl[n_nest]+1)
-    #         size2.value += (nxl[n_nest]+1) * (nyl[n_nest]+2)
-    #         size3.value += (nxl[n_nest]+2) * (nyl[n_nest]+1)
-    #         size4.value += (nxl[n_nest]+1) * (nyl[n_nest]+1)
+    if not (nest_grids == 1 and parent_tile[0] == 0):
+        for n_nest  in range(ntiles_global, ntiles_global+nest_grids):
+            if verbose:
+                print(f"[INFO] Adding memory size for nest {n_nest}, nest_grids: {nest_grids}", file=sys.stderr)
+            size1.value += (nxl[n_nest]+1) * (nyl[n_nest]+1)
+            size2.value += (nxl[n_nest]+1) * (nyl[n_nest]+2)
+            size3.value += (nxl[n_nest]+2) * (nyl[n_nest]+1)
+            size4.value += (nxl[n_nest]+1) * (nyl[n_nest]+1)
 
-    # if verbose:
-    #     print(f"[INFO] Allocating arrays of size {size1} for x, y based on nxp: {nxp} nyp: {nyp} ntiles: {ntiles}", file=sys.stderr)
-    # grid_obj.x = np.empty(shape=size1.value, dtype=np.float64)
-    # grid_obj.y = np.empty(shape=size1.value, dtype=np.float64)
-    # grid_obj.area = np.empty(shape=size4.value, dtype=np.float64)
-    # grid_obj.arcx = arcx
-    # if output_length_angle:
-    #     grid_obj.dx = np.empty(shape=size2.value, dtype=np.float64)
-    #     grid_obj.dy = np.empty(shape=size3.value, dtype=np.float64)
-    #     grid_obj.angle_dx = np.empty(shape=size1.value, dtype=np.float64)
-    #     if conformal != "true":
-    #         grid_obj.angle_dy = np.empty(shape=size1.value, dtype=np.float64)
+    if verbose:
+        print(f"[INFO] Allocating arrays of size {size1} for x, y based on nxp: {nxp} nyp: {nyp} ntiles: {ntiles}", file=sys.stderr)
+    grid_obj.x = np.empty(shape=size1.value, dtype=np.float64)
+    grid_obj.y = np.empty(shape=size1.value, dtype=np.float64)
+    grid_obj.area = np.empty(shape=size4.value, dtype=np.float64)
+    grid_obj.arcx = arcx
+    if output_length_angle:
+        grid_obj.dx = np.empty(shape=size2.value, dtype=np.float64)
+        grid_obj.dy = np.empty(shape=size3.value, dtype=np.float64)
+        grid_obj.angle_dx = np.empty(shape=size1.value, dtype=np.float64)
+        if conformal != "true":
+            grid_obj.angle_dy = np.empty(shape=size1.value, dtype=np.float64)
 
-    # isc = 0
-    # iec = nx - 1
-    # jsc = 0
-    # jec = ny - 1
+    isc = 0
+    iec = nx - 1
+    jsc = 0
+    jec = ny - 1
 
-    # if(my_grid_type==REGULAR_LONLAT_GRID):
-    #     create_regular_lonlat_grid(
-    #         nxbnds, 
-    #         nybnds, 
-    #         xbnds, 
-    #         ybnds, 
-    #         nlon, 
-    #         nlat, 
-    #         dx_bnds, 
-    #         dy_bnds,
-    #         use_legacy, 
-    #         isc, 
-    #         iec, 
-    #         jsc, 
-    #         jec, 
-    #         grid_obj.x, 
-    #         grid_obj.y, 
-    #         grid_obj.dx, 
-    #         grid_obj.dy, 
-    #         grid_obj.area,
-    #         grid_obj.angle_dx, 
-    #         center,
-    #         use_great_circle_algorithm,
-    #     )
+    if(my_grid_type==REGULAR_LONLAT_GRID):
+        print(f"use_legacy py = {use_legacy}")
+        create_regular_lonlat_grid(
+            nxbnds, 
+            nybnds, 
+            xbnds, 
+            ybnds, 
+            nlon, 
+            nlat, 
+            dx_bnds, 
+            dy_bnds,
+            use_legacy, 
+            isc, 
+            iec, 
+            jsc, 
+            jec, 
+            grid_obj.x, 
+            grid_obj.y, 
+            grid_obj.dx, 
+            grid_obj.dy, 
+            grid_obj.area,
+            grid_obj.angle_dx, 
+            center,
+            use_great_circle_algorithm,
+        )
     # elif(my_grid_type==TRIPOLAR_GRID):
     #     create_tripolar_grid(
     #         nxbnds, 
@@ -1163,80 +1193,79 @@ def make_hgrid(
     """
     Write out data
     """
-    # pos_c = 0
-    # pos_e = 0
-    # pos_t = 0
-    # pos_n = 0
-    # for n in range(ntiles):
-    #     tilename = "tile" + str(n+1)
-    #     if ntiles > 1:
-    #         outfile = grid_name + ".tile" + ".nc" + str(n+1)
-    #     else:
-    #         outfile = grid_name + ".nc"
+    pos_c = 0
+    pos_e = 0
+    pos_t = 0
+    pos_n = 0
+    for n in range(ntiles):
+        tilename = "tile" + str(n+1)
+        if ntiles > 1:
+            outfile = grid_name + ".tile" + ".nc" + str(n+1)
+        else:
+            outfile = grid_name + ".nc"
         
-    #     if verbose:
-    #         print(f"Writing out {outfile}", file=sys.stderr)
+        if verbose:
+            print(f"Writing out {outfile}", file=sys.stderr)
         
-    #     nx = nxl[n]
-    #     ny = nyl[n]
-    #     if verbose:
-    #         print(f"[INFO] Outputting arrays of size nx: {nx} and ny: {ny} for tile: {n}", file=sys.stderr)
-    #     nxp = nx + 1
-    #     nyp = nx + 1
+        nx = nxl[n]
+        ny = nyl[n]
+        if verbose:
+            print(f"[INFO] Outputting arrays of size nx: {nx} and ny: {ny} for tile: {n}", file=sys.stderr)
+        nxp = nx + 1
+        nyp = nx + 1
 
-    #     if out_halo == 0:
-    #         if verbose:
-    #             print(f"[INFO] START NC XARRAY write out_halo=0 tile number = n: {n} offset = pos_c: {pos_c}", file=sys.stderr)
-    #             print(f"[INFO] XARRAY: n: {n} x[0]: {grid_obj.x[pos_c]} x[1]: {grid_obj.x[pos_c+1]} x[2]: {grid_obj.x[pos_c+2]} x[3]: {grid_obj.x[pos_c+3]} x[4]: {grid_obj.x[pos_c+4]} x[5]: {grid_obj.x[pos_c+5]} x[10]: {grid_obj.x[pos_c+10]}", file=sys.stderr)
-    #             if n > 0:
-    #                 print(f"[INFO] XARRAY: n: {n} x[0]: {grid_obj.x[pos_c]} x[-1]: {grid_obj.x[pos_c-1]} x[-2]: {grid_obj.x[pos_c-2]} x[-3]: {grid_obj.x[pos_c-3]} x[-4]: {grid_obj.x[pos_c-4]} x[-5]: {grid_obj.x[pos_c-5]} x[-10]: {grid_obj.x[pos_c-10]}", file=sys.stderr)
-    #         grid_obj.x = grid_obj.x[pos_c:]
-    #         grid_obj.y = grid_obj.y[pos_c:]
-    #         if output_length_angle:
-    #             grid_obj.dx = grid_obj.dx[pos_n:]
-    #             grid_obj.dy = grid_obj.dy[pos_e:]
-    #             grid_obj.angle_dx = grid_obj.angle_dx[pos_c:]
-    #             if conformal == "true":
-    #                 grid_obj.angle_dy = grid_obj.angle_dy[pos_c:]
-    #         grid_obj.area = grid_obj.area[pos_t:]
+        if out_halo == 0:
+            if verbose:
+                print(f"[INFO] START NC XARRAY write out_halo=0 tile number = n: {n} offset = pos_c: {pos_c}", file=sys.stderr)
+                print(f"[INFO] XARRAY: n: {n} x[0]: {grid_obj.x[pos_c]} x[1]: {grid_obj.x[pos_c+1]} x[2]: {grid_obj.x[pos_c+2]} x[3]: {grid_obj.x[pos_c+3]} x[4]: {grid_obj.x[pos_c+4]} x[5]: {grid_obj.x[pos_c+5]} x[10]: {grid_obj.x[pos_c+10]}", file=sys.stderr)
+                if n > 0:
+                    print(f"[INFO] XARRAY: n: {n} x[0]: {grid_obj.x[pos_c]} x[-1]: {grid_obj.x[pos_c-1]} x[-2]: {grid_obj.x[pos_c-2]} x[-3]: {grid_obj.x[pos_c-3]} x[-4]: {grid_obj.x[pos_c-4]} x[-5]: {grid_obj.x[pos_c-5]} x[-10]: {grid_obj.x[pos_c-10]}", file=sys.stderr)
+            grid_obj.x = grid_obj.x[pos_c:]
+            grid_obj.y = grid_obj.y[pos_c:]
+            if output_length_angle:
+                grid_obj.dx = grid_obj.dx[pos_n:]
+                grid_obj.dy = grid_obj.dy[pos_e:]
+                grid_obj.angle_dx = grid_obj.angle_dx[pos_c:]
+                if conformal != "true":
+                    grid_obj.angle_dy = grid_obj.angle_dy[pos_c:]
+            grid_obj.area = grid_obj.area[pos_t:]
+        else:
+            tmp = np.empty(shape=(nxp+2*out_halo)*(nyp+2*out_halo), dtype=np.float64)
+            if verbose:
+                print(f"[INFO] INDEX NC write with halo tile number = n: {n}", file=sys.stderr)
+            fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.x, grid_obj.x, n, 1, 1)
+            grid_obj.x = tmp.copy()
+            fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.y, grid_obj.y, n, 1, 1)
+            grid_obj.y = tmp.copy()
+            if output_length_angle:
+                fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.angle_dx, grid_obj.angle_dx, n, 1, 1)
+                grid_obj.angle_dx = tmp.copy()
+                if conformal != "true":
+                    fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.angle_dy, grid_obj.angle_dy, n, 1, 1)
+                    grid_obj.angle_dy = tmp.copy()
+                fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.dx, grid_obj.dy, n, 0, 1)
+                grid_obj.dx = tmp.copy()
+                fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.dy, grid_obj.dx, n, 1, 0)
+                grid_obj.dy = tmp.copy()
+            fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.area, grid_obj.area, n, 0, 0)
+            grid_obj.area = tmp.copy()
 
-    #     else:
-    #         tmp = np.empty(shape=(nxp+2*out_halo)*(nyp+2*out_halo), dtype=np.float64)
-    #         if verbose:
-    #             print(f"[INFO] INDEX NC write with halo tile number = n: {n}", file=sys.stderr)
-    #         fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.x, grid_obj.x, n, 1, 1)
-    #         grid_obj.x = tmp.copy()
-    #         fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.y, grid_obj.y, n, 1, 1)
-    #         grid_obj.y = tmp.copy()
-    #         if output_length_angle:
-    #             fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.angle_dx, grid_obj.angle_dx, n, 1, 1)
-    #             grid_obj.angle_dx = tmp.copy()
-    #             if conformal == "true":
-    #                 fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.angle_dy, grid_obj.angle_dy, n, 1, 1)
-    #                 grid_obj.angle_dy = tmp.copy()
-    #             fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.dx, grid_obj.dy, n, 0, 1)
-    #             grid_obj.dx = tmp.copy()
-    #             fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.dy, grid_obj.dx, n, 1, 0)
-    #             grid_obj.dy = tmp.copy()
-    #         fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.area, grid_obj.area, n, 0, 0)
-    #         grid_obj.area = tmp.copy()
+        if verbose:
+            print(f"About to close {outfile}")
 
-    #     if verbose:
-    #         print(f"About to close {outfile}")
+        nx = nxl[n]
+        ny = nyl[n]
+        nxp = nx + 1
+        nyp = ny + 1
 
-    #     nx = nxl[n]
-    #     ny = nyl[n]
-    #     nxp = nx + 1
-    #     nyp = ny + 1
-
-    #     if verbose:
-    #         print(f"[INFO] INDEX Before increment n: {n} pos_c {pos_c} nxp {nxp} nyp {nyp} nxp*nyp {nxp*nyp}", file=sys.stderr)
-    #     pos_c += nxp*nyp
-    #     if verbose:
-    #         print(f"[INFO] INDEX After increment n: {n} pos_c {pos_c}.", file=sys.stderr)
-    #     pos_e += nxp*ny
-    #     pos_n += nx*nyp
-    #     pos_t += nx*ny
+        if verbose:
+            print(f"[INFO] INDEX Before increment n: {n} pos_c {pos_c} nxp {nxp} nyp {nyp} nxp*nyp {nxp*nyp}", file=sys.stderr)
+        pos_c += nxp*nyp
+        if verbose:
+            print(f"[INFO] INDEX After increment n: {n} pos_c {pos_c}.", file=sys.stderr)
+        pos_e += nxp*ny
+        pos_n += nx*nyp
+        pos_t += nx*ny
 
 
     # grid_obj.write_out_hgrid(
@@ -1252,8 +1281,8 @@ def make_hgrid(
     #     output_length_angle=output_length_angle,
     # )
 
-    # if(mpp.pe() == 0 and verbose):
-    #     print("generate_grid is run successfully")
+    if(mpp.pe() == 0 and verbose):
+        print("generate_grid is run successfully")
 
     pyfms.pyfms_end()
 

@@ -66,49 +66,100 @@ def fill_cubic_grid_halo(
 def create_regular_lonlat_grid(
         nxbnds: int,
         nybnds: int,
-        xbnds: npt.NDArray[np.float64],
-        ybnds: npt.NDArray[np.float64],
-        nlon: npt.NDArray[np.int32],
-        nlat: npt.NDArray[np.int32],
-        dlon: npt.NDArray[np.float64],
-        dlat: npt.NDArray[np.float64],
+        xbnds: npt.NDArray,
+        ybnds: npt.NDArray,
+        nlon: npt.NDArray,
+        nlat: npt.NDArray,
+        dlon: npt.NDArray,
+        dlat: npt.NDArray,
         use_legacy: int,
         isc: int,
         iec: int,
         jsc: int,
         jec: int,
-        x: npt.NDArray[np.float64],
-        y: npt.NDArray[np.float64],
-        dx: npt.NDArray[np.float64],
-        dy: npt.NDArray[np.float64],
-        area: npt.NDArray[np.float64],
-        angle_dx: npt.NDArray[np.float64],
+        x: npt.NDArray,
+        y: npt.NDArray,
+        dx: npt.NDArray,
+        dy: npt.NDArray,
+        area: npt.NDArray,
+        angle_dx: npt.NDArray,
         center: str,
         use_great_circle_algorithm: int
 ):
     _create_regular_lonlat_grid = lib.create_regular_lonlat_grid
 
-    nxbnds_c, nxbnds_t = setscalar_Cint32(nxbnds)
-    nybnds_c, nybnds_t = setscalar_Cint32(nybnds)
-    xbnds_p, xbnds_t = setarray_Cdouble(xbnds)
-    ybnds_p, ybnds_t = setarray_Cdouble(ybnds)
-    nlon_p, nlon_t = setarray_Cint32(nlon)
-    nlat_p, nlat_t = setarray_Cint32(nlat)
-    dlon_p, dlon_t = setarray_Cdouble(dlon)
-    dlat_p, dlat_t = setarray_Cdouble(dlat)
-    use_legacy_c, use_legacy_t = setscalar_Cint32(use_legacy)
-    isc_c, isc_t = setscalar_Cint32(isc)
-    iec_c, iec_t = setscalar_Cint32(iec)
-    jsc_c, jsc_t = setscalar_Cint32(jsc)
-    jec_c, jec_t = setscalar_Cint32(jec)
-    x_p, x_t = setarray_Cdouble(x)
-    y_p, y_t = setarray_Cdouble(y)
-    dx_p, dx_t = setarray_Cdouble(dx)
-    dy_p, dy_t = setarray_Cdouble(dy)
-    area_p, area_t = setarray_Cdouble(area)
-    angle_dx_p, angle_dx_t = setarray_Cdouble(angle_dx)
-    center_c, center_t = set_Cchar(center)
-    use_great_circle_algorithm_c, use_great_circle_algorithm_t = setscalar_Cint32(use_great_circle_algorithm)
+    nxbnds_c, nxbnds_t = ctypes.c_int(nxbnds), ctypes.POINTER(ctypes.c_int)
+    nybnds_c, nybnds_t = ctypes.c_int(nybnds), ctypes.POINTER(ctypes.c_int)
+
+    if xbnds is not None:
+        xbnds_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=xbnds.shape, flags="C_CONTIGUOUS")
+    else:
+        xbnds_t = ctypes.POINTER(ctypes.c_double)
+
+    if ybnds is not None:
+        ybnds_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=ybnds.shape)
+    else:
+        ybnds_t = ctypes.POINTER(ctypes.c_double)
+
+    if nlon is not None:
+        nlon_t = np.ctypeslib.ndpointer(dtype=np.int32, shape=nlon.shape, flags="C_CONTIGUOUS")
+    else:
+        nlon_t = ctypes.POINTER(ctypes.c_int)
+
+    if nlat is not None:
+        nlat_t = np.ctypeslib.ndpointer(dtype=np.int32, shape=nlat.shape, flags="C_CONTIGUOUS")
+    else:
+        nlat_t = ctypes.POINTER(ctypes.c_int)
+
+    if dlon is not None:
+        dlon_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=dlon.shape, flags="C_CONTIGUOUS")
+    else:
+        dlon_t = ctypes.POINTER(ctypes.c_double)
+
+    if dlat is not None:
+        dlat_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=dlat.shape, flags="C_CONTIGUOUS")
+    else:
+        dlat_t = ctypes.POINTER(ctypes.c_double)
+
+    use_legacy_c, use_legacy_t = ctypes.c_int(use_legacy), ctypes.c_int
+
+    isc_c, isc_t = ctypes.c_int(isc), ctypes.POINTER(ctypes.c_int)
+    iec_c, iec_t = ctypes.c_int(iec), ctypes.POINTER(ctypes.c_int)
+    jsc_c, jsc_t = ctypes.c_int(jsc), ctypes.POINTER(ctypes.c_int)
+    jec_c, jec_t = ctypes.c_int(jec), ctypes.POINTER(ctypes.c_int)
+
+    if x is not None:
+        x_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=x.shape, flags="C_CONTIGUOUS")
+    else:
+        x_t = ctypes.POINTER(ctypes.c_double)
+
+    if y is not None:
+        y_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=y.shape, flags="C_CONTIGUOUS")
+    else:
+        y_t = ctypes.POINTER(ctypes.c_double)
+
+    if dx is not None:
+        dx_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=dx.shape, flags="C_CONTIGUOUS")
+    else:
+        dx_t = ctypes.POINTER(ctypes.c_double)
+
+    if dy is not None:
+        dy_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=dy.shape, flags="C_CONTIGUOUS")
+    else:
+        dy_t = ctypes.POINTER(ctypes.c_double)
+
+    if area is not None:
+        area_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=area.shape, flags="C_CONTIGUOUS")
+    else:
+        area_t = ctypes.POINTER(ctypes.c_double)
+
+    if angle_dx is not None:
+        angle_dx_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=angle_dx.shape, flags="C_CONTIGUOUS")
+    else:
+        angle_dx_t = ctypes.POINTER(ctypes.c_double)
+
+    center_c, center_t = ctypes.c_char_p(center.encode("utf-8")), ctypes.c_char_p
+    use_great_circle_algorithm_c, use_great_circle_algorithm_t = ctypes.c_int(use_great_circle_algorithm), ctypes.c_int
 
     _create_regular_lonlat_grid.argtypes = [
         nxbnds_t,
@@ -138,23 +189,23 @@ def create_regular_lonlat_grid(
     _create_regular_lonlat_grid(
         nxbnds_c,
         nybnds_c,
-        xbnds_p,
-        ybnds_p,
-        nlon_p,
-        nlat_p,
-        dlon_p,
-        dlat_p,
+        xbnds,
+        ybnds,
+        nlon,
+        nlat,
+        dlon,
+        dlat,
         use_legacy_c,
         isc_c,
         iec_c,
         jsc_c,
         jec_c,
-        x_p,
-        y_p,
-        dx_p,
-        dy_p,
-        area_p,
-        angle_dx_p,
+        x,
+        y,
+        dx,
+        dy,
+        area,
+        angle_dx,
         center_c,
         use_great_circle_algorithm_c,
     )
