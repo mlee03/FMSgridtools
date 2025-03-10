@@ -350,8 +350,7 @@ void set_depth(int nx, int ny, const double *xbnd, const double *ybnd, double al
 
 /*********************************************************************
    void create_realistic_topog_wrapper( )
-   wrapper for the original C routine, added for FMSgridtools
-   same arguments as create_realistic_topog but domain argument is removed
+   wrapper for the create_realistic_topog function, added for FMSgridtools
  ********************************************************************/
 void create_realistic_topog_wrapper(int nx_dst, int ny_dst, const double *x_dst, const double *y_dst, const char *vgrid_file,
 			    const char* topog_file, const char* topog_field, double scale_factor,
@@ -361,7 +360,7 @@ void create_realistic_topog_wrapper(int nx_dst, int ny_dst, const double *x_dst,
 			    int deepen_shallow, int full_cell, int flat_bottom, int adjust_topo,
 			    int fill_isolated_cells, int dont_change_landmask, int kmt_min, double min_thickness,
 			    int open_very_this_cell, double fraction_full_cell, double *depth,
-			    int *num_levels, int debug, int use_great_circle_algorithm,
+			    int *num_levels, int debug, int use_great_circle_algorithm, // TODO use_gca can be removed
           int on_grid, int x_refine, int y_refine, char* tile_file)
 {
   int nx, ny, layout[2], isc, iec, jsc, jec, nxc, nyc, ni, i, j;
@@ -385,6 +384,11 @@ void create_realistic_topog_wrapper(int nx_dst, int ny_dst, const double *x_dst,
   nx_dst /= x_refine;
   ny_dst /= y_refine;
 
+  // some flags default to true, so we'll flip the values passed in from python 
+  adjust_topo = !adjust_topo;
+  fill_isolated_cells = !fill_isolated_cells;
+  open_very_this_cell = !open_very_this_cell;
+
   // define the domain and compute bounds
   mpp_define_layout( nx_dst, ny_dst, mpp_npes(), layout);
   mpp_define_domain2d( nx_dst, ny_dst, layout, 0, 0, &domain);
@@ -397,7 +401,13 @@ void create_realistic_topog_wrapper(int nx_dst, int ny_dst, const double *x_dst,
   nread[0] = nyc*y_refine+1; nread[1] = nxc*x_refine+1;
   ni       = nxc*x_refine+1;
 
+  // print out domains and argument information if verbose
   if(debug) {
+    printf("adjust_topo=%d\topen_very_this_cell=%d\tfill_isolated_cells=%d\n", adjust_topo, open_very_this_cell, fill_isolated_cells);
+    printf("scale_factor=%lf\n", scale_factor);
+    printf("num_filter_pass=%d\n", num_filter_pass);
+    printf("kmt_min=%d\n", kmt_min);
+    printf("fraction_full_cell=%lf\n", fraction_full_cell);
     if(mpp_root_pe() == mpp_pe()) printf("***\tmpp domain created with %d pes, nx=%d ny=%d\t***\n", mpp_npes(), nx_dst, ny_dst);
     printf("i indices=%d:%d\n",isc, iec);
     printf("j indices=%d:%d\n",jsc, jec);
@@ -422,6 +432,10 @@ void create_realistic_topog_wrapper(int nx_dst, int ny_dst, const double *x_dst,
   g_fid = mpp_open(tile_file, MPP_READ);
   vid = mpp_get_varid(g_fid, "x");
   mpp_get_var_value_block(g_fid, vid, start, nread, tmp);
+
+  // check if great circle algorithm was used in the grid tile 
+  // normally this is done for each grid tile, but this option currently only supports a single tile
+  int using_gca = get_great_circle_algorithm(g_fid);
 
   /*
   // TODO 
@@ -455,8 +469,6 @@ void create_realistic_topog_wrapper(int nx_dst, int ny_dst, const double *x_dst,
     for(i = 0; i < nxc+1; i++)
       y[j*(nxc+1)+i] = tmp[(j*y_refine)*ni+i*x_refine];
 
-  if(debug) printf("x/y data values set successfully\n");
-
   // call the routine to generate depth and num_levels values
   create_realistic_topog(nx_dst, ny_dst, x, y, vgrid_file,
 			    topog_file, topog_field,scale_factor, tripolar_grid, cyclic_x, cyclic_y,
@@ -465,7 +477,7 @@ void create_realistic_topog_wrapper(int nx_dst, int ny_dst, const double *x_dst,
 			    deepen_shallow, full_cell, flat_bottom, adjust_topo,
 			    fill_isolated_cells, dont_change_landmask, kmt_min,min_thickness,
 			    open_very_this_cell,fraction_full_cell,depth,
-			    num_levels, domain, debug, use_great_circle_algorithm, on_grid);
+			    num_levels, domain, debug, using_gca, on_grid);
   
   mpp_domain_end();
   mpp_end();
@@ -502,8 +514,6 @@ void create_realistic_topog(int nx_dst, int ny_dst, const double *x_dst, const d
 
   /* read the vertical grid when vgrid_file is defined */
   if( vgrid_file ) {
-    if(debug)
-      printf("opening vgrid file...");
     fid = mpp_open(vgrid_file, MPP_READ);
     nzv = mpp_get_dimlen(fid, "nzv");
     if( (nzv-1)%2 ) mpp_error("topog: size of dimension nzv should be 2*nk+1, where nk is the number of model vertical level");
@@ -657,7 +667,6 @@ void create_realistic_topog(int nx_dst, int ny_dst, const double *x_dst, const d
   }
 
   if(debug) printf("done.\nfiltering topo (if enabled)...");
-  printf("filter_topog=%d", filter_topog);
 
   if (filter_topog) filter_topo(nx_dst, ny_dst, num_filter_pass, smooth_topo_allow_deepening, depth, domain);
   // TODO causes seg fault
@@ -679,7 +688,7 @@ void create_realistic_topog(int nx_dst, int ny_dst, const double *x_dst, const d
 			      open_very_this_cell, fraction_full_cell, round_shallow, deepen_shallow, fill_shallow,
 			      dont_change_landmask, kmt_min, domain, debug );
 
-  if(debug) printf("done.");
+  if(debug) printf("done.\n");
 
   free(depth_src);
   free(mask_src);

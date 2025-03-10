@@ -4,6 +4,7 @@ import numpy.typing as npt
 import dataclasses
 import itertools
 import ctypes
+from ..shared.gridtools_utils import check_file_is_there
 
 # macro value from tool_util.h
 VERSION_2 = 2
@@ -12,8 +13,6 @@ debug = True
 
 # represents topography output file created by make_topog
 # contains parameters for topography generation that aren't tied to a specific topography type
-# and depth values from specified topog_type algorithm once generated.
-# if multiple tiles are used, the third index of depth will be the the tile number
 @dataclasses.dataclass
 class TopogObj():
     mosaic_filename: str = None
@@ -21,7 +20,7 @@ class TopogObj():
     ntiles: int = None
     x_tile: dict = dataclasses.field(default_factory=dict) 
     y_tile: dict = dataclasses.field(default_factory=dict)
-    nx_tile: dict = dataclasses.field(default_factory=dict) 
+    nx_tile: dict = dataclasses.field(default_factory=dict) # TODO nx/ny can probably be a property 
     ny_tile: dict = dataclasses.field(default_factory=dict)
     x_refine: int = None
     y_refine: int = None
@@ -33,14 +32,10 @@ class TopogObj():
     global_attrs: dict = dataclasses.field(default_factory=dict)
     dims: dict = dataclasses.field(default_factory=dict)
     num_levels: dict = dataclasses.field(default_factory=dict)
+    has_vgrid: bool = False
 
-    # applies any scaling factors or refinements given 
     def __post_init__(self):
         self.depth_vars = dict()
-        self.depth_attrs = dict()
-        self.depth_attrs["standard_name"] = "topographic depth at T-cell centers"
-        self.depth_attrs["units"] = "meters"
-
         # make sure nx/ny dicts are given
         if self.x_tile is None or self.y_tile is None:
             raise ValueError("No nx/ny dictionaries provided, cannot construct TopogObj")
@@ -48,21 +43,6 @@ class TopogObj():
         for tileName in self.x_tile.keys():
             self.nx_tile[tileName] = self.x_tile[tileName].shape[1] - 1
             self.ny_tile[tileName] = self.x_tile[tileName].shape[0] - 1
-
-        # adjust nx/ny for refinements and scaling factor
-        # TODO usage of mpp domains for indices makes this hard to adjust outside the C code
-        # maybe this can done in python eventually
-        #if self.x_refine is not None:
-        #    print(f"updating nx for x refine value of {self.x_refine}")
-        #    self.nx_tile.update((tname, int(val/self.x_refine)) for tname, val in self.nx_tile.items()) 
-        #if self.y_refine is not None:
-        #    print(f"updating y for y refine value of {self.y_refine}")
-        #    self.ny_tile.update((tname, int(val/self.y_refine)) for tname, val in self.ny_tile.items()) 
-        #if self.scale_factor is not None:
-        #    print(f"updating x/y for scale factor value of {self.scale_factor}")
-        #    self.nx_tile.update((tname, int(val*self.scale_factor)) for tname, val in self.nx_tile.items()) 
-        #    self.ny_tile.update((tname, int(val*self.scale_factor)) for tname, val in self.ny_tile.items())
-
         # set up coordinates and dimensions based off tile count and nx/ny values
         # if single tile exclude tile number in variable name
         if self.ntiles == 1:
@@ -79,7 +59,11 @@ class TopogObj():
         if(not self.__data_is_generated):
             print("Warning: write routine called but depth data not yet generated")
 
-        # TODO this needs to be updates to add num_levels as an output variable, it will only be added if vgrid file is used
+        depth_attrs = { "standard_name":"topographic depth at T-cell centers",
+                        "units" : "meters" }      
+        if(self.has_vgrid):
+            num_levels_attrs = {"standard_name":"number of vertical T-cells",
+                                "units":"none"}
 
         # create xarray DataArrays for each output variable
         # single tile
@@ -87,14 +71,24 @@ class TopogObj():
             self.depth_vars['depth'] = xr.DataArray(
                 data = self.depth_vals['depth_tile1'],
                 dims = self.dims,
-                attrs = self.depth_attrs)
+                attrs = depth_attrs)
+            if self.has_vgrid:
+                self.depth_vars['num_levels'] = xr.DataArray(
+                    data = self.depth_vals['num_levels_tile1'],
+                    dims = self.dims,
+                    attrs = num_levels_attrs)
         # multi-tile 
         else:
-            for i in range(1,self.ntiles+1):
-                self.depth_vars['depth_tile'+str(i)] = xr.DataArray(
-                    data = self.depth_vals['depth_tile'+str(i)], 
+            for tname in self.x_tile.keys():
+                self.depth_vars[f'depth_{tname}'] = xr.DataArray(
+                    data = self.depth_vals[f'depth_{tname}'], 
                     dims = self.dims[(i-1)*2:(i-1)*2+2],
-                    attrs = self.depth_attrs)
+                    attrs = depth_attrs)
+                if self.has_vgrid:
+                    self.depth_vars[f'num_levels_{tname}'] = xr.DataArray(
+                        data = self.depth_vals[f'num_levels_{tname}'],
+                        dims = self.dims,
+                        attrs = num_levels_attrs)
 
         # create dataset (this excludes ntiles, since it is not used in a variable)
         self.dataset = xr.Dataset( data_vars=self.depth_vars )
@@ -108,6 +102,7 @@ class TopogObj():
     # 'realistic' option requires a data file (topog_file) and the topography data's variable name (topog_field)
     # and then interpolates the read in data as depth values onto the output grid.
     # It can also take a vertical grid file as input, in which case it will also add another variable 'num_levels'
+    # Currently, the realistic option is limited to single tile mosaics, most commonly used by ocean models 
     def make_topog_realistic( self,
         x_vals_tile: dict = None,
         y_vals_tile: dict = None,
@@ -180,9 +175,15 @@ class TopogObj():
         ## check required arguments 
         if topog_file is None:
             raise ValueError("No argument given for topog_file") 
-        #check_file_is_there(topog_file) todo import error
+        check_file_is_there(topog_file)
         if topog_field is None:
             raise ValueError("No argument given for topog_field")
+        if self.ntiles != 1:
+            raise ValueError("Mosaic input file has more than one tile, 'realistic' option only supports single-tile mosaics")
+        # check vgrid
+        if vgrid_file is not None:
+            check_file_is_there(vgrid_file)
+            self.has_vgrid = True
 
         # set boundary type arguments based on the mosaic 
         cyclic_x = ctypes.c_int(0)
@@ -193,8 +194,6 @@ class TopogObj():
         if(debug):
             print(f"boundary type vals: {cyclic_x} {cyclic_y} {tripolar_grid}")
 
-        # TODO check if using great circle algorithm in all grid files
-        
         # generate data for each tile
         self.depth_vals = {}
         i = 0
@@ -235,12 +234,12 @@ class TopogObj():
             # get the name of the grid file for the current tile
             _grid_filename = grid_filenames[i].encode('utf-8') 
             i = i + 1
-            # TODO might be able to get rid of this as an arg
-            # this should be determined by the grid files 
+            # TODO remove arg 
             _use_great_circle_algorithm = bool_to_int(False)
             # init return values for output arrays
+            # this might not be neccessary since arrays are malloc'd in C
             _depth = np.zeros( (int(_ny_dst/self.y_refine), int(_nx_dst/self.x_refine)) )
-            _num_levels = np.zeros( (int(_ny_dst/self.y_refine), int(_nx_dst/self.x_refine)), dtype=int)
+            _num_levels = np.zeros( (int(_ny_dst/self.y_refine), int(_nx_dst/self.x_refine)), dtype=ctypes.c_int)
 
             print(f"Calling generate_realistic with nx: {self.nx_tile[tileName]}, ny: {self.ny_tile[tileName]}")
             generate_realistic_c( _nx_dst, _ny_dst,
@@ -257,15 +256,19 @@ class TopogObj():
                                   _fraction_full_cell, _depth.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                                   _num_levels.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
                                    _debug, _use_great_circle_algorithm, on_grid, self.x_refine, self.y_refine,
-                                   _grid_filename)
-                
+                                   _grid_filename) 
+            # set depth for current tile to depth values generated by c function
             self.depth_vals[f"depth_{tileName}"] = _depth 
+            # if a vgrid is used, add num_levels variable to the output data and set to returned array 
+            if(self.has_vgrid):
+                self.depth_vals[f"num_levels_{tileName}"] = _num_levels
         self.__data_is_generated = True
 
     def make_rectangular_basin(self, bottom_depth: float = None):
         self.depth_vals = {}
         for tileName in list(self.nx.keys()):
-            self.depth_vals[f"depth_{tileName}"] = np.full( (int(self.ny[tileName]), int(self.nx[tileName])), bottom_depth)
+            self.depth_vals[f"depth_{tileName}"] = np.full( (int(self.ny[tileName] / self.y_refine),
+                                                             int(self.nx[tileName] / self.x_refine)), bottom_depth)
         self.__data_is_generated = True
 
 
