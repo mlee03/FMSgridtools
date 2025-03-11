@@ -669,8 +669,8 @@ void create_realistic_topog(int nx_dst, int ny_dst, const double *x_dst, const d
   if(debug) printf("done.\nfiltering topo (if enabled)...");
 
   if (filter_topog) filter_topo(nx_dst, ny_dst, num_filter_pass, smooth_topo_allow_deepening, depth, domain);
-  // TODO causes seg fault
-  //if(debug) show_deepest(nk, zw, depth, domain);
+
+  if(debug) show_deepest(nk, zw, depth, domain);
 
   /* make first row of ocean model all land points for ice model */
   if(debug) printf("done.\nfilling first row (if enabled)...");

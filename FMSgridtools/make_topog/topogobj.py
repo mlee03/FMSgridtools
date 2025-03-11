@@ -1,15 +1,11 @@
 import xarray as xr
 import numpy as np
-import numpy.typing as npt
 import dataclasses
-import itertools
 import ctypes
 from ..shared.gridtools_utils import check_file_is_there
 
 # macro value from tool_util.h
 VERSION_2 = 2
-# verbosity switch
-debug = True
 
 # represents topography output file created by make_topog
 # contains parameters for topography generation that aren't tied to a specific topography type
@@ -33,6 +29,7 @@ class TopogObj():
     dims: dict = dataclasses.field(default_factory=dict)
     num_levels: dict = dataclasses.field(default_factory=dict)
     has_vgrid: bool = False
+    debug: bool = False
 
     def __post_init__(self):
         self.depth_vars = dict()
@@ -79,7 +76,9 @@ class TopogObj():
                     attrs = num_levels_attrs)
         # multi-tile 
         else:
+            i = 0
             for tname in self.x_tile.keys():
+                i = i + 1
                 self.depth_vars[f'depth_{tname}'] = xr.DataArray(
                     data = self.depth_vals[f'depth_{tname}'], 
                     dims = self.dims[(i-1)*2:(i-1)*2+2],
@@ -102,7 +101,7 @@ class TopogObj():
     # 'realistic' option requires a data file (topog_file) and the topography data's variable name (topog_field)
     # and then interpolates the read in data as depth values onto the output grid.
     # It can also take a vertical grid file as input, in which case it will also add another variable 'num_levels'
-    # Currently, the realistic option is limited to single tile mosaics, most commonly used by ocean models 
+    # Currently, the realistic option is limited to single tile mosaics (ocean)
     def make_topog_realistic( self,
         x_vals_tile: dict = None,
         y_vals_tile: dict = None,
@@ -111,7 +110,6 @@ class TopogObj():
         vgrid_file: str = None,
         num_filter_pass: int = None,
         kmt_min: int = None,
-        min_depth: float = None,
         min_thickness: float = None,
         fraction_full_cell: float = None,
         flat_bottom: bool = None,
@@ -135,7 +133,7 @@ class TopogObj():
         generate_realistic_c = frenct_lib.create_realistic_topog_wrapper
         get_boundary_type_c = frenct_lib.get_boundary_type
         generate_realistic_c.argtypes = [ ctypes.c_int, ctypes.c_int,                        # nx_dst, ny_dst
-                                          ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int),                  # x_dst, y_dst
+                                          ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int), # x_dst, y_dst
                                           ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, # vgrid_file, topog_file, topog_field
                                           ctypes.c_double, ctypes.c_int,                     # scale_factor, tripolar_grid, 
                                           ctypes.c_int, ctypes.c_int,                        # cyclic_x, cyclic_y
@@ -191,77 +189,72 @@ class TopogObj():
         tripolar_grid = ctypes.c_int(0)
         get_boundary_type_c(self.mosaic_filename.encode('utf-8'), VERSION_2, ctypes.byref(cyclic_x), ctypes.byref(cyclic_y),
                             ctypes.byref(tripolar_grid))
-        if(debug):
-            print(f"boundary type vals: {cyclic_x} {cyclic_y} {tripolar_grid}")
 
-        # generate data for each tile
+        # only need to generate for single tile, otherwise get_boundary_type errors out
+        tileName = list(self.x_tile.keys())[0]
         self.depth_vals = {}
-        i = 0
-        for tileName in list(self.nx_tile.keys()):
-            # create temp array for depth output 
-            _depth_temp = np.zeros( (self.ny_tile[tileName], self.nx_tile[tileName]) )
-            # number of grid points
-            _nx_dst = self.nx_tile[tileName]
-            _ny_dst = self.ny_tile[tileName]
-            # get x/y values from grid objs
-            _x_dst = self.x_tile[tileName] 
-            _y_dst = self.y_tile[tileName] 
-            # set by 'get_boundary_type' call above
-            _tripolar_grid = tripolar_grid 
-            _cyclic_x = cyclic_x
-            _cyclic_y = cyclic_y
-            # passed in flags (convert to ints) 
-            _fill_first_row = bool_to_int(fill_first_row)
-            _filter_topog = bool_to_int(filter_topog)
-            _num_filter_pass = bool_to_int(num_filter_pass)
-            _smooth_topo_allow_deepening = bool_to_int(smooth_topo_allow_deepening)
-            _round_shallow = bool_to_int(round_shallow)
-            _fill_shadow = bool_to_int(fill_shallow)
-            _deepen_shallow = bool_to_int(deepen_shallow)
-            _full_cell = bool_to_int(full_cell)
-            _flat_bottom = bool_to_int(flat_bottom)
-            _dont_adjust_topo = bool_to_int(dont_adjust_topo)
-            _dont_fill_isolated_cells = bool_to_int(dont_fill_isolated_cells)
-            _dont_change_landmask = bool_to_int(dont_change_landmask)
-            _open_very_this_cell = bool_to_int(open_very_this_cell)
-            _on_grid = bool_to_int(on_grid)
-            # anything else
-            _kmt_min = 0 if kmt_min is None else kmt_min
-            _min_thickness = 0 if min_thickness is None else min_thickness
-            _fraction_full_cell = fraction_full_cell # double
-            _debug = bool_to_int(True)
-            _vgrid_file = None if vgrid_file is None else vgrid_file.encode('utf-8')
-            # get the name of the grid file for the current tile
-            _grid_filename = grid_filenames[i].encode('utf-8') 
-            i = i + 1
-            # TODO remove arg 
-            _use_great_circle_algorithm = bool_to_int(False)
-            # init return values for output arrays
-            # this might not be neccessary since arrays are malloc'd in C
-            _depth = np.zeros( (int(_ny_dst/self.y_refine), int(_nx_dst/self.x_refine)) )
-            _num_levels = np.zeros( (int(_ny_dst/self.y_refine), int(_nx_dst/self.x_refine)), dtype=ctypes.c_int)
+        # number of grid points
+        _nx_dst = self.nx_tile[tileName]
+        _ny_dst = self.ny_tile[tileName]
+        # get x/y values from grid objs
+        _x_dst = self.x_tile[tileName] 
+        _y_dst = self.y_tile[tileName] 
+        # set by 'get_boundary_type' call above
+        _tripolar_grid = tripolar_grid 
+        _cyclic_x = cyclic_x
+        _cyclic_y = cyclic_y
+        # passed in flags (convert to ints) 
+        _fill_first_row = bool_to_int(fill_first_row)
+        _filter_topog = bool_to_int(filter_topog)
+        _num_filter_pass = bool_to_int(num_filter_pass)
+        _smooth_topo_allow_deepening = bool_to_int(smooth_topo_allow_deepening)
+        _round_shallow = bool_to_int(round_shallow)
+        _fill_shadow = bool_to_int(fill_shallow)
+        _deepen_shallow = bool_to_int(deepen_shallow)
+        _full_cell = bool_to_int(full_cell)
+        _flat_bottom = bool_to_int(flat_bottom)
+        _dont_adjust_topo = bool_to_int(dont_adjust_topo)
+        _dont_fill_isolated_cells = bool_to_int(dont_fill_isolated_cells)
+        _dont_change_landmask = bool_to_int(dont_change_landmask)
+        _open_very_this_cell = bool_to_int(open_very_this_cell)
+        _on_grid = bool_to_int(on_grid)
+        # anything else
+        _kmt_min = 0 if kmt_min is None else kmt_min
+        _min_thickness = 0 if min_thickness is None else min_thickness
+        _fraction_full_cell = fraction_full_cell # double
+        _debug = bool_to_int(self.debug)
+        _vgrid_file = None if vgrid_file is None else vgrid_file.encode('utf-8')
+        # get the name of the grid file for the current tile
+        _grid_filename = grid_filenames[0].encode('utf-8') 
+        # TODO remove arg 
+        _use_great_circle_algorithm = bool_to_int(False)
+        # init return values for output arrays
+        # this might not be neccessary since arrays are malloc'd in C
+        _depth = np.zeros( (int(_ny_dst/self.y_refine), int(_nx_dst/self.x_refine)) )
+        _num_levels = np.zeros( (int(_ny_dst/self.y_refine), int(_nx_dst/self.x_refine)), dtype=ctypes.c_int)
 
+        if(self.debug):
             print(f"Calling generate_realistic with nx: {self.nx_tile[tileName]}, ny: {self.ny_tile[tileName]}")
-            generate_realistic_c( _nx_dst, _ny_dst,
-                                  _x_dst.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
-                                  _y_dst.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
-                                  _vgrid_file, topog_file.encode('utf-8'), topog_field.encode('utf-8'),
-                                  self.scale_factor,
-                                  _tripolar_grid, _cyclic_x, _cyclic_y,
-                                  _fill_first_row, _filter_topog, _num_filter_pass,
-                                  _smooth_topo_allow_deepening, _round_shallow, _fill_shadow,
-                                  _deepen_shallow, _full_cell, _flat_bottom,
-                                  _dont_adjust_topo, _dont_fill_isolated_cells, _dont_change_landmask,
-                                  _kmt_min, _min_thickness, _open_very_this_cell,
-                                  _fraction_full_cell, _depth.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                                  _num_levels.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
-                                   _debug, _use_great_circle_algorithm, on_grid, self.x_refine, self.y_refine,
-                                   _grid_filename) 
-            # set depth for current tile to depth values generated by c function
-            self.depth_vals[f"depth_{tileName}"] = _depth 
-            # if a vgrid is used, add num_levels variable to the output data and set to returned array 
-            if(self.has_vgrid):
-                self.depth_vals[f"num_levels_{tileName}"] = _num_levels
+        generate_realistic_c( _nx_dst, _ny_dst,
+                              _x_dst.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
+                              _y_dst.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
+                              _vgrid_file, topog_file.encode('utf-8'), topog_field.encode('utf-8'),
+                              self.scale_factor,
+                              _tripolar_grid, _cyclic_x, _cyclic_y,
+                              _fill_first_row, _filter_topog, _num_filter_pass,
+                              _smooth_topo_allow_deepening, _round_shallow, _fill_shadow,
+                              _deepen_shallow, _full_cell, _flat_bottom,
+                              _dont_adjust_topo, _dont_fill_isolated_cells, _dont_change_landmask,
+                              _kmt_min, _min_thickness, _open_very_this_cell,
+                              _fraction_full_cell, _depth.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                              _num_levels.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
+                               _debug, _use_great_circle_algorithm, _on_grid, self.x_refine, self.y_refine,
+                               _grid_filename) 
+        # set depth for current tile to depth values generated by c function
+        self.depth_vals[f"depth_{tileName}"] = _depth 
+        # if a vgrid is used, add num_levels variable to the output data and set to returned array 
+        if(self.has_vgrid):
+            self.depth_vals[f"num_levels_{tileName}"] = _num_levels
         self.__data_is_generated = True
 
     def make_rectangular_basin(self, bottom_depth: float = None):
