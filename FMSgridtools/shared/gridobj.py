@@ -1,4 +1,3 @@
-import dataclasses
 from typing import List, Optional
 
 import numpy as np
@@ -10,16 +9,19 @@ from FMSgridtools.shared.gridtools_utils import check_file_is_there
 """
 GridObj:
 
-Dataclass for containing basic grid data to be used by other grid objects
+Class for containing basic grid data to be used by other grid objects
 """
-@dataclasses.dataclass
-class GridObj:
-    dataset: Optional[xr.Dataset] = None
-    grid_file: Optional[str] = None
 
-    def __post_init__(self):
-        if self.grid_file is not None:
+class GridObj:
+
+    def __init__(
+            self, 
+            dataset: Optional[xr.Dataset] = None, 
+            grid_file: Optional[str] = None
+    ):
+        if grid_file is not None:
             check_file_is_there(self.grid_file)
+            self.grid_file = grid_file
             self.dataset = xr.open_dataset(self.grid_file)
 
     """
