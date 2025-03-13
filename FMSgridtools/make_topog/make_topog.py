@@ -6,8 +6,8 @@ import xarray
 from pathlib import Path
 from typing import Optional
 
-from gridtools import TopogObj
-from gridtools import check_file_is_there
+from FMSgridtools import TopogObj, GridObj, MosaicObj
+from FMSgridtools import get_provenance_attrs, check_file_is_there
 
 MOSAIC_FILE_OPT_HELP="Path to a netCDF mosaic grid file to create a topography for"
 TOPOG_TYPE_OPT_HELP="Specify 'type' of topography to generate, determines which algorithm is used to populate data."
@@ -250,23 +250,31 @@ def make_topog(
     dome_embayment_depth : Optional[float] = None,
     output : Optional[str] = None):
 
-
-    # check valid mosaic path and get tiles
-    check_file_is_there(mosaic)
+    # get provenance data
+    prov_attrs = get_provenance_attrs()
 
     # read in object fields from file
-    mosaicGrid = "placeHolderForMosaicGridConstructor()"
+    inputMosaicObj = MosaicObj(mosaic_file=mosaic) 
+
+    # get all the data we need to generate topographies
+    _ntiles = inputMosaicObj.get_ntiles()
+    inputMosaicObj.griddict()
+    nx_tile = {}
+    ny_tile = {}
+    for tileName in inputMosaicObj.grid_dict.keys():
+        nx_tile[tileName] = inputMosaicObj.grid_dict[tileName].x.shape[0]
+        ny_tile[tileName] = inputMosaicObj.grid_dict[tileName].x.shape[1]
 
     # create new TopogStruct for output
-    topogOut = TopogObj(output_name=output, ntiles=1)
+    topogOut = TopogObj(output_name=output, ntiles=_ntiles, global_attrs=prov_attrs, nx = nx_tile, ny = ny_tile,
+                        x_refine=x_refine, y_refine=y_refine, scale_factor=scale_factor)
 
-    # call the specified algorithm for generating topography data
     if (topog_type == "realistic"):
-        topogOut.make_topog_realistic(mosaicGrid, x_refine, y_refine, min_depth, scale_factor, num_filter_pass,
-                                      flat_bottom, fill_first_row, filter_topog, round_shallow, fill_shallow,
-                                      deepen_shallow, smooth_topo_allow_deepening, vgrid_file)
+        topogOut.make_topog_realistic(num_filter_pass, flat_bottom, fill_first_row,
+                                    filter_topog, round_shallow, fill_shallow,
+                                    deepen_shallow, smooth_topo_allow_deepening, vgrid_file)
     elif (topog_type == "rectangular_basin"):
-        topogOut.make_topog_rectangular_basin(mosaicGrid, x_refine, y_refine, scale_factor, bottom_depth)
+        topogOut.make_rectangular_basin(bottom_depth)
     elif (topog_type == "gaussian"):
         topogOut.make_topog_gaussian()
     elif (topog_type == "bowl"):
