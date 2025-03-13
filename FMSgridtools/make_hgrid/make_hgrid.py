@@ -97,20 +97,20 @@ Example use:
                                                                                
     1.  generating regular lon-lat grid (supergrid size 60x20)
             fmsgridtools make_hgrid --grid_type regular_lonlat_grid 
-                                    --nxbnd 2
-                                    --nybnd 2 
-                                    --xbnd 0,30 
-                                    --ybnd 50,60
+                                    --nxbnds 2
+                                    --nybnds 2 
+                                    --xbnds 0,30 
+                                    --ybnds 50,60
                                     --nlon 60
                                     --nlat 20                           
 
     2.  generating tripolar grid with various grid resolution and C-cell
         centered using monotonic bi-cub spline interpolation.
             fmsgridtools make_hgrid --grid_type tripolar_grid
-                                    --nxbnd 2 
-                                    --nybnd 7 
-                                    --xbnd -280,80  
-                                    --ybnd -82,-30,-10,0,10,30,90 
+                                    --nxbnds 2 
+                                    --nybnds 7 
+                                    --xbnds -280,80  
+                                    --ybnds -82,-30,-10,0,10,30,90 
                                     --nlon 720                      
                                     --nlat 104,48,40,40,48,120 
                                     --grid_name om3_grid               
@@ -119,10 +119,10 @@ Example use:
     3.  generating tripolar grid with various grid resolution and C-cell
         centered using legacy algorithm (create GFDL CM2/ocean-like grid)                   
             fmsgridtools make_hgrid --grid_type tripolar_grid 
-                                    --nxbnd 2 
-                                    --nybnd 7 
-                                    --xbnd -280,80  
-                                    --ybnd -82,-30,-10,0,10,30,90 
+                                    --nxbnds 2 
+                                    --nybnds 7 
+                                    --xbnds -280,80  
+                                    --ybnds -82,-30,-10,0,10,30,90 
                                     --dlon 1.0,1.0                  
                                     --dlat 1.0,1.0,0.6666667,0.3333333,0.6666667,1.0,1.0          
                                     --grid_name om3_grid 
@@ -130,8 +130,8 @@ Example use:
                                                                                    
     4.  generating simple cartesian grid(supergrid size 20x20)                     
             fmsgridtools make_hgrid --grid_type simple_cartesian_grid 
-                                    --xbnd 0,30 
-                                    --ybnd 50,60    
+                                    --xbnds 0,30 
+                                    --ybnds 50,60    
                                     --nlon 20 
                                     --nlat 20  
                                     --simple_dx 1000 
@@ -756,7 +756,6 @@ def make_hgrid(
         if nxbnds3 > 0 and nybnds3 > 0:
             num_specify += 1
             use_legacy = 1
-            print(f"use_legacy = {use_legacy}")
         
         if num_specify == 0:
             mpp.pyfms_error(errortype=2, errormsg="make_hgrid: grid type is 'regular_lonlat_grid', 'tripolar_grid', 'f_plane_grid' or 'beta_plane_grid', need to specify one of the pair --nlon --nlat or --dlon --dlat")
@@ -943,7 +942,7 @@ def make_hgrid(
     """
 
     for n_nest in range(ntiles):
-        print(f"[INFO] tile: {n_nest}, {nxl[n_nest]}, {nyl[n_nest]}, ntiles: {ntiles}", file=sys.stderr)
+        print(f"[INFO] tile: {n_nest}, nxl[{nxl[n_nest]}], nyl[{nyl[n_nest]}], ntiles: {ntiles}", file=sys.stderr)
 
     size1 = ctypes.c_ulong(0)
     size2 = ctypes.c_ulong(0)
@@ -972,7 +971,7 @@ def make_hgrid(
             size4.value += (nxl[n_nest]+1) * (nyl[n_nest]+1)
 
     if verbose:
-        print(f"[INFO] Allocating arrays of size {size1} for x, y based on nxp: {nxp} nyp: {nyp} ntiles: {ntiles}", file=sys.stderr)
+        print(f"[INFO] Allocating arrays of size {size1.value} for x, y based on nxp: {nxp} nyp: {nyp} ntiles: {ntiles}", file=sys.stderr)
     grid_obj.x = np.empty(shape=size1.value, dtype=np.float64)
     grid_obj.y = np.empty(shape=size1.value, dtype=np.float64)
     grid_obj.area = np.empty(shape=size4.value, dtype=np.float64)
@@ -990,7 +989,6 @@ def make_hgrid(
     jec = ny - 1
 
     if(my_grid_type==REGULAR_LONLAT_GRID):
-        print(f"use_legacy py = {use_legacy}")
         create_regular_lonlat_grid(
             nxbnds, 
             nybnds, 
@@ -1212,7 +1210,7 @@ def make_hgrid(
         if verbose:
             print(f"[INFO] Outputting arrays of size nx: {nx} and ny: {ny} for tile: {n}", file=sys.stderr)
         nxp = nx + 1
-        nyp = nx + 1
+        nyp = ny + 1
 
         if out_halo == 0:
             if verbose:
@@ -1267,19 +1265,22 @@ def make_hgrid(
         pos_n += nx*nyp
         pos_t += nx*ny
 
-
-    # grid_obj.write_out_hgrid(
-    #     tilename=tilename,
-    #     outfile=outfile,
-    #     north_pole_tile=north_pole_tile,
-    #     north_pole_arcx=north_pole_arcx,
-    #     projection=projection,
-    #     geometry=geometry,
-    #     discretization=discretization,
-    #     conformal=conformal,
-    #     out_halo=out_halo,
-    #     output_length_angle=output_length_angle,
-    # )
+    grid_obj.write_out_hgrid(
+        tilename=tilename,
+        outfile=outfile,
+        nx=nx,
+        ny=ny,
+        nxp=nxp,
+        nyp=nyp,
+        north_pole_tile=north_pole_tile,
+        north_pole_arcx=north_pole_arcx,
+        projection=projection,
+        geometry=geometry,
+        discretization=discretization,
+        conformal=conformal,
+        out_halo=out_halo,
+        output_length_angle=output_length_angle,
+    )
 
     if(mpp.pe() == 0 and verbose):
         print("generate_grid is run successfully")

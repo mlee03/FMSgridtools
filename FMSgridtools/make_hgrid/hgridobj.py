@@ -23,6 +23,10 @@ class HGridObj():
             self,
             tilename,
             outfile,
+            nx: int,
+            ny: int,
+            nxp: int,
+            nyp: int,
             north_pole_tile="none",
             north_pole_arcx="none",
             projection="none",
@@ -75,74 +79,84 @@ class HGridObj():
                 )
             )
 
-        x = xr.DataArray(
-            data=self.x,
-            dims=["nyp", "nxp"],
-            attrs=dict(
-                units="degree_east", 
-                standard_name="geographic_longitude",
-            )
-        )
-            
-        y = xr.DataArray(
-            data=self.y,
-            dims=["nyp", "nxp"],
-            attrs=dict(
-                units="degree_north", 
-                standard_name="geographic_latitude",
-            )
-        )
-    
-        if output_length_angle:
-            dx = xr.DataArray(
-                data=self.dx,
-                dims=["nyp", "nx"],
-                attrs=dict(
-                    units="meters", 
-                    standard_name="grid_edge_x_distance",
-                )
-            )
-            
-            dy = xr.DataArray(
-                data=self.dy,
-                dims=["ny", "nxp"],
-                attrs=dict(
-                    units="meters", 
-                    standard_name="grid_edge_y_distance",
-                )
-            )   
-            angle_dx = xr.DataArray(
-                data=self.angle_dx,
+        if self.x is not None:
+            x = xr.DataArray(
+                data=self.x[:(nyp*nxp)].reshape((nyp,nxp)),
                 dims=["nyp", "nxp"],
                 attrs=dict(
-                    units="degrees_east",
-                    standard_name="grid_vertex_x_angle_WRT_geographic_east",
+                    units="degree_east", 
+                    standard_name="geographic_longitude",
                 )
             )
-            if out_halo > 0:
-                dx.attrs["_FillValue"] = -9999.
-                dy.attrs["_FillValue"] = -9999.
-                angle_dx.attrs["_FillValue"] = -9999.
-            if conformal == "true":
-                angle_dy = xr.DataArray(
-                    data=self.angle_dy,
-                    dims=["nyp", "nxp"],
+            
+        if self.y is not None:
+            y = xr.DataArray(
+                data=self.y[:(nyp*nxp)].reshape((nyp, nxp)),
+                dims=["nyp", "nxp"],
+                attrs=dict(
+                    units="degree_north", 
+                    standard_name="geographic_latitude",
+                )
+            )
+    
+        if output_length_angle:
+            if self.dx is not None:
+                dx = xr.DataArray(
+                    data=self.dx[:(nyp*nx)].reshape((nyp, nx)),
+                    dims=["nyp", "nx"],
                     attrs=dict(
-                        units="degrees_north",
-                        standard_name="grid_vertex_y_angle_WRT_geographic_north",
+                        units="meters", 
+                        standard_name="grid_edge_x_distance",
                     )
                 )
+            if self.dy is not None:    
+                dy = xr.DataArray(
+                    data=self.dy[:(ny*nxp)].reshape((ny, nxp)),
+                    dims=["ny", "nxp"],
+                    attrs=dict(
+                        units="meters", 
+                        standard_name="grid_edge_y_distance",
+                    )
+                )
+            if self.angle_dx is not None:   
+                angle_dx = xr.DataArray(
+                    data=self.angle_dx[:(nyp*nxp)].reshape((nyp, nxp)),
+                    dims=["nyp", "nxp"],
+                    attrs=dict(
+                        units="degrees_east",
+                        standard_name="grid_vertex_x_angle_WRT_geographic_east",
+                    )
+                )
+            if out_halo > 0:
+                if dx is not None:
+                    dx.attrs["_FillValue"] = -9999.
+                if dy is not None:
+                    dy.attrs["_FillValue"] = -9999.
+                if angle_dx is not None:
+                    angle_dx.attrs["_FillValue"] = -9999.
+            if conformal != "true":
+                if self.angle_dy is not None:
+                    angle_dy = xr.DataArray(
+                        data=self.angle_dy.reshape((nyp, nxp)),
+                        dims=["nyp", "nxp"],
+                        attrs=dict(
+                            units="degrees_north",
+                            standard_name="grid_vertex_y_angle_WRT_geographic_north",
+                        )
+                    )
                 if out_halo > 0:
-                    angle_dy.attrs["_FillValue"] = -9999.
+                    if angle_dy is not None:
+                        angle_dy.attrs["_FillValue"] = -9999.
 
-        area = xr.DataArray(
-            data=self.area,
-            dims=["ny", "nx"],
-            attrs=dict(
-                units="m2",
-                standard_name="grid_cell_area",
+        if self.area is not None:
+            area = xr.DataArray(
+                data=self.area[:(ny*nx)].reshape((ny, nx)),
+                dims=["ny", "nx"],
+                attrs=dict(
+                    units="m2",
+                    standard_name="grid_cell_area",
+                )
             )
-        )
 
         if north_pole_arcx == "none":
             arcx = xr.DataArray(
@@ -160,9 +174,12 @@ class HGridObj():
                 )
             )
         if out_halo > 0:
-            x.attrs["_FillValue"] = -9999.
-            y.attrs["_FillValue"] = -9999.
-            area.attrs["_FillValue"] = -9999.
+            if x is not None:
+                x.attrs["_FillValue"] = -9999.
+            if y is not None:
+                y.attrs["_FillValue"] = -9999.
+            if area is not None:
+                area.attrs["_FillValue"] = -9999.
 
         dataset = xr.Dataset(
             data_vars={
