@@ -15,7 +15,7 @@ def check_file_is_there( check_file: str, debug: bool = False ) :
 
 def get_provenance_attrs(
     great_circle_algorithm: Optional[bool] = False,
-    grid_version: Optional[str] = "0.2") -> dict():
+    grid_version: Optional[str] = "0.2") -> dict:
     # returns a dictionary of provenance information to be added
     # as global attributes for output netcdf files
     repo = Repo(search_parent_directories=True)
