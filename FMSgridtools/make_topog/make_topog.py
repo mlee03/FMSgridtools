@@ -4,11 +4,7 @@
 import click
 from typing import Optional
 
-<<<<<<< HEAD
 from FMSgridtools import TopogObj, MosaicObj
-=======
-from FMSgridtools import TopogObj, GridObj, MosaicObj
->>>>>>> origin/main
 from FMSgridtools import get_provenance_attrs, check_file_is_there
 
 MOSAIC_FILE_OPT_HELP="Specify the mosaic file where topography data will be located."
