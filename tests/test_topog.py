@@ -13,8 +13,8 @@ def test_generate_rectangular_basin_single_tile():
     test_topog = TopogObj(output_name=out_file,
                           ntiles = 1,
                           global_attrs = get_provenance_attrs(),
-                          nx = {'tile1': 16},
-                          ny = {'tile1': 16},
+                          x_vals_tile = {'tile1': 16},
+                          y_vals_tile = {'tile1': 16},
                           x_refine = 1,
                           y_refine = 1,
                           scale_factor = 1)
@@ -31,13 +31,13 @@ def test_generate_rectangular_basin_multi_tile():
     test_topog = TopogObj(output_name=out_file,
                           ntiles = 6,
                           global_attrs = get_provenance_attrs(),
-                          nx = {'tile1': 16,
+                          x_vals_tile = {'tile1': 16,
                                 'tile2': 16,
                                 'tile3': 16,
                                 'tile4': 16,
                                 'tile5': 16,
                                 'tile6': 16},
-                          ny = {'tile1': 16,
+                          y_vals_tile = {'tile1': 16,
                                 'tile2': 16,
                                 'tile3': 16,
                                 'tile4': 16,
@@ -55,27 +55,7 @@ def test_generate_rectangular_basin_multi_tile():
         assert all( val == 128.0 for val in ds.data_vars[f'depth_tile{i+1}'].values.flatten())
     remove(Path(out_file))
 
-
+# needs input files generated, will be much easier once make_hgrid and make_mosaic are done
 @pytest.mark.skip(reason="TODO")
 def test_generate_realistic():
-    pass
-
-@pytest.mark.skip(reason="TODO")
-def test_generate_gaussian():
-    pass
-
-@pytest.mark.skip(reason="TODO")
-def test_generate_dome():
-    pass
-
-@pytest.mark.skip(reason="TODO")
-def test_generate_bowl():
-    pass
-
-@pytest.mark.skip(reason="TODO")
-def test_generate_idealized():
-    pass
-
-@pytest.mark.skip(reason="TODO")
-def test_generate_idealized():
     pass
