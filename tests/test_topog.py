@@ -55,27 +55,7 @@ def test_generate_rectangular_basin_multi_tile():
         assert all( val == 128.0 for val in ds.data_vars[f'depth_tile{i+1}'].values.flatten())
     remove(Path(out_file))
 
-
+# needs input files generated, will be much easier once make_hgrid and make_mosaic are done
 @pytest.mark.skip(reason="TODO")
 def test_generate_realistic():
-    pass
-
-@pytest.mark.skip(reason="TODO")
-def test_generate_gaussian():
-    pass
-
-@pytest.mark.skip(reason="TODO")
-def test_generate_dome():
-    pass
-
-@pytest.mark.skip(reason="TODO")
-def test_generate_bowl():
-    pass
-
-@pytest.mark.skip(reason="TODO")
-def test_generate_idealized():
-    pass
-
-@pytest.mark.skip(reason="TODO")
-def test_generate_idealized():
     pass

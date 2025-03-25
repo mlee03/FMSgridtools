@@ -20,7 +20,6 @@ REFINEMENT_OPT_HELP="""The refinement ratio of model grid vs supergrid in the x 
 (ie. for the default refinement of 2, topograpgy generated will have half the number of x/y points)"""
 OUTPUT_OPT_HELP="Name to write for the output topography file"
 BOTTOM_DEPTH_HELP="Maximum depth of the ocean used by the given topog_type method. If using rectangular_basin, this depth will be uniform."
-MIN_DEPTH_HELP="Minimum depth of the ocean"
 SCALE_FACTOR_HELP="Scaling factor for topography data (ie. -1 to flip sign or 0.01 to convert to centimeters)."
 NUM_FILTER_PASS_HELP="Number of passes of spatial filter"
 FLAT_BOTTOM_HELP="Generate flat bottom over ocean points"
@@ -86,10 +85,6 @@ of the polygon, with the copy being rotated far away from the pole
               type = float,
               default = 5000.0,
               help = BOTTOM_DEPTH_HELP)
-@click.option("--min_depth",
-              type = float,
-              default = 10.0,
-              help = MIN_DEPTH_HELP)
 @click.option("--scale_factor",
               type = float,
               default = 1.0,
@@ -165,90 +160,12 @@ of the polygon, with the copy being rotated far away from the pole
               type = str,
               required = False,
               help = VGRID_FILE_HELP)
-# gaussian
-@click.option("--gauss_amp",
-              type = float,
-              default = 0.5,
-              help = "")
-@click.option("--gauss_scale",
-              type = float,
-              default = 0.25,
-              help = "")
-@click.option("--slope_x",
-              type = float,
-              default = 0,
-              help = "")
-@click.option("--slope_y",
-              type = float,
-              default = 0,
-              help = "")
-# bowl
-@click.option("--bowl_south",
-              type = float,
-              default = 60,
-              help = "")
-@click.option("--bowl_north",
-              type = float,
-              default = 70,
-              help = "")
-@click.option("--bowl_west",
-              type = float,
-              default = 0,
-              help = "")
-@click.option("--bowl_east",
-              type = float,
-              default = 20,
-              help = "")
-# box channel
-# these are supposed to be ints
-@click.option("--jwest_south",
-              type = int,
-              default = 0,
-              help = "")
-@click.option("--jwest_north",
-              type = int,
-              default = 0,
-              help = "")
-@click.option("--ieast_south",
-              type = int,
-              default = 0,
-              help = "")
-@click.option("--ieast_north",
-              type = int,
-              default = 0,
-              help = "")
-# dome
-@click.option("--dome_slope",
-              type = float,
-              default = 0,
-              help = "")
-@click.option("--dome_bottom",
-              type = float,
-              default = 0,
-              help = "")
-@click.option("--dome_embayment_west",
-              type = float,
-              default = 0,
-              help = "")
-@click.option("--dome_embayment_east",
-              type = float,
-              default = 0,
-              help = "")
-@click.option("--dome_embayment_south",
-              type = float,
-              default = 0,
-              help = "")
-@click.option("--dome_embayment_depth",
-              type = float,
-              default = 0,
-              help = "")
 def make_topog(
     mosaic : str = None,
     topog_type : str = None,
     x_refine : Optional[int] = None,
     y_refine : Optional[int] = None,
     bottom_depth : Optional[int] = None,
-    min_depth : Optional[int] = None,
     scale_factor : Optional[int] = None,
     topog_file : Optional[str] = None,
     topog_field : Optional[str] = None,
@@ -271,24 +188,6 @@ def make_topog(
     deepen_shallow : Optional[bool] = None,
     smooth_topo_allow_deepening : Optional[bool] = None,
     vgrid_file : Optional[str] = None,
-    gauss_amp : Optional[float] = None,
-    gauss_scale : Optional[float] = None,
-    slope_x : Optional[float] = None,
-    slope_y : Optional[float] = None,
-    bowl_south : Optional[float] = None,
-    bowl_north : Optional[float] = None,
-    bowl_west : Optional[float] = None,
-    bowl_east : Optional[float] = None,
-    jwest_south : Optional[int] = None,
-    jwest_north : Optional[int] = None,
-    ieast_south : Optional[int] = None,
-    ieast_north : Optional[int] = None,
-    dome_slope : Optional[float] = None,
-    dome_bottom : Optional[float] = None,
-    dome_embayment_west : Optional[float] = None,
-    dome_embayment_east : Optional[float] = None,
-    dome_embayment_south : Optional[float] = None,
-    dome_embayment_depth : Optional[float] = None,
     output : Optional[str] = None,
     verbose : Optional[bool] = None):
     """
@@ -309,7 +208,7 @@ More details on the topog_type options are below.
 
               Optional arguments are:
 
-              --min_depth --scale_factor --num_filter_pass --flat_bottom --min_thickness
+              --scale_factor --num_filter_pass --flat_bottom --min_thickness
               --fill_first_row  --filter_topog --round_shallow --fill_shallow --deepen_shallow
               --smooth_topo_allow_deepening --vgrid_file --full_cell --dont_fill_isolated_cells --on_grid
               --dont_change_landmask --kmt_min  --dont_adjust_topo --fraction_full_cell --dont_open_very_this_cell
@@ -320,28 +219,6 @@ More details on the topog_type options are below.
                      --bottom_depth is its optional argument. Set bottom_depth
                      to 0 to get all land topography.
 
-'gaussian':          Construct gaussian bump on a sloping bottom.
-                     --bottom_depth, --min_depth --gauss_amp, --gauss_scale,
-                     --slope_x, --slope_y are optional arguments.
-
-'bowl':              --bottom_depth, --min_depth, --bowl_south, --bowl_north,
-                     --bowl_west, --bowl_east are optional arguments.
-
-'idealized':          Generates an 'idealized' not very realistic topography.
-                      --bottom_depth, --min_depth are optional arguments.
-
-'box_channel':        Generate a box_channel topography. The interior of the
-                      grid box is a flat bottom. The boundary of the grid
-                      box is land except points [jwest_south:jwest_north]
-                      and [ieast_south:ieast_north]. --jwest_south, jwest_north,
-                      --ieast_south and ieast_north need to be specified.
-                      --bottom_depth are optional arguments.
-
-'dome':               similar (not identical) to DOME configuration of
-                      Legg etal Ocean Modelling (2005).  --dome_slope,
-                      --dome_bottom, --dome_embayment_west,
-                      --dome_embayment_east, --dome_embayment_south and
-                      --dome_embayment_depth are optional arguments.
     """
 
     # get provenance data
@@ -371,19 +248,10 @@ More details on the topog_type options are below.
             num_filter_pass, kmt_min, min_thickness, fraction_full_cell, 
             flat_bottom, fill_first_row, filter_topog, round_shallow, fill_shallow,
             deepen_shallow, smooth_topo_allow_deepening, full_cell, dont_fill_isolated_cells,
-            on_grid, dont_change_landmask, dont_adjust_topo, open_very_this_cell, inputMosaicObj.gridfiles)
+            on_grid, dont_change_landmask, dont_adjust_topo, open_very_this_cell, inputMosaicObj.gridfiles,
+            rotate_poly)
     elif (topog_type == "rectangular_basin"):
         topogOut.make_rectangular_basin(bottom_depth)
-    elif (topog_type == "gaussian"):
-        topogOut.make_topog_gaussian()
-    elif (topog_type == "bowl"):
-        topogOut.make_topog_bowl()
-    elif (topog_type == "idealized"):
-        topogOut.make_topog_idealized()
-    elif (topog_type == "box_channel"):
-        topogOut.make_topog_box_channel()
-    elif (topog_type == "dome"):
-        topogOut.make_topog_dome()
     else:
         print("Error: invalid topog_type argument given, must be one of [realistic, gaussian, bowl, box_channel, dome]")
         exit(1)

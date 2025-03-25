@@ -361,7 +361,7 @@ void create_realistic_topog_wrapper(int nx_dst, int ny_dst, const double *x_dst,
 			    int fill_isolated_cells, int dont_change_landmask, int kmt_min, double min_thickness,
 			    int open_very_this_cell, double fraction_full_cell, double *depth,
 			    int *num_levels, int debug, int use_great_circle_algorithm, // TODO use_gca can be removed
-          int on_grid, int x_refine, int y_refine, char* tile_file)
+          int on_grid, int x_refine, int y_refine, char* tile_file, int rotate_poly)
 {
   int nx, ny, layout[2], isc, iec, jsc, jec, nxc, nyc, ni, i, j;
   int g_fid, vid;
@@ -374,6 +374,9 @@ void create_realistic_topog_wrapper(int nx_dst, int ny_dst, const double *x_dst,
   // initialize mpp
   mpp_init(NULL, NULL);
   mpp_domain_init();
+
+  if(rotate_poly)
+    set_rotate_poly_true();
 
   for(i=0;i<4;i++){
     start[i] = 0;
