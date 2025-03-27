@@ -22,8 +22,9 @@
 #include <math.h>
 #include "constant.h"
 #include "create_xgrid.h"
-#include "mosaic_util.h"
 #include "interp.h"
+#include "interp_gpu.h"
+#include "mosaic_util.h"
 #include "mpp_io.h"
 #include "mpp.h"
 #include "mpp_domain.h"
@@ -665,7 +666,7 @@ void create_realistic_topog(int nx_dst, int ny_dst, const double *x_dst, const d
       conserve_interp_great_circle(nx_src, ny_now, nx_dst, ny_dst, x_src, y_src,
         x_out, y_out, mask_src, depth_src, depth );
     else
-      conserve_interp(nx_src, ny_now, nx_dst, ny_dst, x_src, y_src,
+      conserve_interp_gpu(nx_src, ny_now, nx_dst, ny_dst, x_src, y_src,
 	      x_out, y_out, mask_src, depth_src, depth );
   }
 

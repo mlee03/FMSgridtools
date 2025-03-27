@@ -14,6 +14,7 @@ list(APPEND c_source_files
   shared/general_utils_gpu.c
   shared/gradient_c2l.c
   shared/interp.c
+  shared/interp_gpu.c
   shared/mosaic_util.c
   shared/mpp.c
   shared/mpp_domain.c
