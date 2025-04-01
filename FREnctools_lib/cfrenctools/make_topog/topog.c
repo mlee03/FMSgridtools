@@ -349,6 +349,145 @@ void set_depth(int nx, int ny, const double *xbnd, const double *ybnd, double al
 }; /* set_depth */
 
 /*********************************************************************
+   void create_realistic_topog_wrapper( )
+   wrapper for the create_realistic_topog function, added for FMSgridtools
+ ********************************************************************/
+void create_realistic_topog_wrapper(int nx_dst, int ny_dst, const double *x_dst, const double *y_dst, const char *vgrid_file,
+			    const char* topog_file, const char* topog_field, double scale_factor,
+          int tripolar_grid, int cyclic_x, int cyclic_y,
+			    int fill_first_row, int filter_topog, int num_filter_pass,
+			    int smooth_topo_allow_deepening, int round_shallow, int fill_shallow,
+			    int deepen_shallow, int full_cell, int flat_bottom, int adjust_topo,
+			    int fill_isolated_cells, int dont_change_landmask, int kmt_min, double min_thickness,
+			    int open_very_this_cell, double fraction_full_cell, double *depth,
+			    int *num_levels, int debug, int use_great_circle_algorithm, // TODO use_gca can be removed
+          int on_grid, int x_refine, int y_refine, char* tile_file, int rotate_poly)
+{
+  int nx, ny, layout[2], isc, iec, jsc, jec, nxc, nyc, ni, i, j;
+  int g_fid, vid;
+  double *gdata=NULL, *tmp=NULL, *depth_tmp=NULL;
+  int *num_levels_tmp=NULL;
+  double *x=NULL, *y=NULL;
+  size_t start[4], nread[4];
+  domain2D domain;
+
+  // initialize mpp
+  mpp_init(NULL, NULL);
+  mpp_domain_init();
+
+  if(rotate_poly)
+    set_rotate_poly_true();
+
+  for(i=0;i<4;i++){
+    start[i] = 0;
+    nread[i] = 0;
+  }
+
+  // apply refinements 
+  nx_dst /= x_refine;
+  ny_dst /= y_refine;
+
+  // some flags default to true, so we'll flip the values passed in from python 
+  adjust_topo = !adjust_topo;
+  fill_isolated_cells = !fill_isolated_cells;
+  open_very_this_cell = !open_very_this_cell;
+
+  // define the domain and compute bounds
+  mpp_define_layout( nx_dst, ny_dst, mpp_npes(), layout);
+  mpp_define_domain2d( nx_dst, ny_dst, layout, 0, 0, &domain);
+  mpp_get_compute_domain2d( domain, &isc, &iec, &jsc, &jec);
+  nxc = iec - isc + 1;
+  nyc = jec - jsc + 1;
+
+  // adusted indices for refinement values
+  start[0] = jsc*y_refine; start[1] = isc*x_refine;
+  nread[0] = nyc*y_refine+1; nread[1] = nxc*x_refine+1;
+  ni       = nxc*x_refine+1;
+
+  // print out domains and argument information if verbose
+  if(debug) {
+    printf("adjust_topo=%d\topen_very_this_cell=%d\tfill_isolated_cells=%d\n", adjust_topo, open_very_this_cell, fill_isolated_cells);
+    printf("scale_factor=%lf\n", scale_factor);
+    printf("num_filter_pass=%d\n", num_filter_pass);
+    printf("kmt_min=%d\n", kmt_min);
+    printf("fraction_full_cell=%lf\n", fraction_full_cell);
+    if(mpp_root_pe() == mpp_pe()) printf("***\tmpp domain created with %d pes, nx=%d ny=%d\t***\n", mpp_npes(), nx_dst, ny_dst);
+    printf("i indices=%d:%d\n",isc, iec);
+    printf("j indices=%d:%d\n",jsc, jec);
+    printf("x_refine=%d\ty_refine=%d\n", x_refine, y_refine);
+    printf("nxc=%d\tnyc=%d\n", nxc, nyc);
+    printf("x_dst size=%d\ty_dst size=%d\n", sizeof(x_dst)/sizeof(double), sizeof(y_dst)/sizeof(double));
+    printf("tile_name: %s\n", tile_file);
+    printf("j start/nread: %d:%d\n", start[0], nread[0]);
+    printf("i start/nread: %d:%d\n", start[1], nread[1]);
+  }
+
+  // allocate x/y, depth, num_levels, and tmp values for given PE
+  x   = (double *)malloc((nxc+1)*(nyc+1)*sizeof(double));
+  y   = (double *)malloc((nxc+1)*(nyc+1)*sizeof(double));
+  depth_tmp = (double *)malloc(nxc*nyc*sizeof(double));
+  if(vgrid_file) num_levels_tmp = (int* )malloc(nxc*nyc*sizeof(int));
+  tmp = (double *)malloc((nxc*x_refine+1)*(nyc*y_refine+1)*sizeof(double));
+
+
+  // read in x vals from grid file
+  // TODO this can be removed once the below code works
+  g_fid = mpp_open(tile_file, MPP_READ);
+  vid = mpp_get_varid(g_fid, "x");
+  mpp_get_var_value_block(g_fid, vid, start, nread, tmp);
+
+  // check if great circle algorithm was used in the grid tile 
+  // normally this is done for each grid tile, but this option currently only supports a single tile
+  int using_gca = get_great_circle_algorithm(g_fid);
+
+  /*
+  // TODO 
+  // need to recreate the tmp array using the passed in x_dst/y_dst data
+  // will need to look closer at the arrays netcdf's calls are returning
+  for(j = start[0]; j < nread[0]; j++)
+    for(i = start[1]; i < nread[1]; i++)
+      tmp[i]= x_dst[i*nx_dst + j];
+  */
+
+  // set x values from read in grid file
+  for(j = 0; j < nyc+1; j++)
+    for(i = 0; i < nxc+1; i++)
+      x[j*(nxc+1)+i] = tmp[(j*y_refine)*ni+i*x_refine];
+
+  // read in y vals from grid file (not needed, read in python)
+  vid = mpp_get_varid(g_fid, "y");
+  mpp_get_var_value_block( g_fid, vid, start, nread, tmp);
+  mpp_close(g_fid);
+
+  /*
+  // TODO
+  // copy grid data into tmp array with adjusted indices
+  for(j = start[0]; j < nread[0]; j++)
+    for(i = start[1]; i < nread[1]; i++)
+      tmp[i]= y_dst[i*ny_dst + j];
+  */
+
+  // set y values from read in grid file
+  for(j = 0; j < nyc+1; j++)
+    for(i = 0; i < nxc+1; i++)
+      y[j*(nxc+1)+i] = tmp[(j*y_refine)*ni+i*x_refine];
+
+  // call the routine to generate depth and num_levels values
+  create_realistic_topog(nx_dst, ny_dst, x, y, vgrid_file,
+			    topog_file, topog_field,scale_factor, tripolar_grid, cyclic_x, cyclic_y,
+			    fill_first_row, filter_topog, num_filter_pass,
+			    smooth_topo_allow_deepening, round_shallow, fill_shallow,
+			    deepen_shallow, full_cell, flat_bottom, adjust_topo,
+			    fill_isolated_cells, dont_change_landmask, kmt_min,min_thickness,
+			    open_very_this_cell,fraction_full_cell,depth,
+			    num_levels, domain, debug, using_gca, on_grid);
+  
+  mpp_domain_end();
+  mpp_end();
+
+}
+
+/*********************************************************************
    void create_realistic_topog( )
    reading data from source data file topog_file and remap it onto current grid
  ********************************************************************/
@@ -391,6 +530,8 @@ void create_realistic_topog(int nx_dst, int ny_dst, const double *x_dst, const d
     free(zeta);
   }
 
+  if(debug) printf("reading in topog file metadata...");
+
   /* first read source topography data to get source grid and source topography */
   fid = mpp_open(topog_file, MPP_READ);
   vid = mpp_get_varid(fid, topog_field);
@@ -412,19 +553,25 @@ void create_realistic_topog(int nx_dst, int ny_dst, const double *x_dst, const d
   vid = mpp_get_varid(fid, yname);
   mpp_get_var_value(fid, vid, yt_src);
 
+  if(debug) printf("done.\nsetting data arrays with read in values...");
 
-  for(i=1; i<nx_src; i++) xc_src[i] = (xt_src[i-1] + xt_src[i])*0.5;
+  for(i=1; i<nx_src; i++)
+    xc_src[i] = (xt_src[i-1] + xt_src[i])*0.5;
   xc_src[0] = 2*xt_src[0] - xc_src[1];
   xc_src[nx_src] = 2*xt_src[nx_src-1] - xc_src[nx_src-1];
 
-  for(j=1; j<ny_src; j++) yc_src[j] = (yt_src[j-1] + yt_src[j])*0.5;
+  for(j=1; j<ny_src; j++)
+    yc_src[j] = (yt_src[j-1] + yt_src[j])*0.5;
   yc_src[0] = 2*yt_src[0] - yc_src[1];
   yc_src[ny_src] = 2*yt_src[ny_src-1] - yc_src[ny_src-1];
 
+  if(debug) printf("done.\nscaling grid to radians...");
 
   /* scale grid to radius */
-  for(i=0; i<nxp_src; i++) xc_src[i] = xc_src[i]*D2R;
-  for(j=0; j<nyp_src; j++) yc_src[j] = yc_src[j]*D2R;
+  for(i=0; i<nxp_src; i++)
+    xc_src[i] = xc_src[i]*D2R;
+  for(j=0; j<nyp_src; j++)
+    yc_src[j] = yc_src[j]*D2R;
 
   x_out = (double *)malloc((nx_dst+1)*(ny_dst+1)*sizeof(double));
   y_out = (double *)malloc((nx_dst+1)*(ny_dst+1)*sizeof(double));
@@ -432,6 +579,8 @@ void create_realistic_topog(int nx_dst, int ny_dst, const double *x_dst, const d
     x_out[i] = x_dst[i]*D2R;
     y_out[i] = y_dst[i]*D2R;
   }
+
+  if(debug) printf("done.\nreading topog field...");
 
   /* doing the conservative interpolation */
   y_min = minval_double((nx_dst+1)*(ny_dst+1), y_out);
@@ -486,8 +635,9 @@ void create_realistic_topog(int nx_dst, int ny_dst, const double *x_dst, const d
         mpp_error("topog.c: nc_type should be NC_DOUBLE, NC_FLOAT or NC_INT");
      }
   }
-
   mpp_close(fid);
+
+  if(debug) printf("done.\ndoing interpolation...");
 
   for(i=0; i<nx_src*ny_now; i++) {
     if(depth_src[i] == missing)
@@ -495,13 +645,14 @@ void create_realistic_topog(int nx_dst, int ny_dst, const double *x_dst, const d
     else {
       depth_src[i] = depth_src[i]*scale_factor;
       if( depth_src[i] <= 0.0)
-	mask_src[i] = 0.0;
+	      mask_src[i] = 0.0;
       else
-	mask_src[i] = 1.0;
+	      mask_src[i] = 1.0;
     }
   }
+  
   if(on_grid) {
-     printf("We do no topography interpolation!\n");
+     if(debug) printf("We do no topography interpolation!\n");
      for(i=0; i<nx_src*ny_now; i++) {
         if(depth_src[i] == missing)
           depth[i] = 0.0;
@@ -509,20 +660,23 @@ void create_realistic_topog(int nx_dst, int ny_dst, const double *x_dst, const d
           depth[i] = depth_src[i];
      }
    }
-   else {
+  else {
+    if(use_great_circle_algorithm)
+      conserve_interp_great_circle(nx_src, ny_now, nx_dst, ny_dst, x_src, y_src,
+        x_out, y_out, mask_src, depth_src, depth );
+    else
+      conserve_interp(nx_src, ny_now, nx_dst, ny_dst, x_src, y_src,
+	      x_out, y_out, mask_src, depth_src, depth );
+  }
 
-     if(use_great_circle_algorithm)
-       conserve_interp_great_circle(nx_src, ny_now, nx_dst, ny_dst, x_src, y_src,
-	   	    x_out, y_out, mask_src, depth_src, depth );
-     else
-       conserve_interp(nx_src, ny_now, nx_dst, ny_dst, x_src, y_src,
-	   	    x_out, y_out, mask_src, depth_src, depth );
-   }
+  if(debug) printf("done.\nfiltering topo (if enabled)...");
 
   if (filter_topog) filter_topo(nx_dst, ny_dst, num_filter_pass, smooth_topo_allow_deepening, depth, domain);
+
   if(debug) show_deepest(nk, zw, depth, domain);
 
   /* make first row of ocean model all land points for ice model */
+  if(debug) printf("done.\nfilling first row (if enabled)...");
 
   if(fill_first_row) {
     for(i=0;i<nx_dst;i++) {
@@ -530,10 +684,14 @@ void create_realistic_topog(int nx_dst, int ny_dst, const double *x_dst, const d
     }
   }
 
+  if(debug) printf("done.\nprocessing topo(if enabled)...");
+
   if(vgrid_file) process_topo(nk, depth, num_levels, zw, tripolar_grid, cyclic_x, cyclic_y,
 			      full_cell, flat_bottom, adjust_topo, fill_isolated_cells, min_thickness,
 			      open_very_this_cell, fraction_full_cell, round_shallow, deepen_shallow, fill_shallow,
 			      dont_change_landmask, kmt_min, domain, debug );
+
+  if(debug) printf("done.\n");
 
   free(depth_src);
   free(mask_src);
