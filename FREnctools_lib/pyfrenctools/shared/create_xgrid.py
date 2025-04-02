@@ -6,8 +6,76 @@ class CreateXgrid():
 
     def __init__(self, clib: ctypes.CDLL =  None):
         self.clib = clib
+        self.MAXXGRID = 10**6
 
-    def create_xgrid_transfer_data(self, nxgrid: int):
+    def get_2dx2d_order1(self,
+                         nlon_src: int,
+                         nlat_src: int,
+                         nlon_tgt: int,
+                         nlat_tgt: int,
+                         lon_src: npt.NDArray[np.float64],
+                         lat_src: npt.NDArray[np.float64],
+                         lon_tgt: npt.NDArray[np.float64],
+                         lat_tgt: npt.NDArray[np.float64],
+                         mask_src: npt.NDArray[np.float64] = None):
+
+        _create_xgrid = self.clib.create_xgrid_2dx2d_order1
+        
+        ngrid_src = (nlon_src+1)*(nlat_src+1)
+        ngrid_tgt = (nlon_tgt+1)*(nlat_tgt+1)
+        nlon_src_t = ctypes.c_int
+        nlat_src_t = ctypes.c_int
+        nlon_tgt_t = ctypes.c_int
+        nlat_tgt_t = ctypes.c_int
+        lon_src_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=(ngrid_src), flags='C_CONTIGUOUS')
+        lat_src_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=(ngrid_src), flags='C_CONTIGUOUS')
+        lon_tgt_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=(ngrid_tgt), flags='C_CONTIGUOUS')
+        lat_tgt_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=(ngrid_tgt), flags='C_CONTIGUOUS')
+        mask_src_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=(nlon_src*nlat_src), flags='C_CONTIGUOUS')
+        i_src_t = np.ctypeslib.ndpointer(dtype=np.int32, shape=(self.MAXXGRID), flags='C_CONTIGUOUS')
+        j_src_t = np.ctypeslib.ndpointer(dtype=np.int32, shape=(self.MAXXGRID), flags='C_CONTIGUOUS')
+        i_tgt_t = np.ctypeslib.ndpointer(dtype=np.int32, shape=(self.MAXXGRID), flags='C_CONTIGUOUS')
+        j_tgt_t = np.ctypeslib.ndpointer(dtype=np.int32, shape=(self.MAXXGRID), flags='C_CONTIGUOUS')
+        xarea_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=(self.MAXXGRID), flags='C_CONTIGUOUS')
+
+        if mask_src is None: mask_src = np.ones((nlon_src*nlat_src), dtype=np.float64)
+        i_src = np.zeros(self.MAXXGRID, dtype=np.int32)
+        j_src = np.zeros(self.MAXXGRID, dtype=np.int32)
+        i_tgt = np.zeros(self.MAXXGRID, dtype=np.int32)
+        j_tgt = np.zeros(self.MAXXGRID, dtype=np.int32)
+        xarea = np.zeros(self.MAXXGRID, dtype=np.float64)
+
+        _create_xgrid.restype = ctypes.c_int        
+        _create_xgrid.argtypes = [ctypes.POINTER(nlon_src_t),
+                                  ctypes.POINTER(nlat_src_t),
+                                  ctypes.POINTER(nlon_tgt_t),
+                                  ctypes.POINTER(nlat_tgt_t),
+                                  lon_src_t,
+                                  lat_src_t,
+                                  lon_tgt_t,
+                                  lat_tgt_t,
+                                  mask_src_t,
+                                  i_src_t,
+                                  j_src_t,
+                                  i_tgt_t,
+                                  j_tgt_t,
+                                  xarea_t]
+        
+        nlon_src_c = nlon_src_t(nlon_src)
+        nlat_src_c = nlat_src_t(nlat_src)
+        nlon_tgt_c = nlon_tgt_t(nlon_tgt)
+        nlat_tgt_c = nlat_tgt_t(nlat_tgt)
+        nxgrid = _create_xgrid(nlon_src_c, nlat_src_c, nlon_tgt_c, nlat_tgt_c,
+                               lon_src, lat_src, lon_tgt, lat_tgt, mask_src,
+                               i_src, j_src, i_tgt, j_tgt, xarea)
+
+        return dict(nxgrid=nxgrid,
+                    xgrid_ij1=i_src[:nxgrid]*nlon_src + j_src[:nxgrid],
+                    xgrid_ij2=i_tgt[:nxgrid]*nlon_tgt + j_tgt[:nxgrid],
+                    xgrid_area=xarea[:nxgrid])
+                    
+        
+    def create_xgrid_transfer_data_gpu(self, nxgrid: int):
 
         _create_xgrid_transfer_data = self.clib.create_xgrid_transfer_data
 
@@ -83,7 +151,7 @@ class CreateXgrid():
                                                   lon_src, lat_src,
                                                   lon_tgt, lat_tgt, mask_src)
         
-        return self.create_xgrid_transfer_data(nxgrid)
+        return self.create_xgrid_transfer_data_gpu(nxgrid)
     
 
         

@@ -21,11 +21,17 @@ def test_create_xgrid_gpu():
 
     create_xgrid = pyfrenctools.CreateXgrid(cfrenctools)
     
-    results = create_xgrid.get_2dx2d_order1_gpu(nlon_src, nlat_src, nlon_tgt, nlat_tgt,
+    results_gpu = create_xgrid.get_2dx2d_order1_gpu(nlon_src, nlat_src, nlon_tgt, nlat_tgt,
+                                                    lon_src, lat_src, lon_tgt, lat_tgt)
+
+    results_cpu = create_xgrid.get_2dx2d_order1(nlon_src, nlat_src, nlon_tgt, nlat_tgt,
                                                 lon_src, lat_src, lon_tgt, lat_tgt)
+    
+    assert(results_gpu["nxgrid"]==nlon_src*nlat_src)
+    assert(np.all(results_gpu["xgrid_ij1"]==results_gpu["xgrid_ij2"]))
 
+    assert(results_cpu["nxgrid"]==nlon_src*nlat_src)
+    assert(np.all(results_cpu["xgrid_ij1"]==results_cpu["xgrid_ij2"]))
 
-    assert(results["nxgrid"]==nlon_src*nlat_src)
-    assert(np.all(results["xgrid_ij1"]==results["xgrid_ij2"]))    
+    assert(
 
-test_create_xgrid_gpu()
