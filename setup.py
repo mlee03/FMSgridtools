@@ -64,7 +64,7 @@ setup(
     cmdclass={'install': CustomInstall},
     entry_points={
         "console_scripts": [
-            "fmsgridtools make_hgrid = fmsgridtools.make_grid.hgrid.make_hgrid:main",
+            "make_hgrid = FMSgridtools.make_hgrid.make_hgrid:make_hgrid", # TODO fmsggridtools entrypoint
             "make_topog = FMSgridtools.make_topog.make_topog:make_topog", # TODO fmsgridtools entrypoint
         ]
     },
