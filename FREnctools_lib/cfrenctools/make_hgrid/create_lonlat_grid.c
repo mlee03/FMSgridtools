@@ -289,8 +289,6 @@ void set_regular_lonlat_grid( int nxp, int nyp, int isc, int iec, int jsc, int j
 {
   long n, i, j;
   double lon[4], lat[4];
-  
-  double test;
 
   n = 0;
   for(j=0; j<nyp; j++) {
