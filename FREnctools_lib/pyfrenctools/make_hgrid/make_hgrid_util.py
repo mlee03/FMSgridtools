@@ -90,102 +90,25 @@ def create_regular_lonlat_grid(
 
     nxbnds_c, nxbnds_t = ctypes.c_int(nxbnds), ctypes.POINTER(ctypes.c_int)
     nybnds_c, nybnds_t = ctypes.c_int(nybnds), ctypes.POINTER(ctypes.c_int)
-
-    # if xbnds is not None:
-    #     xbnds_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=xbnds.shape, flags="C_CONTIGUOUS")
-    # else:
-    #     xbnds_t = ctypes.POINTER(ctypes.c_double)
-
     xbnds, xbnds_t = setarray_Cdouble(xbnds)
-
-    # if ybnds is not None:
-    #     ybnds_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=ybnds.shape)
-    # else:
-    #     ybnds_t = ctypes.POINTER(ctypes.c_double)
-
     ybnds, ybnds_t = setarray_Cdouble(ybnds)
-
-    # if nlon is not None:
-    #     nlon_t = np.ctypeslib.ndpointer(dtype=np.int32, shape=nlon.shape, flags="C_CONTIGUOUS")
-    # else:
-    #     nlon_t = ctypes.POINTER(ctypes.c_int)
-
     nlon, nlon_t = setarray_Cint32(nlon)
-
-    # if nlat is not None:
-    #     nlat_t = np.ctypeslib.ndpointer(dtype=np.int32, shape=nlat.shape, flags="C_CONTIGUOUS")
-    # else:
-    #     nlat_t = ctypes.POINTER(ctypes.c_int)
-
     nlat, nlat_t = setarray_Cint32(nlat)
-
-    # if dlon is not None:
-    #     dlon_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=dlon.shape, flags="C_CONTIGUOUS")
-    # else:
-    #     dlon_t = ctypes.POINTER(ctypes.c_double)
-
     dlon, dlon_t = setarray_Cdouble(dlon)
-
-    # if dlat is not None:
-    #     dlat_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=dlat.shape, flags="C_CONTIGUOUS")
-    # else:
-    #     dlat_t = ctypes.POINTER(ctypes.c_double)
-
     dlat, dlat_t = setarray_Cdouble(dlat)
-
     use_legacy_c, use_legacy_t = ctypes.c_int(use_legacy), ctypes.c_int
-
-    # isc_c, isc_t = ctypes.c_int(isc), ctypes.POINTER(ctypes.c_int)
-    # iec_c, iec_t = ctypes.c_int(iec), ctypes.POINTER(ctypes.c_int)
-    # jsc_c, jsc_t = ctypes.c_int(jsc), ctypes.POINTER(ctypes.c_int)
-    # jec_c, jec_t = ctypes.c_int(jec), ctypes.POINTER(ctypes.c_int)
-
     isc_c, isc_t = setscalar_Cint32(isc)
     iec_c, iec_t = setscalar_Cint32(iec)
     jsc_c, jsc_t = setscalar_Cint32(jsc)
     jec_c, jec_t = setscalar_Cint32(jec)
-
-    # if x is not None:
-    #     x_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=x.shape, flags="C_CONTIGUOUS")
-    # else:
-    #     x_t = ctypes.POINTER(ctypes.c_double)
     x, x_t = setarray_Cdouble(x)
-
-    # if y is not None:
-    #     y_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=y.shape, flags="C_CONTIGUOUS")
-    # else:
-    #     y_t = ctypes.POINTER(ctypes.c_double)
     y, y_t = setarray_Cdouble(y)
-
-    # if dx is not None:
-    #     dx_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=dx.shape, flags="C_CONTIGUOUS")
-    # else:
-    #     dx_t = ctypes.POINTER(ctypes.c_double)
     dx, dx_t = setarray_Cdouble(dx)
-
-    # if dy is not None:
-    #     dy_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=dy.shape, flags="C_CONTIGUOUS")
-    # else:
-    #     dy_t = ctypes.POINTER(ctypes.c_double)
     dy, dy_t = setarray_Cdouble(dy)
-
-    # if area is not None:
-    #     area_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=area.shape, flags="C_CONTIGUOUS")
-    # else:
-    #     area_t = ctypes.POINTER(ctypes.c_double)
-
     area, area_t = setarray_Cdouble(area)
-
-    # if angle_dx is not None:
-    #     angle_dx_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=angle_dx.shape, flags="C_CONTIGUOUS")
-    # else:
-    #     angle_dx_t = ctypes.POINTER(ctypes.c_double)
-
     angle_dx, angle_dx_t = setarray_Cdouble(angle_dx)
-
-    # center_c, center_t = ctypes.c_char_p(center.encode("utf-8")), ctypes.c_char_p
     center_c, center_t = set_Cchar(center)
-    
+
     use_great_circle_algorithm_c, use_great_circle_algorithm_t = ctypes.c_int(use_great_circle_algorithm), ctypes.c_int
 
     _create_regular_lonlat_grid.argtypes = [

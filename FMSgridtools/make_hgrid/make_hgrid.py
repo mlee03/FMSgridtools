@@ -10,7 +10,7 @@ from typing import Optional
 from pyfms import pyFMS, pyFMS_mpp, pyFMS_mpp_domains
 
 from FMSgridtools.make_hgrid.hgridobj import HGridObj
-from FMSgridtools.shared.gridtools_utils import check_file_is_there
+from FMSgridtools.shared.gridtools_utils import check_file_is_there, get_provenance_attrs
 from FREnctools_lib.pyfrenctools.make_hgrid.make_hgrid_util import (
     create_regular_lonlat_grid,
     create_tripolar_grid,
@@ -1268,6 +1268,7 @@ def make_hgrid(
         pos_n += nx*nyp
         pos_t += nx*ny
 
+    prov_attrs = get_provenance_attrs(great_circle_algorithm=use_great_circle_algorithm)
     grid_obj.write_out_hgrid(
         tilename=tilename,
         outfile=outfile,
@@ -1275,6 +1276,7 @@ def make_hgrid(
         ny=ny,
         nxp=nxp,
         nyp=nyp,
+        global_attrs=prov_attrs,
         north_pole_tile=north_pole_tile,
         north_pole_arcx=north_pole_arcx,
         projection=projection,

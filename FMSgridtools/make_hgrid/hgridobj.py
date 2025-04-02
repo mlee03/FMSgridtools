@@ -27,6 +27,7 @@ class HGridObj():
             ny: int,
             nxp: int,
             nyp: int,
+            global_attrs: dict,
             north_pole_tile="none",
             north_pole_arcx="none",
             projection="none",
@@ -34,7 +35,7 @@ class HGridObj():
             discretization="none",
             conformal="none",
             out_halo=0,
-            output_length_angle=0
+            output_length_angle=0,
     ):
         tile = None
         x = None
@@ -194,6 +195,7 @@ class HGridObj():
                 "arcx": arcx,
             }
         )
+        dataset.attrs = global_attrs
         self.dataset = dataset
         dataset.to_netcdf(outfile)
 

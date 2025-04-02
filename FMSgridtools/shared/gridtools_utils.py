@@ -20,7 +20,7 @@ def get_provenance_attrs(
     # as global attributes for output netcdf files
     repo = Repo(search_parent_directories=True)
     git_hash = repo.head.object.hexsha
-    package_version = get_distribution("gridtools").version
+    package_version = get_distribution("fmsgridtools").version
     history = " ".join(sys.argv)
     hostname = run(["hostname"],capture_output=True,text=True).stdout
     g_attrs = {
