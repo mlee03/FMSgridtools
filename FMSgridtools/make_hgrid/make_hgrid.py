@@ -612,9 +612,10 @@ def make_hgrid(
     with open(fms_file, "x") as file:
         file.write("")
 
-    pyfms = pyFMS(clibFMS_path="./pyFMS/cFMS/libcFMS/.libs/libcFMS.so")
-    mpp = pyFMS_mpp(clibFMS=pyfms.clibFMS)
-    mpp_domains = pyFMS_mpp_domains(clibFMS=pyfms.clibFMS)
+    #TODO: Will change after pyFMS refactor
+    pyfms = pyFMS(cFMS_path="./pyFMS/cFMS/libcFMS/.libs/libcFMS.so")
+    mpp = pyFMS_mpp(cFMS=pyfms.cFMS)
+    mpp_domains = pyFMS_mpp_domains(cFMS=pyfms.cFMS)
 
     if(mpp.npes() > 1):
         mpp.pyfms_error(errortype=2, errormsg="make_hgrid: make_hgrid must be run one processor, contact developer")
