@@ -28,18 +28,12 @@
 #include "create_xgrid_gpu.h"
 #include "create_xgrid_utils_gpu.h"
 
-/*------------------------------------------------------------------------------
-  void conserve_interp()
-  conservative interpolation through exchange grid.
-  Currently only first order interpolation are implemented here.
-  ----------------------------------------------------------------------------*/
-void conserve_interp_gpu(int nx_src, int ny_src, int nx_dst, int ny_dst, double *x_src,
-                         double *y_src,  double *x_dst,  double *y_dst,
-                         double *mask_src,  double *data_src, double *data_dst,
-                         int *xgrid_ij1, int *xgrid_ij2, double *xgrid_area)
+Interp_per_input_tile interp_gpu;
+
+int create_xgrid_order1_gpu_wrapper(int nx_src, int ny_src, int nx_dst, int ny_dst, double *x_src,
+                                    double *y_src,  double *x_dst,  double *y_dst, double *mask_src)
 {
   Grid_cells_struct_config output_grid_cells;
-  Interp_per_input_tile interp_gpu;
 
   int ncells_src = nx_src * ny_src;
   int ncells_dst = nx_dst * ny_dst;
@@ -72,8 +66,23 @@ void conserve_interp_gpu(int nx_src, int ny_src, int nx_dst, int ny_dst, double 
                               interp_gpu.output_parent_cell_index[:nxgrid], \
                               interp_gpu.xcell_area[:nxgrid])
 
-  xgrid_ij1 = interp_gpu.input_parent_cell_index;
-  xgrid_ij2 = interp_gpu.output_parent_cell_index;
-  xgrid_area = interp_gpu.xcell_area;
+  //deallocate output_grid_cells
+  return nxgrid;
+  
+}
 
-}; /* conserve_interp */
+void create_xgrid_transfer_data(int nxgrid, int *xgrid_ij1_in, int *xgrid_ij2_in, double *xgrid_area_in)
+{
+
+  for(int ix=0; ix<nxgrid; ix++){
+    xgrid_ij1_in[ix] = interp_gpu.input_parent_cell_index[ix];
+    xgrid_ij2_in[ix] = interp_gpu.output_parent_cell_index[ix];
+    xgrid_area_in[ix] = interp_gpu.xcell_area[ix];
+  }
+  
+  free(interp_gpu.input_parent_cell_index);
+  free(interp_gpu.output_parent_cell_index);
+  free(interp_gpu.xcell_area);  
+
+}
+
