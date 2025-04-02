@@ -2,7 +2,7 @@ import numpy as np
 import numpy.typing as npt
 import ctypes
 
-from pyfms.pyfms_data_handling import (
+from pyfms.data_handling import (
     setscalar_Cint32,
     setscalar_Cdouble,
     setarray_Cdouble,
