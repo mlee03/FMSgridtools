@@ -779,10 +779,10 @@ def make_hgrid(
     # if my_grid_type != GNOMONIC_ED and nest_grids:
     #     mpp.pyfms_error(errortype=2, errormsg="make_hgrid: --nest_grids can be set only when grid_type = 'gnomonic_ed'")
 
-    # if my_grid_type == TRIPOLAR_GRID:
-    #     projection = "tripolar"
-    #     if nxbnds != 2:
-    #         mpp.pyfms_error(errortype=2, errormsg="make_hgrid: grid type is 'tripolar_grid', nxbnds should be 2")
+    if my_grid_type == TRIPOLAR_GRID:
+        projection = "tripolar"
+        if nxbnds != 2:
+            mpp.pyfms_error(errortype=2, errormsg="make_hgrid: grid type is 'tripolar_grid', nxbnds should be 2")
     # elif my_grid_type == FROM_FILE:
     #     if ntiles_file == 0:
     #         mpp.pyfms_error(errortype=2, errormsg="make_hgrid: grid_type is 'from_file', but my_grid_file is not specified")
@@ -1012,32 +1012,32 @@ def make_hgrid(
             center,
             use_great_circle_algorithm,
         )
-    # elif(my_grid_type==TRIPOLAR_GRID):
-    #     create_tripolar_grid(
-    #         nxbnds, 
-    #         nybnds, 
-    #         xbnds, 
-    #         ybnds, 
-    #         nlon, 
-    #         nlat, 
-    #         dx_bnds, 
-    #         dy_bnds,
-    #         use_legacy, 
-    #         lat_join, 
-    #         isc, 
-    #         iec, 
-    #         jsc, 
-    #         jec, 
-    #         grid_obj.x, 
-    #         grid_obj.y, 
-    #         grid_obj.dx, 
-    #         grid_obj.dy,
-    #         grid_obj.area, 
-    #         grid_obj.angle_dx, 
-    #         center, 
-    #         verbose, 
-    #         use_great_circle_algorithm,
-    #     )
+    elif(my_grid_type==TRIPOLAR_GRID):
+        create_tripolar_grid(
+            nxbnds, 
+            nybnds, 
+            xbnds, 
+            ybnds, 
+            nlon, 
+            nlat, 
+            dx_bnds, 
+            dy_bnds,
+            use_legacy, 
+            lat_join, 
+            isc, 
+            iec, 
+            jsc, 
+            jec, 
+            grid_obj.x, 
+            grid_obj.y, 
+            grid_obj.dx, 
+            grid_obj.dy,
+            grid_obj.area, 
+            grid_obj.angle_dx, 
+            center, 
+            verbose, 
+            use_great_circle_algorithm,
+        )
     # elif(my_grid_type==FROM_FILE):
     #     for n in range(ntiles):
     #         n1 = n * nxp * nyp
@@ -1187,6 +1187,9 @@ def make_hgrid(
     #         grid_obj.angle_dx, 
     #         center,
     #     )
+    else:
+        mpp.pyfms_error(errortype=2, errormsg="make_hgrid: passed grid type is not implemented")
+
 
     """
     Write out data
