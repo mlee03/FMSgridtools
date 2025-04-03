@@ -1,13 +1,14 @@
 import ctypes
 import os
+import pytest
 import pyfrenctools
 
-def test_load_library_default():
-    cfrenctools = pyfrenctools.cfrenctools.LIB().lib
+def test_loaded_library():
+    assert(id(pyfrenctools.cLIB.clib) == id(pyfrenctools.CreateXgrid.clib))
 
-def test_load_library_explicit():
-    frenctoolslib = os.path.dirname(__file__) + "/../cfrenctools/c_build/clib.so"
-    cfrenctools = pyfrenctools.cfrenctools.LIB(frenctoolslib).lib
+@pytest.mark.xfail
+def test_library_load_fail():
+    pyfrenctools.cLIB.change_lib(clib_path="do_not_exist")
 
 
 
