@@ -78,7 +78,7 @@ class CreateXgrid():
                     xgrid_ij2=i_tgt[:nxgrid]*nlon_tgt + j_tgt[:nxgrid],
                     xgrid_area=xarea[:nxgrid])
                     
-        
+    @classmethod
     def create_xgrid_transfer_data_gpu(cls, nxgrid: int):
 
         _create_xgrid_transfer_data = cls.clib.create_xgrid_transfer_data
