@@ -46,6 +46,7 @@ class HGridObj():
         angle_dx = None
         angle_dy = None
         arcx = None
+        var_dict={}
         if north_pole_tile == "none":
             tile = xr.DataArray(
                 [tilename],
@@ -79,6 +80,7 @@ class HGridObj():
                     conformal=conformal,
                 )
             )
+        var_dict['tile'] = tile
 
         if self.x is not None:
             x = xr.DataArray(
@@ -89,6 +91,11 @@ class HGridObj():
                     standard_name="geographic_longitude",
                 )
             )
+
+            if out_halo > 0:
+                x.attrs["_FillValue"] = -9999.
+
+            var_dict['x'] = x
             
         if self.y is not None:
             y = xr.DataArray(
@@ -99,6 +106,11 @@ class HGridObj():
                     standard_name="geographic_latitude",
                 )
             )
+
+            if out_halo > 0:
+                y.attrs["_FillValue"] = -9999.
+
+            var_dict['y'] = y
     
         if output_length_angle:
             if self.dx is not None:
@@ -110,6 +122,12 @@ class HGridObj():
                         standard_name="grid_edge_x_distance",
                     )
                 )
+
+                if out_halo > 0:
+                    dx.attrs["_FillValue"] = -9999.
+
+                var_dict['dx'] = dx
+
             if self.dy is not None:    
                 dy = xr.DataArray(
                     data=self.dy[:(ny*nxp)].reshape((ny, nxp)),
@@ -119,6 +137,12 @@ class HGridObj():
                         standard_name="grid_edge_y_distance",
                     )
                 )
+
+                if out_halo > 0:
+                    dy.attrs["_FillValue"] = -9999.
+
+                var_dict['dy'] = dy
+
             if self.angle_dx is not None:   
                 angle_dx = xr.DataArray(
                     data=self.angle_dx[:(nyp*nxp)].reshape((nyp, nxp)),
@@ -128,13 +152,12 @@ class HGridObj():
                         standard_name="grid_vertex_x_angle_WRT_geographic_east",
                     )
                 )
-            if out_halo > 0:
-                if dx is not None:
-                    dx.attrs["_FillValue"] = -9999.
-                if dy is not None:
-                    dy.attrs["_FillValue"] = -9999.
-                if angle_dx is not None:
+
+                if out_halo > 0:
                     angle_dx.attrs["_FillValue"] = -9999.
+
+                var_dict['angle_dx'] = angle_dx
+                    
             if conformal != "true":
                 if self.angle_dy is not None:
                     angle_dy = xr.DataArray(
@@ -145,9 +168,11 @@ class HGridObj():
                             standard_name="grid_vertex_y_angle_WRT_geographic_north",
                         )
                     )
-                if out_halo > 0:
-                    if angle_dy is not None:
+
+                    if out_halo > 0:
                         angle_dy.attrs["_FillValue"] = -9999.
+
+                    var_dict['angle_dy'] = angle_dy
 
         if self.area is not None:
             area = xr.DataArray(
@@ -158,6 +183,11 @@ class HGridObj():
                     standard_name="grid_cell_area",
                 )
             )
+
+            if out_halo > 0:
+                area.attrs["_FillValue"] = -9999.
+
+            var_dict['area'] = area
 
         if north_pole_arcx == "none":
             arcx = xr.DataArray(
@@ -174,26 +204,11 @@ class HGridObj():
                     north_pole=north_pole_arcx,
                 )
             )
-        if out_halo > 0:
-            if x is not None:
-                x.attrs["_FillValue"] = -9999.
-            if y is not None:
-                y.attrs["_FillValue"] = -9999.
-            if area is not None:
-                area.attrs["_FillValue"] = -9999.
+
+        var_dict['arcx'] = arcx   
 
         dataset = xr.Dataset(
-            data_vars={
-                "tile": tile,
-                "x": x,
-                "y": y,
-                "dx": dx,
-                "dy": dy,
-                "area": area,
-                "angle_dx": angle_dx,
-                "angle_dy": angle_dy,
-                "arcx": arcx,
-            }
+            data_vars=var_dict
         )
         dataset.attrs = global_attrs
         self.dataset = dataset
