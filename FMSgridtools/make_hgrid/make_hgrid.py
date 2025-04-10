@@ -13,7 +13,6 @@ from FMSgridtools.make_hgrid.hgridobj import HGridObj
 from FMSgridtools.shared.gridtools_utils import check_file_is_there, get_provenance_attrs
 from FREnctools_lib.pyfrenctools.make_hgrid.make_hgrid_util import (
     create_regular_lonlat_grid,
-    create_tripolar_grid,
     create_grid_from_file,
     create_simple_cartesian_grid,
     create_spectral_grid,
@@ -73,22 +72,18 @@ The available options for grid_type are:
     3. 'regular_lonlat_grid':
             --nxbnds, --nybnds --xbnds, --ybnds, must be
             specified to define the grid bounds.
-    4. 'tripolar_grid':
-            --nxbnds, --nybnds, --xbnds, --ybnds, must be
-            specified to define the grid bounds. --lat_join
-            is optional with default value 65.
-    5  'conformal_cubic_grid'
-    6  'gnomonic_ed'
-    7. 'simple_cartesian_grid':
+    4  'conformal_cubic_grid'
+    5  'gnomonic_ed'
+    6. 'simple_cartesian_grid':
             --xbnds, --ybnds must be specified to define
             the grid bounds location and grid size. number
             of bounds must be 2 in both and x and y-direction. 
             --simple_dx and --simple_dy must be specified to 
             specify uniform cell length.
-    8 . 'f_plane_grid':
+    7. 'f_plane_grid':
             For setting geometric fractors according
             to f-plane. f_plane_latitude need to be specified.
-    9.  'beta_plane_grid':
+    8.  'beta_plane_grid':
             For setting geometric fractors according
             to  beta plane. f_plane_latitude need to be
             specified
@@ -114,21 +109,9 @@ Example use:
                                     --nlon 720                      
                                     --nlat 104,48,40,40,48,120 
                                     --grid_name om3_grid               
-                                    --center c_cell                                               
+                                    --center c_cell                                                                        
                                                                                    
-    3.  generating tripolar grid with various grid resolution and C-cell
-        centered using legacy algorithm (create GFDL CM2/ocean-like grid)                   
-            fmsgridtools make_hgrid --grid_type tripolar_grid 
-                                    --nxbnds 2 
-                                    --nybnds 7 
-                                    --xbnds -280,80  
-                                    --ybnds -82,-30,-10,0,10,30,90 
-                                    --dlon 1.0,1.0                  
-                                    --dlat 1.0,1.0,0.6666667,0.3333333,0.6666667,1.0,1.0          
-                                    --grid_name om3_grid 
-                                    --center c_cell                          
-                                                                                   
-    4.  generating simple cartesian grid(supergrid size 20x20)                     
+    3.  generating simple cartesian grid(supergrid size 20x20)                     
             fmsgridtools make_hgrid --grid_type simple_cartesian_grid 
                                     --xbnds 0,30 
                                     --ybnds 50,60    
@@ -137,16 +120,16 @@ Example use:
                                     --simple_dx 1000 
                                     --simple_dy 1000        
                                                                                    
-    5.  generating conformal cubic grid. (supergrid size 60x60 for each tile)      
+    4.  generating conformal cubic grid. (supergrid size 60x60 for each tile)      
             fmsgridtools make_hgrid --grid_type conformal_cubic_grid 
                                     --nlon 60 
                                     --nratio 2         
                                                                                    
-    6. generating gnomonic cubic grid with equal_dist_face_edge(C48 grid)         
+    5. generating gnomonic cubic grid with equal_dist_face_edge(C48 grid)         
             fmsgridtools make_hgrid --grid_type gnomonic_ed 
                                     --nlon 96                             
                                                                                    
-    7. generating gnomonic cubic stretched grid.                                  
+    6. generating gnomonic cubic stretched grid.                                  
             fmsgridtools make_hgrid --grid_type gnomonic_ed 
                                     --nlon 180 
                                     --do_schmidt               
@@ -154,7 +137,7 @@ Example use:
                                     --target_lat 40. 
                                     --target_lon 20.          
                                                                                    
-    8. generating gnomonic cubic stretched grid with two nests on tile 6.         
+    7. generating gnomonic cubic stretched grid with two nests on tile 6.         
             fmsgridtools make_hgrid --grid_type gnomonic_ed 
                                     --nlon 192 
                                     --do_schmidt               
@@ -170,12 +153,12 @@ Example use:
                                     --jend_nest 42,82 
                                     --halo 3                  
                                                                                    
-    9. generating spectral grid. (supergrid size 128x64)                          
+    8. generating spectral grid. (supergrid size 128x64)                          
             fmsgridtools make_hgrid --grid_type spectral_grid 
                                     --nlon 128 
                                     --nlat 64                
                                                                                    
-    10. Through user-defined grids                                             
+    9. Through user-defined grids                                             
             fmsgridtools make_hgrid --grid_type from_file 
                                     --my_grid_file my_grid_file             
                                     --nlon 4 
@@ -202,7 +185,7 @@ Example use:
                   30                                                                   
                   40                                                                   
                                                                                    
-    11. generating f_plane_grids                                                  
+    10. generating f_plane_grids                                                  
             fmsgridtools make_hgrid --grid_type f_plane_grid 
                                     --f_plane_latitude 55 
                                     --nxbnd 2      
@@ -702,8 +685,6 @@ def make_hgrid(
 
     if grid_type == "regular_lonlat_grid":
         my_grid_type = REGULAR_LONLAT_GRID
-    elif grid_type == "tripolar_grid":
-        my_grid_type = TRIPOLAR_GRID
     elif grid_type == "from_file":
         my_grid_type = FROM_FILE
     elif grid_type == "simple_cartesian_grid":
@@ -741,7 +722,7 @@ def make_hgrid(
     Command line argument check
     """
 
-    if my_grid_type == REGULAR_LONLAT_GRID or my_grid_type == TRIPOLAR_GRID or my_grid_type == F_PLANE_GRID or my_grid_type == BETA_PLANE_GRID:
+    if my_grid_type == REGULAR_LONLAT_GRID or my_grid_type == F_PLANE_GRID or my_grid_type == BETA_PLANE_GRID:
         nxbnds = nxbnds0
         nybnds = nybnds0
         if nxbnds < 2 or nybnds < 2:
@@ -780,10 +761,6 @@ def make_hgrid(
     # if my_grid_type != GNOMONIC_ED and nest_grids:
     #     mpp.pyfms_error(errortype=2, errormsg="make_hgrid: --nest_grids can be set only when grid_type = 'gnomonic_ed'")
 
-    if my_grid_type == TRIPOLAR_GRID:
-        projection = "tripolar"
-        if nxbnds != 2:
-            mpp.pyfms_error(errortype=2, errormsg="make_hgrid: grid type is 'tripolar_grid', nxbnds should be 2")
     # elif my_grid_type == FROM_FILE:
     #     if ntiles_file == 0:
     #         mpp.pyfms_error(errortype=2, errormsg="make_hgrid: grid_type is 'from_file', but my_grid_file is not specified")
@@ -899,10 +876,7 @@ def make_hgrid(
     """
     Get super grid size
     """
-    if use_legacy:
-        nxl[0] = get_legacy_grid_size(nxbnds, xbnds, dx_bnds)
-        nyl[0] = get_legacy_grid_size(nybnds, ybnds, dy_bnds)
-    elif my_grid_type == GNOMONIC_ED or my_grid_file == CONFORMAL_CUBIC_GRID:
+    if my_grid_type == GNOMONIC_ED or my_grid_file == CONFORMAL_CUBIC_GRID:
         for n in range(ntiles_global):
             nxl[n] = nlon[0]
             nyl[n] = nxl[n]
@@ -1011,32 +985,6 @@ def make_hgrid(
             grid_obj.area,
             grid_obj.angle_dx, 
             center,
-            use_great_circle_algorithm,
-        )
-    elif(my_grid_type==TRIPOLAR_GRID):
-        create_tripolar_grid(
-            nxbnds, 
-            nybnds, 
-            xbnds, 
-            ybnds, 
-            nlon, 
-            nlat, 
-            dx_bnds, 
-            dy_bnds,
-            use_legacy, 
-            lat_join, 
-            isc, 
-            iec, 
-            jsc, 
-            jec, 
-            grid_obj.x, 
-            grid_obj.y, 
-            grid_obj.dx, 
-            grid_obj.dy,
-            grid_obj.area, 
-            grid_obj.angle_dx, 
-            center, 
-            verbose, 
             use_great_circle_algorithm,
         )
     # elif(my_grid_type==FROM_FILE):
