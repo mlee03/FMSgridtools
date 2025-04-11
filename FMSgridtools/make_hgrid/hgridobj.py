@@ -46,39 +46,20 @@ class HGridObj():
         angle_dy = None
         arcx = None
         var_dict={}
-        if north_pole_tile == "none":
-            tile = xr.DataArray(
-                [self.tile],
-                attrs=dict(
-                    standard_name="grid_tile_spec",
-                    geometry=geometry,
-                    discretization=discretization,
-                    conformal=conformal,
-                )
+        
+        tile = xr.DataArray(
+            [self.tile],
+            attrs=dict(
+                standard_name="grid_tile_spec",
+                geometry=geometry,
+                discretization=discretization,
+                conformal=conformal,
             )
-        elif projection == "none":
-            tile = xr.DataArray(
-                [self.tile],
-                attrs=dict(
-                    standard_name="grid_tile_spec",
-                    geometry=geometry,
-                    north_pole=north_pole_tile,
-                    discretization=discretization,
-                    conformal=conformal,
-                )
-            )
-        else:
-            tile = xr.DataArray(
-                [self.tile],
-                attrs=dict(
-                    standard_name="grid_tile_spec",
-                    geometry=geometry,
-                    north_pole=north_pole_tile,
-                    projection=projection,
-                    discretization=discretization,
-                    conformal=conformal,
-                )
-            )
+        )
+        if north_pole_tile is "none":
+            tile = tile.assign_attrs(projection=projection)
+        if projection is "none":
+            tile = tile.assign_attrs(north_pole_tile=north_pole_tile)
         var_dict['tile'] = tile
 
         if self.x is not None:
