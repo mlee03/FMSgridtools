@@ -21,8 +21,8 @@ class HGridObj():
 
     def write_out_hgrid(
             self,
-            tilename,
-            outfile,
+            tilename: str,
+            outfile: str,
             nx: int,
             ny: int,
             nxp: int,

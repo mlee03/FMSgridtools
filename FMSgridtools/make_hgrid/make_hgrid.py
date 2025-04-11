@@ -5,7 +5,6 @@ import ctypes
 import numpy as np
 import numpy.typing as npt
 import click
-from typing import Optional
 
 from pyfms import pyFMS, pyFMS_mpp, pyFMS_mpp_domains
 
@@ -521,7 +520,7 @@ MISSING_VALUE = -9999.
 )
 def make_hgrid(
     grid_type: str,
-    my_grid_file: Optional[str],
+    my_grid_file: str,
     nxbnds: int,
     nybnds: int,
     xbnds: str,

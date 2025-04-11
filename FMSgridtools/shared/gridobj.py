@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 
 import numpy as np
 import numpy.typing as npt
@@ -16,8 +16,8 @@ class GridObj:
 
     def __init__(
             self, 
-            dataset: Optional[xr.Dataset] = None, 
-            grid_file: Optional[str] = None
+            dataset: xr.Dataset = None, 
+            grid_file: str = None
     ):
         if grid_file is not None:
             check_file_is_there(self.grid_file)
