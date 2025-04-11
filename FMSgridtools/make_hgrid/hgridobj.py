@@ -21,7 +21,6 @@ class HGridObj():
 
     def write_out_hgrid(
             self,
-            tilename: str,
             outfile: str,
             nx: int,
             ny: int,
@@ -49,7 +48,7 @@ class HGridObj():
         var_dict={}
         if north_pole_tile == "none":
             tile = xr.DataArray(
-                [tilename],
+                [self.tile],
                 attrs=dict(
                     standard_name="grid_tile_spec",
                     geometry=geometry,
@@ -59,7 +58,7 @@ class HGridObj():
             )
         elif projection == "none":
             tile = xr.DataArray(
-                [tilename],
+                [self.tile],
                 attrs=dict(
                     standard_name="grid_tile_spec",
                     geometry=geometry,
@@ -70,7 +69,7 @@ class HGridObj():
             )
         else:
             tile = xr.DataArray(
-                [tilename],
+                [self.tile],
                 attrs=dict(
                     standard_name="grid_tile_spec",
                     geometry=geometry,

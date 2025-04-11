@@ -1147,7 +1147,7 @@ def make_hgrid(
     pos_t = 0
     pos_n = 0
     for n in range(ntiles):
-        tilename = "tile" + str(n+1)
+        grid_obj.tile = "tile" + str(n+1)
         if ntiles > 1:
             outfile = grid_name + ".tile" + ".nc" + str(n+1)
         else:
@@ -1218,7 +1218,6 @@ def make_hgrid(
 
     prov_attrs = get_provenance_attrs(great_circle_algorithm=use_great_circle_algorithm)
     grid_obj.write_out_hgrid(
-        tilename=tilename,
         outfile=outfile,
         nx=nx,
         ny=ny,

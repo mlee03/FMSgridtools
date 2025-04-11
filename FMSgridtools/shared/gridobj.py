@@ -16,7 +16,7 @@ class GridObj:
 
     def __init__(
             self, 
-            dataset: xr.Dataset = None, 
+            dataset: type[xr.Dataset] = None, 
             grid_file: str = None
     ):
         if grid_file is not None:
