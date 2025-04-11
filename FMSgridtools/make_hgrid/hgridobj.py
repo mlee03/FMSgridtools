@@ -214,71 +214,61 @@ class HGridObj():
         dataset.to_netcdf(outfile)
 
     def make_gridobj(self) -> "GridObj":
+        var_dict = {}
         if self.dataset is None:
-            tile = None
-            x = None
-            y = None
-            dx = None
-            dy = None
-            angle_dx = None
-            angle_dy = None
-            area = None
-            arcx = None
-            if self.tile is not None:
-                tile = xr.DataArray(
-                    [self.tile]
-                )
+            tile = xr.DataArray(
+                [self.tile]
+            )
+            var_dict['tile'] = tile
             if self.x is not None:
                 x = xr.DataArray(
                     data=self.x,
                     dims=["nyp", "nxp"],
                 )
+                var_dict['x'] = x
             if self.y is not None:
                 y = xr.DataArray(
                     data=self.y,
                     dims=["nyp", "nxp"],
                 )
+                var_dict['y'] = y
             if self.dx is not None:
                 dx = xr.DataArray(
                     data=self.dx,
                     dims=["nyp", "nx"],
                 )
+                var_dict['dx'] = dx
             if self.dy is not None:
                 dy = xr.DataArray(
                     data=self.dy,
                     dims=["ny", "nxp"],
                 )
+                var_dict['dy'] = dy
             if self.angle_dx is not None:
                 angle_dx = xr.DataArray(
                     data=self.angle_dx,
                     dims=["nyp", "nxp"],
                 )
+                var_dict['angle_dx'] = angle_dx
             if self.angle_dy is not None:
                 angle_dy = xr.DataArray(
                     data=self.angle_dy,
                     dims=["nyp", "nxp"],
                 )
+                var_dict['angle_dy'] = angle_dy
             if self.area is not None:
                 area = xr.DataArray(
                     data=self.area,
                     dims=["ny", "nx"],
                 )
+                var_dict['area'] = area
             if self.arcx is not None:
                 arcx = xr.DataArray(
                     [self.arcx],
                 )
+                var_dict['arcx'] = arcx
             dataset = xr.Dataset(
-                data_vars = {
-                    "tile": tile,
-                    "x": x,
-                    "y": y,
-                    "dx": dx,
-                    "dy": dy,
-                    "angle_dx": angle_dx,
-                    "angle_dy": angle_dy,
-                    "area": area,
-                    "arcx": arcx
-                }
+                data_vars = var_dict
             )
         else:
             dataset=self.dataset
