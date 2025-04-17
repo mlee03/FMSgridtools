@@ -362,7 +362,7 @@ void create_realistic_topog_wrapper(int nx_dst, int ny_dst, const double *x_dst,
 			    int fill_isolated_cells, int dont_change_landmask, int kmt_min, double min_thickness,
 			    int open_very_this_cell, double fraction_full_cell, double *depth,
 			    int *num_levels, int debug, int use_great_circle_algorithm, // TODO use_gca can be removed
-          int on_grid, int x_refine, int y_refine, char* tile_file, int rotate_poly)
+          int on_grid, int x_refine, int y_refine, char* tile_file, int rotate_poly, int gpu)
 {
   int nx, ny, layout[2], isc, iec, jsc, jec, nxc, nyc, ni, i, j;
   int g_fid, vid;
@@ -481,7 +481,7 @@ void create_realistic_topog_wrapper(int nx_dst, int ny_dst, const double *x_dst,
 			    deepen_shallow, full_cell, flat_bottom, adjust_topo,
 			    fill_isolated_cells, dont_change_landmask, kmt_min,min_thickness,
 			    open_very_this_cell,fraction_full_cell,depth,
-			    num_levels, domain, debug, using_gca, on_grid);
+			    num_levels, domain, debug, using_gca, on_grid, gpu);
   
   mpp_domain_end();
   mpp_end();
@@ -501,7 +501,7 @@ void create_realistic_topog(int nx_dst, int ny_dst, const double *x_dst, const d
 			    int fill_isolated_cells, int dont_change_landmask, int kmt_min, double min_thickness,
 			    int open_very_this_cell, double fraction_full_cell, double *depth,
 			    int *num_levels, domain2D domain, int debug, int use_great_circle_algorithm,
-                int on_grid )
+                int on_grid, int gpu )
 {
   char xname[128], yname[128];
   int nx_src, ny_src, nxp_src, nyp_src, i, j, count, n;
@@ -665,8 +665,11 @@ void create_realistic_topog(int nx_dst, int ny_dst, const double *x_dst, const d
     if(use_great_circle_algorithm)
       conserve_interp_great_circle(nx_src, ny_now, nx_dst, ny_dst, x_src, y_src,
         x_out, y_out, mask_src, depth_src, depth );
-    else
+    else if(gpu)
       conserve_interp_gpu(nx_src, ny_now, nx_dst, ny_dst, x_src, y_src,
+	      x_out, y_out, mask_src, depth_src, depth );
+    else
+      conserve_interp(nx_src, ny_now, nx_dst, ny_dst, x_src, y_src,
 	      x_out, y_out, mask_src, depth_src, depth );
   }
 
