@@ -11,6 +11,7 @@ list(APPEND c_source_files
   shared/create_xgrid.c
   shared/create_xgrid_gpu.c
   shared/create_xgrid_utils_gpu.c
+  shared/create_xgrid_gpu_wrapper.c
   shared/general_utils_gpu.c
   shared/gradient_c2l.c
   shared/interp.c
