@@ -49,7 +49,8 @@ class MosaicObj:
         else: 
             for i in range(len(self.gridfiles)): 
                 self.grid_dict[self.gridtiles[i]] = GridObj.from_file(self.gridfiles[i]) 
-
+        return self.grid_dict
+                
     def write_out_mosaic(self, outfile:str):
         if self.mosaic_name is not None:
             mosaic = xr.DataArray(data=self.mosaic_name,

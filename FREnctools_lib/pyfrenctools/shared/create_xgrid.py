@@ -75,8 +75,8 @@ class CreateXgrid():
                                i_src, j_src, i_tgt, j_tgt, xarea)
 
         return dict(nxgrid=nxgrid,
-                    xgrid_ij1=i_src[:nxgrid]*nlon_src + j_src[:nxgrid],
-                    xgrid_ij2=i_tgt[:nxgrid]*nlon_tgt + j_tgt[:nxgrid],
+                    xgrid_ij1=j_src[:nxgrid]*nlon_src + i_src[:nxgrid],
+                    xgrid_ij2=j_tgt[:nxgrid]*nlon_tgt + i_tgt[:nxgrid],
                     xgrid_area=xarea[:nxgrid])
                     
     @classmethod

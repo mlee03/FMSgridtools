@@ -1,74 +1,73 @@
-from gridtools import XGridObj, GridObj
 import numpy as np
 import os
-import pytest
 import xarray as xr
 
-def generate_remap(filename : str = None) :
-    string = 255
-    ncells = 10
-    two = 2
+import FMSgridtools
 
-    tile1 = xr.DataArray( data = np.array([1]*ncells),
-                          dims = ('ncells'),
-                          attrs = dict(tile1_standard_name = "tile_number_in_mosaic1") )
-    tile1_cell = xr.DataArray( data = np.array([[4,2]]*ncells),
-                               dims = ('ncells', 'two'),
-                               attrs = dict(tile1_cell_standard_name = "parent_cell_indices_in_mosaic1"))
-    tile2_cell = xr.DataArray( data = np.array([[2,3]]*ncells),
-                               dims = ('ncells', 'two'),
-                               attrs = dict(tile2_cell_standard_name = "parent_cell_indices_in_mosaic2"))
-    xgrid_area = xr.DataArray( data = np.random.rand(ncells),
-                               dims = ('ncells'),
-                               attrs = dict(xgrid_area_units = "m2"))
-    xgrid = xr.Dataset( data_vars = dict(tile1 = tile1,
-                                         tile1_cell = tile1_cell,
-                                         tile2_cell = tile2_cell,
-                                         xgrid_area = xgrid_area))
-    if filename is not None : xgrid.to_netcdf(filename, mode='w')
-    return xgrid
+def generate_mosaic(nx: int = 360, ny:int = 90, refine: int = 1):
 
+    xstart, xend = 0, 360
+    ystart, yend = -45, 45
+    nx_src, ny_src = nx, ny
+    nxp_src, nyp_src = nx_src+1, ny_src+1
+    dx_src = (xend-xstart)/(nxp_src-1)
+    dy_src = (yend-ystart)/(nyp_src-1)
 
-def test_in_development_create_xgridobj() :
-
-    # create xgrid from mosaic files
-    with open('src_mosaic.nc', 'w') as myfile : pass
-    with open('tgt_mosaic.nc', 'w') as myfile : pass    
-    xgridobj = XGridObj(src_mosaic='./src_mosaic.nc', tgt_mosaic='./tgt_mosaic.nc')
-    del(xgridobj)
-    os.remove('src_mosaic.nc')
-    os.remove('tgt_mosaic.nc')
-
-    # create xgrid from gridobjs
-    src_grid = GridObj(gridfile='file')
-    tgt_grid = GridObj(gridfile='file')    
-    xgridobj = XGridObj( src_grid=src_grid, tgt_grid=tgt_grid )
-    del(src_grid, tgt_grid, xgridobj)
-
+    nx_tgt, ny_tgt = nx_src*refine, ny_src*refine
+    nxp_tgt, nyp_tgt = nx_tgt+1, ny_tgt+1
+    dx_tgt = dx_src/refine
+    dy_tgt = dy_src/refine
     
-def test_create_xgridobj_from_restart_file() :
+    x_src, y_src = [], []
+    for j in range(nyp_src):
+        x_src.append([xstart+i*dx_src for i in range(nxp_src)])
+        y_src.append([ystart+j*dy_src]*nxp_src)
 
-    remap_file = './remap.nc'
-    
-    answer = generate_remap(remap_file)
-    xgridobj = XGridObj(restart_remap_file=remap_file)
+    x_tgt, y_tgt = [], []
+    for j in range(nyp_tgt):
+        x_tgt.append([xstart+i*dx_tgt for i in range(nxp_tgt)])
+        y_tgt.append([ystart+j*dy_tgt]*nxp_tgt)
 
-    assert( answer.equals(xgridobj.dataset) )
-    del(xgridobj, answer)
-    os.remove(remap_file)
-    
-    
-def test_write_remap_file() :
+    for ifile in ("src", "tgt"):
+        mosaicfile = ifile + "_mosaic.nc"
+        gridfile = ifile + "_grid.nc"
+        gridlocation = "./"
+        gridtile = "tile1"
+        xr.Dataset(data_vars=dict(mosaic=mosaicfile.encode(),
+                                  gridlocation=gridlocation.encode(),
+                                  gridfiles=(["ntiles"], [gridfile.encode()]),
+                                  gridtiles=(["ntiles"], [gridtile.encode()]))
+        ).to_netcdf(mosaicfile)
+        
 
-    out_remap_file = 'test_remap.nc'
-    answer = generate_remap()
-    
-    xgridobj = XGridObj(dataset=answer, out_remap_file=out_remap_file)
-    xgridobj.write_remap_file()
+    for (x, y, prefix) in [(x_src, y_src, "src"), (x_tgt, y_tgt, "tgt")]:                                                 
+        xr.Dataset(data_vars=dict(x=(["nyp", "nxp"], x),
+                                  y=(["nyp", "nxp"], y))
+        ).to_netcdf(prefix+"_grid.nc")
 
-    test_dataset = xr.open_dataset(out_remap_file)
-    
-    assert(answer.equals(test_dataset))
-    del(xgridobj, test_dataset)
-    
+        
+def test_create_xgrid() :
 
+    nx, ny, refine = 360, 90, 2
+    generate_mosaic(nx=nx, ny=ny, refine=refine)
+
+    xgrid = FMSgridtools.XGridObj(src_mosaic="src_mosaic.nc", tgt_mosaic="tgt_mosaic.nc")
+    xgrid.create_xgrid()
+    xgrid.write_remap_file()
+    
+    del xgrid
+    
+    xgrid = FMSgridtools.XGridObj(restart_remap_file="remap.nc").dataset
+
+    nxgrid = nx * refine * ny * refine 
+    assert(xgrid.sizes["ncells"] == nxgrid)    
+
+    tile1_cells = np.repeat([i for i in range(nx*ny)],4)
+    assert(np.all(xgrid["tile1_cell"].values==tile1_cells))
+
+    tile2_cells = []
+    for j in range(ny):
+        for i in range(nx):
+            base = (refine*j)*(refine*nx) + refine*i
+            tile2_cells.extend([base, base+1, base+refine*nx, base+refine*nx+1])
+    assert(np.all(xgrid["tile2_cell"].values==np.array(tile2_cells)))
