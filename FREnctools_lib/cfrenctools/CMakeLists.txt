@@ -14,6 +14,7 @@ list(APPEND c_source_files
   shared/general_utils_gpu.c
   shared/gradient_c2l.c
   shared/interp.c
+  shared/interp_gpu.c
   shared/mosaic_util.c
   shared/mpp.c
   shared/mpp_domain.c
@@ -26,6 +27,7 @@ list(APPEND c_source_files
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 find_package(MPI REQUIRED COMPONENTS C)
 find_package(NetCDF REQUIRED COMPONENTS C)
+find_package(OpenACC COMPONENTS C)
 
 # macros that were previously set via autotools config.h
 execute_process(
@@ -50,7 +52,8 @@ target_include_directories(clib PUBLIC
 )
 
 target_link_libraries(clib PUBLIC NetCDF::NetCDF_C
-                                  MPI::MPI_C)
+                                  MPI::MPI_C
+                                  OpenACC::OpenACC_C)
 
 
 # Set the output directory
@@ -59,6 +62,7 @@ set_target_properties(
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/c_build
     POSITION_INDEPENDENT_CODE ON
     PREFIX ""
+    COMPILE_FLAGS ${OpenACC_C_FLAGS}
 )
 
 # Install the shared library
