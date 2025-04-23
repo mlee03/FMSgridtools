@@ -36,7 +36,7 @@ class create_xgrid():
                          lat_tgt: npt.NDArray[np.float64],
                          mask_src: npt.NDArray[np.float64] = None):
 
-        _create_xgrid = cls.clib.create_xgrid_2dx2d_order1
+        _create_xgrid = cls.lib.create_xgrid_2dx2d_order1
         
         ngrid_src = (nlon_src+1)*(nlat_src+1)
         ngrid_tgt = (nlon_tgt+1)*(nlat_tgt+1)
@@ -94,7 +94,7 @@ class create_xgrid():
     @classmethod
     def transfer_data_gpu(cls, nxgrid: int):
 
-        _create_xgrid_transfer_data = cls.clib.create_xgrid_transfer_data
+        _create_xgrid_transfer_data = cls.lib.create_xgrid_transfer_data
 
         nxgrid_t = ctypes.c_int
         xgrid_ij1_t = np.ctypeslib.ndpointer(dtype=np.int32, shape=(nxgrid))
@@ -131,7 +131,7 @@ class create_xgrid():
                              lat_tgt: npt.NDArray,
                              mask_src: npt.NDArray[np.float64] = None):
 
-        _create_xgrid_order1_gpu_wrapper = cls.clib.create_xgrid_order1_gpu_wrapper
+        _create_xgrid_order1_gpu_wrapper = cls.lib.create_xgrid_order1_gpu_wrapper
 
         ngrid_src = (nlon_src+1)*(nlat_src+1)
         ngrid_tgt = (nlon_tgt+1)*(nlat_tgt+1)
