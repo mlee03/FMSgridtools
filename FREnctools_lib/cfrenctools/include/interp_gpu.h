@@ -20,8 +20,8 @@
 /*
   Copyright (C) 2011 NOAA Geophysical Fluid Dynamics Lab, Princeton, NJ
 */
-#ifndef INTERP_H_
-#define INTERP_H_
+#ifndef INTERP_GPU_H_
+#define INTERP_GPU_H_
 /*********************************************************************
                      interp.h
    This header files contains defition of some interpolation routine  (1-D or 2-D).

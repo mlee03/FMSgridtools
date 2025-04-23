@@ -2,14 +2,27 @@ import ctypes
 import numpy.typing as npt
 import numpy as np
 
-class CreateXgrid():
+class create_xgrid():
 
-    clib: ctypes.CDLL =  None
+    __libpath: str = None
+    __lib: ctypes.CDLL = None
     MAXXGRID: int = 10**6
+    
+    @classmethod
+    def init(cls, libpath, lib):
+        cls.__libpath = libpath
+        cls.__lib = lib
 
     @classmethod
-    def init(cls, clib):
-        cls.clib = clib
+    @property
+    def lib(cls):
+        return cls.__lib
+
+    @classmethod
+    @property
+    def libpath(cls):
+        return cls.__libpath
+
 
     @classmethod
     def get_2dx2d_order1(cls,
@@ -23,7 +36,7 @@ class CreateXgrid():
                          lat_tgt: npt.NDArray[np.float64],
                          mask_src: npt.NDArray[np.float64] = None):
 
-        _create_xgrid = cls.clib.create_xgrid_2dx2d_order1
+        _create_xgrid = cls.lib.create_xgrid_2dx2d_order1
         
         ngrid_src = (nlon_src+1)*(nlat_src+1)
         ngrid_tgt = (nlon_tgt+1)*(nlat_tgt+1)
@@ -80,9 +93,9 @@ class CreateXgrid():
                     xgrid_area=xarea[:nxgrid])
                     
     @classmethod
-    def create_xgrid_transfer_data_gpu(cls, nxgrid: int):
+    def transfer_data_gpu(cls, nxgrid: int):
 
-        _create_xgrid_transfer_data = cls.clib.create_xgrid_transfer_data
+        _create_xgrid_transfer_data = cls.lib.create_xgrid_transfer_data
 
         nxgrid_t = ctypes.c_int
         xgrid_ij1_t = np.ctypeslib.ndpointer(dtype=np.int32, shape=(nxgrid))
@@ -119,7 +132,7 @@ class CreateXgrid():
                              lat_tgt: npt.NDArray,
                              mask_src: npt.NDArray[np.float64] = None):
 
-        _create_xgrid_order1_gpu_wrapper = cls.clib.create_xgrid_order1_gpu_wrapper
+        _create_xgrid_order1_gpu_wrapper = cls.lib.create_xgrid_order1_gpu_wrapper
 
         ngrid_src = (nlon_src+1)*(nlat_src+1)
         ngrid_tgt = (nlon_tgt+1)*(nlat_tgt+1)
@@ -157,7 +170,7 @@ class CreateXgrid():
                                                   lon_src, lat_src,
                                                   lon_tgt, lat_tgt, mask_src)
         
-        return cls.create_xgrid_transfer_data_gpu(nxgrid)
+        return cls.transfer_data_gpu(nxgrid)
     
 
         

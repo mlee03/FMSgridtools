@@ -1,25 +1,28 @@
 import ctypes
 import os
-from .shared.create_xgrid import CreateXgrid
+from .shared.create_xgrid import create_xgrid
 
-class cLIB():
+class cfrenctools():
 
-    clib_path: str = os.path.dirname(__file__) + "/../cfrenctools/c_build/clib.so"
-    clib: ctypes.CDLL = ctypes.CDLL(clib_path)
-    __initialized = False
+    __libpath: str = os.path.dirname(__file__) + "/../cfrenctools/c_build/clib.so"
+    __lib: ctypes.CDLL = ctypes.CDLL(__libpath)
     
     @classmethod
     def init(cls):        
-        if not cls.__initialized:
-            CreateXgrid.init(clib=cls.clib)
-            cls.__initialized = True
+        create_xgrid.init(cls.libpath, cls.lib)
 
     @classmethod
-    def change_lib(cls, clib_path: str):
+    def changelib(cls, libpath):
+        cls.__libpath = libpath
+        cls.__lib = ctypes.CDLL(cls.__libpath)
+        cls.init()
+        
+    @classmethod
+    @property
+    def lib(cls):
+        return cls.__lib
 
-        cls._clib_path = clib_path
-        try: cls._clib = ctypes.CDLL(cls.clib_path)
-        except: raise RuntimeError("ERROR LOADING LIBRARY")
-            
-        CreateXgrid.init(clib=cls.clib)
-        cls.__initialized = True
+    @classmethod
+    @property
+    def libpath(cls):
+        return cls.__libpath
