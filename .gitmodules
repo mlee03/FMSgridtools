@@ -1,4 +1,4 @@
 
 [submodule "pyFMS"]
 	path = pyFMS
-	url = https://github.com/fmalatino/pyFMS.git
+	url = https://github.com/NOAA-GFDL/pyFMS.git
