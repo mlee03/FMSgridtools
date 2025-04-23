@@ -1318,7 +1318,10 @@ void set_the_rotation_matrix_gpu() {
       the_rotation_matrix_gpu[i][j] = m[i][j];
     }
   }
+// this breaks with gcc's openacc implementation
+#ifndef __GNUC__
 #pragma acc data update device(the_rotation_matrix_gpu[:3][:3])
+#endif
 }
 
 /* Rotate point given the passed in rotation matrix  */
