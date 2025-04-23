@@ -1,5 +1,5 @@
-from .cfrenctools import cLIB
-from .shared.create_xgrid import CreateXgrid
+from .cfrenctools import cfrenctools
+from .shared.create_xgrid import create_xgrid
 
-cLIB.init()
+cfrenctools.init()
 

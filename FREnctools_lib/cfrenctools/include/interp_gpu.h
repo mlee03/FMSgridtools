@@ -22,7 +22,6 @@
 */
 #ifndef INTERP_GPU_H_
 #define INTERP_GPU_H_
->>>>>>> origin/main
 /*********************************************************************
                      interp.h
    This header files contains defition of some interpolation routine  (1-D or 2-D).

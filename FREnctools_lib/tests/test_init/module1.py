@@ -1,4 +1,4 @@
 import pyfrenctools
 
 class Module1Class():
-    module1_clib_id = id(pyfrenctools.cLIB.clib)
+    module1_lib_id = id(pyfrenctools.cfrenctools.lib)
