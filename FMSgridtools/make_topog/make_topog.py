@@ -50,6 +50,9 @@ MIN_THICKNESS_HELP="Minimum vertical thickness allowed"
 ROTATE_POLY_HELP="""Calculate polar polygon areas by calculating the area of a copy
 of the polygon, with the copy being rotated far away from the pole
 """
+GPU_HELP="""Enables using GPU acceleration via OpenACC for realistic topography generation.
+Nvidia (nvc) is the only currently supported compiler for offloading and must be available during the initial pip install.
+"""
 # TODO add rest of the help descriptions
 
 @click.command()
@@ -160,6 +163,9 @@ of the polygon, with the copy being rotated far away from the pole
               type = str,
               required = False,
               help = VGRID_FILE_HELP)
+@click.option("--gpu",
+              is_flag = True,
+              help = GPU_HELP)
 def make_topog(
     mosaic : str = None,
     topog_type : str = None,
@@ -189,6 +195,7 @@ def make_topog(
     smooth_topo_allow_deepening : Optional[bool] = None,
     vgrid_file : Optional[str] = None,
     output : Optional[str] = None,
+    gpu: Optional[bool] = None,
     verbose : Optional[bool] = None):
     """
 make_topog can generate topography for any Mosaic. The output file
@@ -212,6 +219,7 @@ More details on the topog_type options are below.
               --fill_first_row  --filter_topog --round_shallow --fill_shallow --deepen_shallow
               --smooth_topo_allow_deepening --vgrid_file --full_cell --dont_fill_isolated_cells --on_grid
               --dont_change_landmask --kmt_min  --dont_adjust_topo --fraction_full_cell --dont_open_very_this_cell
+              --gpu
 
               Realistic currently only supports single-tile grids, and x/y_refinement values of 2.
 
@@ -249,7 +257,7 @@ More details on the topog_type options are below.
             flat_bottom, fill_first_row, filter_topog, round_shallow, fill_shallow,
             deepen_shallow, smooth_topo_allow_deepening, full_cell, dont_fill_isolated_cells,
             on_grid, dont_change_landmask, dont_adjust_topo, open_very_this_cell, inputMosaicObj.gridfiles,
-            rotate_poly)
+            rotate_poly, gpu)
     elif (topog_type == "rectangular_basin"):
         topogOut.make_rectangular_basin(bottom_depth)
     else:

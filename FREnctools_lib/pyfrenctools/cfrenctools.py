@@ -1,18 +1,28 @@
 import ctypes
-import dataclasses
-from typing import Optional
 import os
+from .shared.create_xgrid import create_xgrid
 
-@dataclasses.dataclass
-class LIB():
+class cfrenctools():
 
-    lib_path: Optional[str] = os.path.dirname(__file__) + "/../cfrenctools/c_build/clib.so"
-    lib: Optional[ctypes.CDLL] = None
+    __libpath: str = os.path.dirname(__file__) + "/../cfrenctools/c_build/clib.so"
+    __lib: ctypes.CDLL = ctypes.CDLL(__libpath)
+    
+    @classmethod
+    def init(cls):        
+        create_xgrid.init(cls.libpath, cls.lib)
 
-    def __post_init__(self):
-        if self.lib is None:
-            if not os.path.exists(self.lib_path) :
-                raise IOError(f"{self.lib_path} does not exist")
-            self.lib = ctypes.CDLL(self.lib_path)
-
+    @classmethod
+    def changelib(cls, libpath):
+        cls.__libpath = libpath
+        cls.__lib = ctypes.CDLL(cls.__libpath)
+        cls.init()
         
+    @classmethod
+    @property
+    def lib(cls):
+        return cls.__lib
+
+    @classmethod
+    @property
+    def libpath(cls):
+        return cls.__libpath
