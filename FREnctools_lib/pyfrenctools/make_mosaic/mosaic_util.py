@@ -1,29 +1,45 @@
-import ctypes
 import dataclasses
-import numpy as np
-import pyfrenctools
-import numpy.typing as npt
+import ctypes
+from ctypes import create_string_buffer
 from typing import Optional
+import numpy as np
+import numpy.typing as npt
+from cfrenctools import LIB
+import pathlib
+from numpy.ctypeslib import ndpointer
 
-@dataclasses.dataclass
 class Contact:
-    tile1: int
-    tile2: int
-    nxp1: int
-    nxp2: int
-    nyp1: int
-    nyp2: int
-    x1: npt.NDArray
-    x2: npt.NDArray
-    y1: npt.NDArray
-    y2: npt.NDArray
-    periodx: Optional[int] = None
-    periody: Optional[int] = None
+    def __init__(self,
+                 tile1: int,
+                 tile2: int,
+                 nxp1: int, 
+                 nxp2: int,
+                 nyp1: int, 
+                 nyp2: int, 
+                 x1: npt.NDArray, 
+                 x2: npt.NDArray,
+                 y1: npt.NDArray,
+                 y2: npt.NDArray,
+                 periodx: int = None,
+                 periody: int = None):
+        
+        self.tile1 = tile1
+        self.tile2 = tile2
+        self.nxp1 = nxp1 
+        self.nxp2 = nxp2
+        self.nyp1 = nyp1 
+        self.nyp2 = nyp2
+        self.x1 = x1
+        self.x2 = x2
+        self.y1 = y1
+        self.y2 = y2
+        self.periodx = periodx
+        self.periody = periody
 
     def align_contact(self) -> int:
 
-        clibrary = pyfrenctools.cfrenctools.LIB().lib
-
+        #clibrary = ctypes.CDLL(lib_file)
+        clibrary = LIB('/home/Halle.Derry/savegit/libcontact.so').lib
         #acquire function signature
         find_align = clibrary.get_align_contact
 
@@ -78,3 +94,4 @@ class Contact:
 
     def overlap_contact_call(self):
         pass
+
