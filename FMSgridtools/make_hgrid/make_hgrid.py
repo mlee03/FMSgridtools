@@ -13,219 +13,6 @@ from FMSgridtools.shared.gridtools_utils import check_file_is_there, get_provena
 import pyfrenctools
 
 
-"""
-Usage of make_hgrid
-
-fmsgridtools make_hgrid --grid_type (see types supported below) (string)
-                        --my_grid_file file_name (string)
-                        --nxbnds #
-                        --nybnds #
-                        --xbnds x(1),...,x(nxbnds)
-                        --ybnds y(1),...,y(nybnds)
-                        --nlon nlon(1),...nlon(nxbnds-1)
-                        --nlat nlat(1),...nlat(nybnds-1)
-                        --dlon dlon(1),...dlon(nxbnds)
-                        --dlat dlat(1),...dlat(nybnds)
-                        --lat_join #
-                        --num_lon #
-                        --nratio #
-                        --simple_dx #
-                        --simple_dy #
-                        --grid_name (string)
-                        --center (string)
-                        --verbose (bool)
-                        --shift_fac #
-                        --do_schmidt (bool)
-                        --stretch_fac #
-                        --target_lon #
-                        --target_lat #
-                        --do_cube_transform (bool)
-                        --nest_grids #
-                        --parent_tile parent_tile(1),...parent_tile(nests-1)
-                        --refine_ratio refine_ratio(1),...refine_ratio(nests-1)
-                        --halo #
-                        --istart_nest istart_nest(1),...istart_nest(nests-1)
-                        --iend_nest iend_nest(1),...iend_nest(nests-1)
-                        --jstart_nest jstart_nest(1),...jstart_nest(nests-1)
-                        --jend_nest jend_nest(1),...jend_nest(nests-1)
-                        --use_great_circle_algorithm (bool)
-                        --out_halo #
-                        --no_output_length_angle (bool)
-
-The available options for grid_type are:
-    1. 'from_file':
-            --my_grid_file must be specified. The grid
-            specified in my_grid_file should be super grid
-            vertex.
-    2. 'spectral_grid'
-    3. 'regular_lonlat_grid':
-            --nxbnds, --nybnds --xbnds, --ybnds, must be
-            specified to define the grid bounds.
-    4  'conformal_cubic_grid'
-    5  'gnomonic_ed'
-    6. 'simple_cartesian_grid':
-            --xbnds, --ybnds must be specified to define
-            the grid bounds location and grid size. number
-            of bounds must be 2 in both and x and y-direction. 
-            --simple_dx and --simple_dy must be specified to 
-            specify uniform cell length.
-    7. 'f_plane_grid':
-            For setting geometric fractors according
-            to f-plane. f_plane_latitude need to be specified.
-    8.  'beta_plane_grid':
-            For setting geometric fractors according
-            to  beta plane. f_plane_latitude need to be
-            specified
-
-Example use:
-                                                                               
-    1.  generating regular lon-lat grid (supergrid size 60x20)
-            fmsgridtools make_hgrid --grid_type regular_lonlat_grid 
-                                    --nxbnds 2
-                                    --nybnds 2 
-                                    --xbnds 0,30 
-                                    --ybnds 50,60
-                                    --nlon 60
-                                    --nlat 20                           
-
-    2.  generating tripolar grid with various grid resolution and C-cell
-        centered using monotonic bi-cub spline interpolation.
-            fmsgridtools make_hgrid --grid_type tripolar_grid
-                                    --nxbnds 2 
-                                    --nybnds 7 
-                                    --xbnds -280,80  
-                                    --ybnds -82,-30,-10,0,10,30,90 
-                                    --nlon 720                      
-                                    --nlat 104,48,40,40,48,120 
-                                    --grid_name om3_grid               
-                                    --center c_cell                                                                        
-                                                                                   
-    3.  generating simple cartesian grid(supergrid size 20x20)                     
-            fmsgridtools make_hgrid --grid_type simple_cartesian_grid 
-                                    --xbnds 0,30 
-                                    --ybnds 50,60    
-                                    --nlon 20 
-                                    --nlat 20  
-                                    --simple_dx 1000 
-                                    --simple_dy 1000        
-                                                                                   
-    4.  generating conformal cubic grid. (supergrid size 60x60 for each tile)      
-            fmsgridtools make_hgrid --grid_type conformal_cubic_grid 
-                                    --nlon 60 
-                                    --nratio 2         
-                                                                                   
-    5. generating gnomonic cubic grid with equal_dist_face_edge(C48 grid)         
-            fmsgridtools make_hgrid --grid_type gnomonic_ed 
-                                    --nlon 96                             
-                                                                                   
-    6. generating gnomonic cubic stretched grid.                                  
-            fmsgridtools make_hgrid --grid_type gnomonic_ed 
-                                    --nlon 180 
-                                    --do_schmidt               
-                                    --stretch_factor 3 
-                                    --target_lat 40. 
-                                    --target_lon 20.          
-                                                                                   
-    7. generating gnomonic cubic stretched grid with two nests on tile 6.         
-            fmsgridtools make_hgrid --grid_type gnomonic_ed 
-                                    --nlon 192 
-                                    --do_schmidt               
-                                    --stretch_factor 3 
-                                    --target_lat 10. 
-                                    --target_lon 20.          
-                                    --nest_grids 2 
-                                    --parent_tile 6,6 
-                                    --refine_ratio 2,2           
-                                    --istart_nest 11,51 
-                                    --jstart_nest 11,51                       
-                                    --iend_nest 42,82 
-                                    --jend_nest 42,82 
-                                    --halo 3                  
-                                                                                   
-    8. generating spectral grid. (supergrid size 128x64)                          
-            fmsgridtools make_hgrid --grid_type spectral_grid 
-                                    --nlon 128 
-                                    --nlat 64                
-                                                                                   
-    9. Through user-defined grids                                             
-            fmsgridtools make_hgrid --grid_type from_file 
-                                    --my_grid_file my_grid_file             
-                                    --nlon 4 
-                                    --nlat 4                                             
-                                                                                   
-        Contents of a sample my_grid_file:                                           
-            The first line of my_grid_file will be text ( will be ignored)          
-            followed by nlon+1 lines of real value of x-direction supergrid bound   
-            location. Then another line of text ( will be ignored), followed by     
-            nlat+1 lines of real value of y-direction supergrid bound location.     
-                                                                                   
-            For example:                                                            
-                                                                                   
-                x-grid                                                               
-                  0.0                                                                  
-                  5.0                                                                  
-                  10.0                                                                 
-                  15.0                                                                 
-                  20.0                                                                 
-                y-grid                                                               
-                 -10                                                                  
-                  10                                                                   
-                  20                                                                   
-                  30                                                                   
-                  40                                                                   
-                                                                                   
-    10. generating f_plane_grids                                                  
-            fmsgridtools make_hgrid --grid_type f_plane_grid 
-                                    --f_plane_latitude 55 
-                                    --nxbnd 2      
-                                    --nybnd 2 
-                                    --xbnd 0,30 
-                                    --ybnd 50,60  
-                                    --nlon 60 
-                                    --nlat 20       
-                                                                                   
-A note on generating cyclic regular lon-lat grids when center = 'c_cell':-      
-It is possible to have an improperly centered boundary unless care is taken to  
-ensure local symmetry at the join.                                              
-A correctly formed grid is only guaranteed if the first three values of the     
---xbnd argument mirror the last 3 and the first two 'nlon' arguments mirror the 
-last 2.                                                                         
-                                                                                   
-For example for a global grid make_hgrid should be invoked as                   
-            fmsgridtools make_hgrid --grid_type regular_lonlat_grid ...                          
-                                    --xbnd 0,X1,X2,...,360-X2,360-X1,360                         
-                                    --nlon N1,N2,...,N2,N1 
-                                    --center c_cell                       
-                                                                                   
-As an example                                                                   
-                                                                                   
-            fmsgridtools make_hgrid --grid_type regular_lonlat_grid 
-                                    --nxbnd 7 
-                                    --nybnd 2          
-                                    --xbnd 0,15,30,300,330,345,360 
-                                    --ybnd 50,60                  
-                                    --nlon 4,2,6,4,2,4 
-                                    --nlat 2 
-                                    --center c_cell                  
-                                                                                   
-                                                                                   
-results in a valid cyclic grid whereas (note the second last value of nlon)     
-                                                                                   
-            fmsgridtools make_hgrid --grid_type regular_lonlat_grid
-                                    --nxbnd 7 
-                                    --nybnd 2          
-                                    --xbnd 0,15,30,300,330,345,360 
-                                    --ybnd 50,60                  
-                                    --nlon 4,2,6,4,4,4 
-                                    --nlat 2 
-                                    --center c_cell                  
-                                                                                   
-                                                                                   
-is not properly centered across 0,360                                           
-                                                                                   
-An informational message is issued if the leftmost and rightmost  resolutions   
-differ  by more than 1 part in 10E6
-"""
 
 MAXBOUNDS = 100
 MAX_NESTS = 128
@@ -240,34 +27,24 @@ F_PLANE_GRID = 8
 BETA_PLANE_GRID = 9
 MISSING_VALUE = -9999.
 
+@click.group()
+def make_hgrid():
+    pass
 
-@click.command()
+@make_hgrid.command()
 @click.option(
-    "--grid_type", 
-    type=str, 
-    default="regular_lonlat_grid",
-    help="specify type of topography. See above for grid type option.",
-)
-@click.option(
-    "--my_grid_file", 
+    "--nlon", 
     type=str, 
     default=None,
-    help="when this flag is present, the program will read grid information\
-          from 'my_grid_file'. The file format can be ascii file or netcdf\
-          file. Multiple file entry are allowed but the number should be\
-          less than MAXBOUNDS.",
+    help="Number of model grid points(supergrid) for each zonal regions of\
+          varying resolution.",
 )
 @click.option(
-    "--nxbnds", 
-    type=int, 
-    default=2,
-    help="Specify number of zonal regions for varying resolution.",
-)
-@click.option(
-    "--nybnds", 
-    type=int, 
-    default=2,
-    help="Specify number of meridinal regions for varying resolution.",
+    "--nlat", 
+    type=str, 
+    default=None,
+    help="Number of model grid points(supergid) for each meridinal regions of\
+          varying resolution.",
 )
 @click.option(
     "--xbnds",
@@ -286,20 +63,6 @@ MISSING_VALUE = -9999.
           resolution",
 )
 @click.option(
-    "--nlon", 
-    type=str, 
-    default=None,
-    help="Number of model grid points(supergrid) for each zonal regions of\
-          varying resolution.",
-)
-@click.option(
-    "--nlat", 
-    type=str, 
-    default=None,
-    help="Number of model grid points(supergid) for each meridinal regions of\
-          varying resolution.",
-)
-@click.option(
     "--dlon", 
     type=str, 
     default=None,
@@ -312,202 +75,289 @@ MISSING_VALUE = -9999.
     help="nominal resolution of meridional regions",
 )
 @click.option(
-    "--lat_join", 
-    type=float, 
-    default=65.,
-    help="Specify latitude for joining spherical and rotated bipolar grid.\
-          Default value is 65 degree.",
-)
-@click.option(
-    "--nratio", 
-    type=int, 
-    default=1,
-    help="Speicify the refinement ratio when calculating cell length and area\
-          of supergrid.",
-)
-@click.option(
-    "--simple_dx", 
-    type=float, 
-    default=0.,
-    help="Specify the uniform cell length in x-direction for simple cartesian\
-          grid.",
-)
-@click.option(
-    "--simple_dy", 
-    type=float, 
-    default=0.,
-    help="Specify the uniform cell length in y-direction for simple cartesian\
-          grid.",
-)
-@click.option(
-    "--grid_name", 
-    type=str, 
-    default="horizontal_grid",
-    help=("Specify the grid name. The output grid file name will be" 
-          "grid_name.nc if there is one tile and grid_name.tile#.nc if there is"
-          "more than one tile. The default value will be horizontal_grid."),
-)
-@click.option(
-    "--center", 
-    type=str, 
-    default="none",
-    help="""Specify the center location of grid. Valid entries will be 'none'"
-          ", 't_cell' or 'c_cell' with default value 'none'. The grid "
-          "refinement is assumed to be 2 in x and y-direction when center is "
-          "not 'none'. 'c_cell' should be used for the grid used in MOM.""",
-)
-@click.option(
-    "--shift_fac", 
-    type=float, 
-    default=18.0, 
-    help="shift west by 180/shift_fac. Default value is 18.",
-)
-@click.option(
-    "--f_plane_latitude", 
-    type=float, 
-    default=100.,
-    help=""
-)
-@click.option(
-    "--do_schmidt", 
-    is_flag=True, 
-    default=False, 
-    help=("Set to do Schmidt transformation to create stretched grid. When "
-          "do_schmidt is set, the following must be set: --stretch_factor, "
-          " --target_lon and --target_lat."),
-)
-@click.option(
-    "--do_cube_transform", 
-    is_flag=True, 
-    default=False,
-    help=("re-orient the rotated cubed sphere so that tile 6 has 'north' "
-          "facing upward, which would make analysis and explaining nest "
-          "placement much easier. When do_cube_transform is set, the "
-          "following must be set: --stretch_factor, --latget_lon, and "
-          " --target_lat."),
-)
-@click.option(
-    "--stretch_factor", 
-    type=float, 
-    default=0.0,
-    help="Stretching factor for the grid",
-)
-@click.option(
-    "--target_lon", 
-    type=float, 
-    default=0.0,
-    help="center longitude of the highest resolution tile",
-)
-@click.option(
-    "--target_lat", 
-    type=float, 
-    default=0.0,
-    help="center latitude of the highest resolution tile",
-)
-@click.option(
-    "--nest_grids", 
-    type=int, 
-    default=0,
-    help="""set to create this # nested grids as well as the global grid. This 
-          replaces the option --nest_grid. This option could only be set when  
-          grid_type is 'gnomonic_ed'. When it is set, besides 6 tile grid ,
-          files created, there are # more nest grids with 
-          file name = grid_name.tile.nest.nc""",
-)
-@click.option(
-    "--parent_tile", 
-    type=str, 
-    default=None, 
-    help="Specify the comma-separated list of the parent tile number(s) of \
-        nest grid(s).",
-)
-@click.option(
-    "--refine_ratio", 
-    type=str, 
-    default=None, 
-    help="Specify the comma-separated list of refinement ratio(s) for nest\
-          grid(s).",
-)
-@click.option(
-    "--istart_nest", 
-    type=str, 
-    default=None,
-    help="Specify the comma-separated list of starting i-direction index(es)\
-          of nest grid(s) in parent tile supergrid(Fortran index).",
-)
-@click.option(
-    "--iend_nest", 
-    type=str, 
-    default=None, 
-    help="Specify the comma-separated list of ending i-direction index(es) of \
-        nest grids in parent tile supergrid( Fortran index).",
-)
-@click.option(
-    "--jstart_nest", 
-    type=str, 
-    default=None,
-    help="Specify the comma-separated list of starting j-direction index(es) of \
-        nest grids in parent tile supergrid(Fortran index).",
-)
-@click.option(
-    "--jend_nest", 
-    type=str, 
-    default=None,
-    help="Specify the comma-separated list of ending j-direction index(es) of \
-        nest grids in parent tile supergrid (Fortran index).",
-)
-@click.option(
-    "--halo", 
-    type=int, 
-    default=0, 
-    help=("halo size is used in the atmosphere cubic sphere model. Its purpose "
-          "is to make sure the nest, including the halo region, is fully "
-          "contained within a single parent (coarse) tile. The option may "
-          "be obsolete and removed in future development. It only needs to "
-          "be specified when --nest_grid(s) is set."),
-)
-@click.option(
     "--use_great_circle_algorithm", 
     is_flag=True, 
     default=False,
     help="When specified, great_circle_algorithm will be used to compute grid \
          cell area.",
 )
-@click.option(
-    "--out_halo", 
-    type=int, 
-    default=0,
-    help="extra halo size data to be written out. This is only works for \
-         gnomonic_ed.",
-)
-@click.option(
-    "--no_output_length_angle",
-    is_flag=True, 
-    default=False,
-    help="When specified, will not output length(dx,dy) and angle \
-         (angle_dx, angle_dy)"
-)
-@click.option(
-    "--angular_midpoint", 
-    is_flag=True,
-    default=False,
-    help=""
-)
-@click.option(
-    "--rotate_poly",
-    is_flag=True, 
-    default=False,
-    help=("Set to calculate polar polygon areas by calculating the area of a "
-          "copy of the polygon, with the copy being rotated far away from the" 
-          "pole.")
-)
-@click.option(
-    "--verbose", 
-    is_flag=True, 
-    default=False,
-    help=("Will print out running time message when this option is set. "
-          "Otherwise the run will be silent when there is no error.")
-)
+def lonlat(
+    nlon, 
+    nlat, 
+    xbnds, 
+    ybnds, 
+    dlon, 
+    dlat, 
+    use_great_circle_algorithm
+):
+
+
+# @click.option(
+#     "--grid_type", 
+#     type=str, 
+#     default="regular_lonlat_grid",
+#     help="specify type of topography. See above for grid type option.",
+# )
+# @click.option(
+#     "--my_grid_file", 
+#     type=str, 
+#     default=None,
+#     help="when this flag is present, the program will read grid information\
+#           from 'my_grid_file'. The file format can be ascii file or netcdf\
+#           file. Multiple file entry are allowed but the number should be\
+#           less than MAXBOUNDS.",
+# )
+# @click.option(
+#     "--nxbnds", 
+#     type=int, 
+#     default=2,
+#     help="Specify number of zonal regions for varying resolution.",
+# )
+# @click.option(
+#     "--nybnds", 
+#     type=int, 
+#     default=2,
+#     help="Specify number of meridinal regions for varying resolution.",
+# )
+# @click.option(
+#     "--xbnds",
+#     type=str,
+#     default=None,
+#     help="Specify boundaries for defining zonal regions of varying resolution.\
+#           When --tripolar is present, x also defines the longitude of the two\
+#           new poles. nxbnds must be 2 and lon_start = x(1), lon_end = x(nxbnds)\
+#           are longitude of the two new poles.",
+# )
+# @click.option(
+#     "--ybnds", 
+#     type=str, 
+#     default=None,
+#     help="Specify boundaries for defining meridional regions of varying\
+#           resolution",
+# )
+# @click.option(
+#     "--nlon", 
+#     type=str, 
+#     default=None,
+#     help="Number of model grid points(supergrid) for each zonal regions of\
+#           varying resolution.",
+# )
+# @click.option(
+#     "--nlat", 
+#     type=str, 
+#     default=None,
+#     help="Number of model grid points(supergid) for each meridinal regions of\
+#           varying resolution.",
+# )
+# @click.option(
+#     "--dlon", 
+#     type=str, 
+#     default=None,
+#     help="nominal resolution of zonal regions",
+# )
+# @click.option(
+#     "--dlat", 
+#     type=str, 
+#     default=None,
+#     help="nominal resolution of meridional regions",
+# )
+# @click.option(
+#     "--lat_join", 
+#     type=float, 
+#     default=65.,
+#     help="Specify latitude for joining spherical and rotated bipolar grid.\
+#           Default value is 65 degree.",
+# )
+# @click.option(
+#     "--nratio", 
+#     type=int, 
+#     default=1,
+#     help="Speicify the refinement ratio when calculating cell length and area\
+#           of supergrid.",
+# )
+# @click.option(
+#     "--simple_dx", 
+#     type=float, 
+#     default=0.,
+#     help="Specify the uniform cell length in x-direction for simple cartesian\
+#           grid.",
+# )
+# @click.option(
+#     "--simple_dy", 
+#     type=float, 
+#     default=0.,
+#     help="Specify the uniform cell length in y-direction for simple cartesian\
+#           grid.",
+# )
+# @click.option(
+#     "--grid_name", 
+#     type=str, 
+#     default="horizontal_grid",
+#     help=("Specify the grid name. The output grid file name will be" 
+#           "grid_name.nc if there is one tile and grid_name.tile#.nc if there is"
+#           "more than one tile. The default value will be horizontal_grid."),
+# )
+# @click.option(
+#     "--center", 
+#     type=str, 
+#     default="none",
+#     help="""Specify the center location of grid. Valid entries will be 'none'"
+#           ", 't_cell' or 'c_cell' with default value 'none'. The grid "
+#           "refinement is assumed to be 2 in x and y-direction when center is "
+#           "not 'none'. 'c_cell' should be used for the grid used in MOM.""",
+# )
+# @click.option(
+#     "--shift_fac", 
+#     type=float, 
+#     default=18.0, 
+#     help="shift west by 180/shift_fac. Default value is 18.",
+# )
+# @click.option(
+#     "--f_plane_latitude", 
+#     type=float, 
+#     default=100.,
+#     help=""
+# )
+# @click.option(
+#     "--do_schmidt", 
+#     is_flag=True, 
+#     default=False, 
+#     help=("Set to do Schmidt transformation to create stretched grid. When "
+#           "do_schmidt is set, the following must be set: --stretch_factor, "
+#           " --target_lon and --target_lat."),
+# )
+# @click.option(
+#     "--do_cube_transform", 
+#     is_flag=True, 
+#     default=False,
+#     help=("re-orient the rotated cubed sphere so that tile 6 has 'north' "
+#           "facing upward, which would make analysis and explaining nest "
+#           "placement much easier. When do_cube_transform is set, the "
+#           "following must be set: --stretch_factor, --latget_lon, and "
+#           " --target_lat."),
+# )
+# @click.option(
+#     "--stretch_factor", 
+#     type=float, 
+#     default=0.0,
+#     help="Stretching factor for the grid",
+# )
+# @click.option(
+#     "--target_lon", 
+#     type=float, 
+#     default=0.0,
+#     help="center longitude of the highest resolution tile",
+# )
+# @click.option(
+#     "--target_lat", 
+#     type=float, 
+#     default=0.0,
+#     help="center latitude of the highest resolution tile",
+# )
+# @click.option(
+#     "--nest_grids", 
+#     type=int, 
+#     default=0,
+#     help="""set to create this # nested grids as well as the global grid. This 
+#           replaces the option --nest_grid. This option could only be set when  
+#           grid_type is 'gnomonic_ed'. When it is set, besides 6 tile grid ,
+#           files created, there are # more nest grids with 
+#           file name = grid_name.tile.nest.nc""",
+# )
+# @click.option(
+#     "--parent_tile", 
+#     type=str, 
+#     default=None, 
+#     help="Specify the comma-separated list of the parent tile number(s) of \
+#         nest grid(s).",
+# )
+# @click.option(
+#     "--refine_ratio", 
+#     type=str, 
+#     default=None, 
+#     help="Specify the comma-separated list of refinement ratio(s) for nest\
+#           grid(s).",
+# )
+# @click.option(
+#     "--istart_nest", 
+#     type=str, 
+#     default=None,
+#     help="Specify the comma-separated list of starting i-direction index(es)\
+#           of nest grid(s) in parent tile supergrid(Fortran index).",
+# )
+# @click.option(
+#     "--iend_nest", 
+#     type=str, 
+#     default=None, 
+#     help="Specify the comma-separated list of ending i-direction index(es) of \
+#         nest grids in parent tile supergrid( Fortran index).",
+# )
+# @click.option(
+#     "--jstart_nest", 
+#     type=str, 
+#     default=None,
+#     help="Specify the comma-separated list of starting j-direction index(es) of \
+#         nest grids in parent tile supergrid(Fortran index).",
+# )
+# @click.option(
+#     "--jend_nest", 
+#     type=str, 
+#     default=None,
+#     help="Specify the comma-separated list of ending j-direction index(es) of \
+#         nest grids in parent tile supergrid (Fortran index).",
+# )
+# @click.option(
+#     "--halo", 
+#     type=int, 
+#     default=0, 
+#     help=("halo size is used in the atmosphere cubic sphere model. Its purpose "
+#           "is to make sure the nest, including the halo region, is fully "
+#           "contained within a single parent (coarse) tile. The option may "
+#           "be obsolete and removed in future development. It only needs to "
+#           "be specified when --nest_grid(s) is set."),
+# )
+# @click.option(
+#     "--use_great_circle_algorithm", 
+#     is_flag=True, 
+#     default=False,
+#     help="When specified, great_circle_algorithm will be used to compute grid \
+#          cell area.",
+# )
+# @click.option(
+#     "--out_halo", 
+#     type=int, 
+#     default=0,
+#     help="extra halo size data to be written out. This is only works for \
+#          gnomonic_ed.",
+# )
+# @click.option(
+#     "--no_output_length_angle",
+#     is_flag=True, 
+#     default=False,
+#     help="When specified, will not output length(dx,dy) and angle \
+#          (angle_dx, angle_dy)"
+# )
+# @click.option(
+#     "--angular_midpoint", 
+#     is_flag=True,
+#     default=False,
+#     help=""
+# )
+# @click.option(
+#     "--rotate_poly",
+#     is_flag=True, 
+#     default=False,
+#     help=("Set to calculate polar polygon areas by calculating the area of a "
+#           "copy of the polygon, with the copy being rotated far away from the" 
+#           "pole.")
+# )
+# @click.option(
+#     "--verbose", 
+#     is_flag=True, 
+#     default=False,
+#     help=("Will print out running time message when this option is set. "
+#           "Otherwise the run will be silent when there is no error.")
+# )
 def make_hgrid(
     grid_type: str,
     my_grid_file: str,

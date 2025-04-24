@@ -1,7 +1,7 @@
 import ctypes
 import os
 from .shared.create_xgrid import create_xgrid
-from .make_hgrid.make_hgrid_util import make_hgrid_util
+from .make_hgrid.make_hgrid_wrappers import make_hgrid_util
 
 class cfrenctools():
 
