@@ -10,19 +10,8 @@ from pyfms import pyFMS, pyFMS_mpp, pyFMS_mpp_domains
 
 from FMSgridtools.make_hgrid.hgridobj import HGridObj
 from FMSgridtools.shared.gridtools_utils import check_file_is_there, get_provenance_attrs
-# from FREnctools_lib.pyfrenctools.make_hgrid.make_hgrid_util import (
-#     create_regular_lonlat_grid,
-#     create_grid_from_file,
-#     create_simple_cartesian_grid,
-#     create_spectral_grid,
-#     create_conformal_cubic_grid,
-#     create_gnomonic_cubic_grid_GR,
-#     create_gnomonic_cubic_grid,
-#     create_f_plane_grid,
-#     fill_cubic_grid_halo,
-# )
 import pyfrenctools
-# from FREnctools_lib.pyfrenctools.shared.tool_util import get_legacy_grid_size
+
 
 """
 Usage of make_hgrid

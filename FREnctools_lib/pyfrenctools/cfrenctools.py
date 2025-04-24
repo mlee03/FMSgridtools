@@ -5,7 +5,7 @@ from .make_hgrid.make_hgrid_util import make_hgrid_util
 
 class cfrenctools():
 
-    __libpath: str = os.path.dirname(__file__) + "/../cfrenctools/c_build/clib.so"
+    __libpath: str = os.path.dirname(__file__) + "../cfrenctools/c_build/clib.so"
     __lib: ctypes.CDLL = ctypes.CDLL(__libpath)
     
     @classmethod
