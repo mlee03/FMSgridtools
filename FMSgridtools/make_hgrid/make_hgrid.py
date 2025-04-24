@@ -10,17 +10,18 @@ from pyfms import pyFMS, pyFMS_mpp, pyFMS_mpp_domains
 
 from FMSgridtools.make_hgrid.hgridobj import HGridObj
 from FMSgridtools.shared.gridtools_utils import check_file_is_there, get_provenance_attrs
-from FREnctools_lib.pyfrenctools.make_hgrid.make_hgrid_util import (
-    create_regular_lonlat_grid,
-    create_grid_from_file,
-    create_simple_cartesian_grid,
-    create_spectral_grid,
-    create_conformal_cubic_grid,
-    create_gnomonic_cubic_grid_GR,
-    create_gnomonic_cubic_grid,
-    create_f_plane_grid,
-    fill_cubic_grid_halo,
-)
+# from FREnctools_lib.pyfrenctools.make_hgrid.make_hgrid_util import (
+#     create_regular_lonlat_grid,
+#     create_grid_from_file,
+#     create_simple_cartesian_grid,
+#     create_spectral_grid,
+#     create_conformal_cubic_grid,
+#     create_gnomonic_cubic_grid_GR,
+#     create_gnomonic_cubic_grid,
+#     create_f_plane_grid,
+#     fill_cubic_grid_halo,
+# )
+import pyfrenctools
 # from FREnctools_lib.pyfrenctools.shared.tool_util import get_legacy_grid_size
 
 """
@@ -963,7 +964,7 @@ def make_hgrid(
     jec = ny - 1
 
     if(my_grid_type==REGULAR_LONLAT_GRID):
-        create_regular_lonlat_grid(
+        pyfrenctools.make_hgrid_util.create_regular_lonlat_grid(
             nxbnds, 
             nybnds, 
             xbnds, 
@@ -992,7 +993,7 @@ def make_hgrid(
     #         n2 = n * nx * nyp
     #         n3 = n * nxp * ny
     #         n4 = n * nx * ny
-    #         create_grid_from_file(
+    #         pyfrenctools.make_hgrid_util.create_grid_from_file(
     #             my_grid_file[n], 
     #             nx, 
     #             ny, 
@@ -1006,7 +1007,7 @@ def make_hgrid(
     #             use_angular_midpoint,
     #         )
     # elif(my_grid_type==SIMPLE_CARTESIAN_GRID):
-    #     create_simple_cartesian_grid(
+    #     pyfrenctools.make_hgrid_util.create_simple_cartesian_grid(
     #         xbnds, 
     #         ybnds, 
     #         nx, 
@@ -1025,7 +1026,7 @@ def make_hgrid(
     #         grid_obj.angle_dx,
     #     )
     # elif(my_grid_type==SPECTRAL_GRID):
-    #     create_spectral_grid(
+    #     pyfrenctools.make_hgrid_util.create_spectral_grid(
     #         nx, 
     #         ny, 
     #         isc, 
@@ -1041,7 +1042,7 @@ def make_hgrid(
     #         use_great_circle_algorithm,
     #     )
     # elif(my_grid_type==CONFORMAL_CUBIC_GRID):
-    #     create_conformal_cubic_grid(
+    #     pyfrenctools.make_hgrid_util.create_conformal_cubic_grid(
     #         nx, 
     #         nratio, 
     #         method, 
@@ -1056,7 +1057,7 @@ def make_hgrid(
     #     )
     # elif(my_grid_type==GNOMONIC_ED):
     #     if(nest_grids == 1 and parent_tile[0] == 0):
-    #         create_gnomonic_cubic_grid_GR(
+    #         pyfrenctools.make_hgrid_util.create_gnomonic_cubic_grid_GR(
     #             grid_type, 
     #             nxl, 
     #             nyl, 
@@ -1084,7 +1085,7 @@ def make_hgrid(
     #             output_length_angle,
     #         )
     #     else:
-    #         create_gnomonic_cubic_grid(
+    #         pyfrenctools.make_hgrid_util.create_gnomonic_cubic_grid(
     #             grid_type, 
     #             nxl, 
     #             nyl, 
@@ -1112,7 +1113,7 @@ def make_hgrid(
     #             output_length_angle,
     #         )
     # elif(my_grid_type==F_PLANE_GRID or my_grid_type==BETA_PLANE_GRID):
-    #     create_f_plane_grid(
+    #     pyfrenctools.make_hgrid_util.create_f_plane_grid(
     #         nxbnds, 
     #         nybnds, 
     #         xbnds, 
@@ -1182,21 +1183,21 @@ def make_hgrid(
             tmp = np.empty(shape=(nxp+2*out_halo)*(nyp+2*out_halo), dtype=np.float64)
             if verbose:
                 print(f"[INFO] INDEX NC write with halo tile number = n: {n}", file=sys.stderr)
-            fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.x, grid_obj.x, n, 1, 1)
+            pyfrenctools.make_hgrid_util.fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.x, grid_obj.x, n, 1, 1)
             grid_obj.x = tmp.copy()
-            fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.y, grid_obj.y, n, 1, 1)
+            pyfrenctools.make_hgrid_util.fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.y, grid_obj.y, n, 1, 1)
             grid_obj.y = tmp.copy()
             if output_length_angle:
-                fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.angle_dx, grid_obj.angle_dx, n, 1, 1)
+                pyfrenctools.make_hgrid_util.fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.angle_dx, grid_obj.angle_dx, n, 1, 1)
                 grid_obj.angle_dx = tmp.copy()
                 if conformal != "true":
-                    fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.angle_dy, grid_obj.angle_dy, n, 1, 1)
+                    pyfrenctools.make_hgrid_util.fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.angle_dy, grid_obj.angle_dy, n, 1, 1)
                     grid_obj.angle_dy = tmp.copy()
-                fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.dx, grid_obj.dy, n, 0, 1)
+                pyfrenctools.make_hgrid_util.fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.dx, grid_obj.dy, n, 0, 1)
                 grid_obj.dx = tmp.copy()
-                fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.dy, grid_obj.dx, n, 1, 0)
+                pyfrenctools.make_hgrid_util.fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.dy, grid_obj.dx, n, 1, 0)
                 grid_obj.dy = tmp.copy()
-            fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.area, grid_obj.area, n, 0, 0)
+            pyfrenctools.make_hgrid_util.fill_cubic_grid_halo(nx, ny, out_halo, tmp, grid_obj.area, grid_obj.area, n, 0, 0)
             grid_obj.area = tmp.copy()
 
         if verbose:
