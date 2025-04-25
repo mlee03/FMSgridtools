@@ -1,8 +1,6 @@
 import numpy as np
-import ctypes
 
 from FMSgridtools.make_hgrid.hgridobj import HGridObj
-from FMSgridtools.make_hgrid.make_hgrid_util import make_grid_info, grid_writer
 import pyfrenctools
 
 def make_lonlat_grid(
@@ -45,8 +43,7 @@ def make_lonlat_grid(
     else:
         dy_bnds = np.zeros(shape=100, dtype=np.float64)
 
-    grid_info_dict = make_grid_info(
-        grid_obj=grid_obj,
+    grid_obj.make_grid_info(
         nxbnds=nxbnds,
         nybnds=nybnds,
         nlon=nlon,
@@ -63,10 +60,10 @@ def make_lonlat_grid(
         dlon=dx_bnds, 
         dlat=dy_bnds,
         use_legacy=0, 
-        isc=grid_info_dict['isc'], 
-        iec=grid_info_dict['iec'], 
-        jsc=grid_info_dict['jsc'], 
-        jec=grid_info_dict['jec'], 
+        isc=grid_obj.isc, 
+        iec=grid_obj.iec, 
+        jsc=grid_obj.jsc, 
+        jec=grid_obj.jec, 
         x=grid_obj.x, 
         y=grid_obj.y, 
         dx=grid_obj.dx, 
@@ -77,10 +74,7 @@ def make_lonlat_grid(
         use_great_circle_algorithm=use_great_circle_algorithm,
     )
 
-    grid_writer(
-        grid_obj=grid_obj,
-        info_dict=grid_info_dict,
-    )
+    grid_obj.write_out_hgrid()
 
 
     

@@ -1,17 +1,7 @@
-import sys
-import os
-import xarray as xr
-import ctypes
-import numpy as np
-import numpy.typing as npt
 import click
 
-from pyfms import pyFMS, pyFMS_mpp, pyFMS_mpp_domains
-
-from FMSgridtools.make_hgrid.hgridobj import HGridObj
 from FMSgridtools.make_hgrid.make_lonlat_grid import make_lonlat_grid
-from FMSgridtools.shared.gridtools_utils import check_file_is_there, get_provenance_attrs
-import pyfrenctools
+
 
 @click.group()
 def make_hgrid():
@@ -22,13 +12,13 @@ def make_hgrid():
     "--nlon", 
     type=str, 
     default=None,
-    help="Number of model grid points(supergrid) for each zonal regions of varying resolution.",
+    help="Comma separated list of model grid points(supergrid) for each zonal regions of varying resolution.",
 )
 @click.option(
     "--nlat", 
     type=str, 
     default=None,
-    help="Number of model grid points(supergid) for each meridinal regions of varying resolution.",
+    help="Comma separated of model grid points(supergid) for each meridinal regions of varying resolution.",
 )
 @click.option(
     "--xbnds",
