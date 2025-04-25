@@ -1,4 +1,3 @@
-import dataclasses
 import ctypes
 from ctypes import create_string_buffer
 from typing import Optional
@@ -38,8 +37,7 @@ class Contact:
 
     def align_contact(self) -> int:
 
-        #clibrary = ctypes.CDLL(lib_file)
-        clibrary = LIB('/home/Halle.Derry/savegit/libcontact.so').lib
+        clibrary = pyfrenctools.cfrenctools.LIB().lib
         #acquire function signature
         find_align = clibrary.get_align_contact
 
