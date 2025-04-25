@@ -5,7 +5,7 @@ from FMSgridtools.make_hgrid.hgridobj import HGridObj
 from FMSgridtools.make_hgrid.make_hgrid_util import make_grid_info, grid_writer
 import pyfrenctools
 
-def make(
+def make_lonlat_grid(
         nlon: int, 
         nlat: int, 
         xbnds: str = None,
@@ -14,47 +14,14 @@ def make(
         dlat: str = None, 
         use_great_circle_algorithm: bool = False
 ):
-    # fmsgridtools make_hgrid --grid_type regular_lonlat_grid 
-    #                                 --nxbnds 2
-    #                                 --nybnds 2 
-    #                                 --xbnds 0,30 
-    #                                 --ybnds 50,60
-    #                                 --nlon 60
-    #                                 --nlat 20 
-    # pyfrenctools.make_hgrid_util.create_regular_lonlat_grid(
-    #         nxbnds, 
-    #         nybnds, 
-    #         xbnds, 
-    #         ybnds, 
-    #         nlon, 
-    #         nlat, 
-    #         dx_bnds, 
-    #         dy_bnds,
-    #         use_legacy, 
-    #         isc, 
-    #         iec, 
-    #         jsc, 
-    #         jec, 
-    #         grid_obj.x, 
-    #         grid_obj.y, 
-    #         grid_obj.dx, 
-    #         grid_obj.dy, 
-    #         grid_obj.area,
-    #         grid_obj.angle_dx, 
-    #         center,
-    #         use_great_circle_algorithm,
-    #     )
-
     center = "none"
     grid_obj = HGridObj()
     
     if nlon is not None:
         nlon = np.fromstring(nlon, dtype=np.int32, sep=',')
-        nxbnds2 = nlon.size
 
     if nlat is not None:
         nlat = np.fromstring(nlat, dtype=np.int32, sep=',')
-        nybnds2 = nlat.size
 
     if xbnds is not None:
         xbnds = np.fromstring(xbnds, dtype=np.float64, sep=',')
@@ -70,13 +37,11 @@ def make(
 
     if dlon is not None:
         dx_bnds = np.fromstring(dlon, dtype=np.float64, sep=',')
-        nxbnds3 = dx_bnds.size
     else:
         dx_bnds = np.zeros(shape=100, dtype=np.float64)
         
     if dlat is not None:
         dy_bnds = np.fromstring(dlat, dtype=np.float64, sep=',')
-        nybnds3 = dy_bnds.size
     else:
         dy_bnds = np.zeros(shape=100, dtype=np.float64)
 

@@ -1,11 +1,17 @@
 import ctypes
+import importlib.resources
 import os
+from pathlib import Path
+
 from .shared.create_xgrid import create_xgrid
 from .make_hgrid.make_hgrid_wrappers import make_hgrid_util
 
+relative_path = "cfrenctools/c_build/clib.so"
+# /home/Frank.Malatino/.conda/envs/fmsgtenv2/lib/python3.11/cfrenctools/c_build/clib.so
+
 class cfrenctools():
 
-    __libpath: str = os.path.dirname(__file__) + "../cfrenctools/c_build/clib.so"
+    __libpath: str = os.path.dirname(__file__) + "/../cfrenctools/c_build/clib.so"
     __lib: ctypes.CDLL = ctypes.CDLL(__libpath)
     
     @classmethod
