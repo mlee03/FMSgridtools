@@ -11,25 +11,6 @@ def local_pkg(name: str, relative_path: str) -> str:
     path = f"{name} @ file://{Path(os.path.abspath(__file__)).parent / relative_path}"
     return path
 
-class CustomInstall(install):
-    def run(self):
-        with open("compile_log.txt", "w") as f:
-            subprocess.run(
-                ["cmake", ".."], 
-                cwd="./FREnctools_lib/cfrenctools/c_build", 
-                stdout=f,
-                stderr=subprocess.STDOUT,
-                check=True,
-            )
-            subprocess.run(
-                ["make"], 
-                cwd="./FREnctools_lib/cfrenctools/c_build", 
-                stdout=f,
-                stderr=subprocess.STDOUT,
-                check=True,
-            )
-        install.run(self)
-
 test_requirements = ["pytest", "coverage"]
 develop_requirements = test_requirements + ["pre-commit"]
 
@@ -46,7 +27,8 @@ requirements: List[str] = [
     "numpy",
     "xarray",
     "netCDF4",
-    local_pkg("pyfms", "pyFMS")
+    local_pkg("pyfms", "pyFMS"),
+    local_pkg("pyfrenctools", "FREnctools_lib")
 ]
 
 setup(
@@ -57,11 +39,10 @@ setup(
     extras_require=extras_requires,
     name="fmsgridtools",
     license="",
-    packages=find_namespace_packages(include=["FMSgridtools", "FMSgridtools.*", "FREnctools_lib", "FREnctools_lib.pyfrenctools.*"]),
+    packages=find_namespace_packages(include=["FMSgridtools", "FMSgridtools.*"]),
     include_package_data=True,
     version="0.0.1",
     zip_safe=False,
-    cmdclass={'install': CustomInstall},
     entry_points={
         "console_scripts": [
             "make_hgrid = FMSgridtools.make_hgrid.make_hgrid:make_hgrid", # TODO fmsggridtools entrypoint
