@@ -1,13 +1,8 @@
 import ctypes
-import importlib.resources
 import os
-from pathlib import Path
 
 from .shared.create_xgrid import create_xgrid
-from .make_hgrid.make_hgrid_wrappers import make_hgrid_util
-
-relative_path = "cfrenctools/c_build/clib.so"
-# /home/Frank.Malatino/.conda/envs/fmsgtenv2/lib/python3.11/cfrenctools/c_build/clib.so
+from .make_hgrid.make_hgrid_wrappers import make_hgrid_wrappers
 
 class cfrenctools():
 
@@ -17,7 +12,7 @@ class cfrenctools():
     @classmethod
     def init(cls):        
         create_xgrid.init(cls.libpath, cls.lib)
-        make_hgrid_util.init(cls.libpath, cls.lib)
+        make_hgrid_wrappers.init(cls.libpath, cls.lib)
 
     @classmethod
     def changelib(cls, libpath):

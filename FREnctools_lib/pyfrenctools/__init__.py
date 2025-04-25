@@ -1,6 +1,6 @@
 from .cfrenctools import cfrenctools
 from .shared.create_xgrid import create_xgrid
-from .make_hgrid import make_hgrid_wrappers
+from .make_hgrid.make_hgrid_wrappers import make_hgrid_wrappers
 
 cfrenctools.init()
 

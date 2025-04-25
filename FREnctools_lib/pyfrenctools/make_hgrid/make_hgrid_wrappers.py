@@ -12,7 +12,7 @@ from pyfms.pyfms_utils.data_handling import (
 
 # lib = ctypes.CDLL("./FREnctools_lib/cfrenctools/c_build/clib.so")
 
-class make_hgrid_util():
+class make_hgrid_wrappers():
     __libpath: str = None
     __lib: ctypes.CDLL = None
 
