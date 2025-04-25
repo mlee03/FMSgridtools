@@ -27,6 +27,6 @@ jobs:
           export PATH="$PATH:$CONDA/envs/FMSgridtools/bin"
           which cmake
           $CONDA/envs/FMSgridtools/bin/pip install .
-          cat compile_log.txt
+          cat $CONDA/envs/FMSgridtools/bin/FREnctools_lib/compile_log.txt
       - name: Run pytest (just link test for now)
         run: pytest tests/shared/test_libs.py 
