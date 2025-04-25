@@ -44,32 +44,12 @@ class MosaicObj:
                 print("Error: Mosaic file not provided as an attribute, \
                     unable to return gridfiles")
 
-    def get_gridtiles(self) -> List:
-        return [tile.decode('ascii') for tile in self.dataset.gridtiles.values]
-
     def get_ntiles(self) -> List:
         try:
             return  self.dataset.sizes['ntiles']
         except AttributeError:
             print("Error: Mosaic file not provided as an attribute, \
                   unable to return number of tiles")
-
-    def get_ncontacts(self) -> int:
-        return self.dataset.sizes['ncontacts']
-
-    def get_mosaic_name(self) -> str:
-        return self.dataset.mosaic.values.flatten()
-
-    def get_great_circle_algorithm(self, filepath: str) -> int:
-        ds = xr.open_dataset(filepath)
-        great_circle_algorithm = 0
-        for key,value in ds.attrs.items():
-            if 'great_circle_algorithm' in key:
-                if value == 'TRUE':
-                    great_circle_algorithm = 1
-                else:
-                    great_circle_algorithm = 0
-        return great_circle_algorithm
 
     def griddict(self) -> Dict:
         if self.gridtiles is None:
