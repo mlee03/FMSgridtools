@@ -35,7 +35,6 @@ class MosaicObj:
             self.dataset = xr.open_dataset(self.mosaic_file)
             self.gridfiles = self.get_gridfiles()
 
-
     def get_gridfiles(self) -> List:
         try:
             return [ifile.decode('ascii') for
@@ -61,7 +60,6 @@ class MosaicObj:
         else:
             for i in range(len(self.gridfiles)):
                 self.grid_dict[self.gridtiles[i]] = GridObj.from_file(self.gridfiles[i])
-
 
     def write_out_mosaic(self, outfile:str):
         if self.mosaic_name is not None:
@@ -116,7 +114,6 @@ class MosaicObj:
                         "contact_index": contact_index})
 
         out.to_netcdf(outfile)
-
 
     def write_out_regional_mosaic(self, outfile:str):
         if self.mosaic_name is not None:
