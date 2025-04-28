@@ -1,9 +1,10 @@
+import sys
 import ctypes
 import numpy as np
 from numpy.typing import NDArray
 import xarray as xr
 
-from FMSgridtools.shared.gridtools_utils import check_file_is_there, get_provenance_attrs
+from FMSgridtools.shared.gridtools_utils import get_provenance_attrs
 from FMSgridtools.shared.gridobj import GridObj
 import pyfrenctools
 
@@ -31,8 +32,8 @@ class HGridObj():
 
     def make_grid_info(
             self,
-            nxbnds: int,
-            nybnds: int,
+            nxbnds: int=None,
+            nybnds: int=None,
             ntiles: int=1,
             ntiles_global: int=1,
             nlon: NDArray=None,
@@ -46,11 +47,28 @@ class HGridObj():
             jend_nest: NDArray=None,
             arcx: str="small_circle",
             grid_type: str=None,
+            conformal: str="true",
+            output_length_angle: bool=True,
+            verbose: bool=False,
     ):
+        """Get super grid size"""
+
         self.nxl = np.empty(shape=ntiles, dtype=np.int32)
         self.nyl = np.empty(shape=ntiles, dtype=np.int32)
 
         if grid_type == "GNOMONIC_ED" or grid_type == "CONFORMAL_CUBIC_GRID":
+            """
+            NOTE: The if-block in the loop below is changed with multiple nests.
+            It appeared to allow refinement of the global grid
+            without using any nests. However, the method used the
+            nesting parameters "parent_tile" and "refine_ratio" to
+            achieve this, which was enabled by setting parent_tile = 0 .
+            This is no longer possible, as parent_tile is now an array.
+            Instead, if the first value in the list of parent_tile values is 0,
+            then the first value in the list of refine_ratio values will be
+            applied to the global grid. This global-refinement application
+            may not be valid for all permutations of nesting and refinement. [Ahern]
+            """
             for n in range(ntiles_global):
                 self.nxl[n] = nlon[0]
                 self.nyl[n] = self.nxl[n]
@@ -62,6 +80,7 @@ class HGridObj():
                 nn = n - ntiles_global
                 self.nxl[n] = (iend_nest[nn] - istart_nest[nn] + 1) * refine_ratio[nn]
                 self.nyl[n] = (jend_nest[nn] - jstart_nest[nn] + 1) * refine_ratio[nn]
+
         elif grid_type == "FROM_FILE":
             for n in range(ntiles_global):
                 self.nxl[n] = nlon[n]
@@ -79,43 +98,58 @@ class HGridObj():
         self.nxp = self.nx + 1
         self.nyp = self.ny + 1
 
+        """Create grid information"""
+
         size1 = ctypes.c_ulong(0)
         size2 = ctypes.c_ulong(0)
         size3 = ctypes.c_ulong(0)
         size4 = ctypes.c_ulong(0)
 
+        for n_nest in range(ntiles):
+            print(f"[INFO] tile: {n_nest}, {self.nxl[n_nest]}, {self.nyl[n_nest]}, ntiles: {ntiles}\n")
+
         if grid_type == "FROM_FILE":
+            size1 = 0
+            size2 = 0
+            size3 = 0
+            size4 = 0
             for n in range(ntiles_global):
                 size1.value += (nlon[n] + 1) * (nlat[n] + 1)
                 size2.value += (nlon[n] + 1) * (nlat[n] + 1 + 1)
-                size3.value += (nlon[n] + 1 +1) * (nlat[n] + 1)
+                size3.value += (nlon[n] + 1 + 1) * (nlat[n] + 1)
                 size4.value += (nlon[n] + 1) * (nlat[n] + 1)
         else:
             size1 = ctypes.c_ulong(self.nxp * self.nyp * ntiles_global)
-            size2 = ctypes.c_ulong(self.nxp * (self.nyp + 1) * ntiles_global)
-            size3 = ctypes.c_ulong((self.nxp + 1) * self.nyp * ntiles_global)
-            size4 = ctypes.c_ulong(self.nxp * self.nyp * ntiles_global)
+            size2 = ctypes.c_ulong(self.nx * self.nyp * ntiles_global)
+            size3 = ctypes.c_ulong(self.nxp * self.ny * ntiles_global)
+            size4 = ctypes.c_ulong(self.nx * self.ny * ntiles_global)
 
         if not (nest_grids == 1 and parent_tile[0] == 0):
             for n_nest  in range(ntiles_global, ntiles_global+nest_grids):
+                if verbose:
+                    print(f"[INFO] Adding memory size for nest {n_nest}, nest_grids: {nest_grids}\n", file=sys.stderr)
                 size1.value += (self.nxl[n_nest]+1) * (self.nyl[n_nest]+1)
                 size2.value += (self.nxl[n_nest]+1) * (self.nyl[n_nest]+2)
                 size3.value += (self.nxl[n_nest]+2) * (self.nyl[n_nest]+1)
                 size4.value += (self.nxl[n_nest]+1) * (self.nyl[n_nest]+1)
 
+        if verbose:
+            print(f"[INFO] Allocating arrays of size {size1.value} for x, y based on nxp: {self.nxp} nyp: {self.nyp} ntiles: {ntiles}\n", file=sys.stderr)
+            print(f"size1 = {size1.value}, size2 = {size2.value}, size3 = {size3.value}, size4 = {size4.value}")
         self.x = np.empty(shape=size1.value, dtype=np.float64)
         self.y = np.empty(shape=size1.value, dtype=np.float64)
         self.area = np.empty(shape=size4.value, dtype=np.float64)
         self.arcx = arcx
-        self.dx = np.empty(shape=size2.value, dtype=np.float64)
-        self.dy = np.empty(shape=size3.value, dtype=np.float64)
-        self.angle_dx = np.empty(shape=size1.value, dtype=np.float64)
-        self.angle_dy = np.empty(shape=size1.value, dtype=np.float64)
+        if output_length_angle:
+            self.dx = np.empty(shape=size2.value, dtype=np.float64)
+            self.dy = np.empty(shape=size3.value, dtype=np.float64)
+            self.angle_dx = np.empty(shape=size1.value, dtype=np.float64)
+            if conformal != "true":
+                self.angle_dy = np.empty(shape=size1.value, dtype=np.float64)
         self.isc = 0
         self.iec = self.nx - 1
         self.jsc = 0
         self.jec = self.ny - 1
-
 
     def write_out_hgrid(
             self,
@@ -128,7 +162,8 @@ class HGridObj():
             discretization: str="logically_rectangular",
             conformal: str="true",
             out_halo: int=0,
-            output_length_angle: int=0,
+            output_length_angle: bool=True,
+            verbose: bool=False,
     ):
         
         var_dict={}
@@ -142,42 +177,67 @@ class HGridObj():
                 outfile = grid_name + ".tile" + ".nc" + str(n+1)
             else:
                 outfile = grid_name + ".nc"
+
+            if verbose:
+                print(f"Writing out {outfile}\n", file=sys.stderr)
         
+            """define dimension"""
             nx = self.nxl[n]
             ny = self.nyl[n]
+            if verbose:
+                print(f"[INFO] Outputting arrays of size nx: {nx} and ny: {ny} for tile: {n}")
             nxp = nx + 1
             nyp = ny + 1
 
             if out_halo == 0:
+                if verbose:
+                    print(f"[INFO] START NC XARRAY write out_halo={out_halo} tile number = {n} offset = pos_c: {pos_c}", file=sys.stderr)
+                    print(f"[INFO] XARRAY: n: {n} x[0]: {self.x[pos_c]} x[1]: {self.x[pos_c+1]} x[2]: {self.x[pos_c+2]} x[3]: {self.x[pos_c+3]} x[4]: {self.x[pos_c+4]} x[5]: {self.x[pos_c+5]} x[10]: {self.x[pos_c+10]}", file=sys.stderr)
+                    if n > 0:
+                        print(f"[INFO] XARRAY: n: {n} x[0]: {self.x[pos_c]} x[-1]: {self.x[pos_c-1]} x[-2]: {self.x[pos_c-2]} x[-3]: {self.x[pos_c-3]} x[-4]: {self.x[pos_c-4]} x[-5]: {self.x[pos_c-5]} x[-10]: {self.x[pos_c-10]}", file=sys.stderr)
                 self.x = self.x[pos_c:]
                 self.y = self.y[pos_c:]
-                self.dx = self.dx[pos_n:]
-                self.dy = self.dy[pos_e:]
-                self.angle_dx = self.angle_dx[pos_c:]
-                self.angle_dy = self.angle_dy[pos_c:]
                 self.area = self.area[pos_t:]
+                if output_length_angle:
+                    self.dx = self.dx[pos_n:]
+                    self.dy = self.dy[pos_e:]
+                    self.angle_dx = self.angle_dx[pos_c:]
+                    if conformal != "true":
+                        self.angle_dy = self.angle_dy[pos_c:]
             else:
                 tmp = np.empty(shape=(nxp+2*out_halo)*(nyp+2*out_halo), dtype=np.float64)
+                if verbose:
+                    print(f"[INFO] INDEX NC write with halo tile number = n: {n}", file=sys.stderr)
                 pyfrenctools.make_hgrid_wrappers.fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.x, self.x, n, 1, 1)
                 self.x = tmp.copy()
                 pyfrenctools.make_hgrid_wrappers.fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.y, self.y, n, 1, 1)
                 self.y = tmp.copy()
-                pyfrenctools.make_hgrid_wrappers.fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.angle_dx, self.angle_dx, n, 1, 1)
-                self.angle_dx = tmp.copy()
-                pyfrenctools.make_hgrid_wrappers.fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.angle_dy, self.angle_dy, n, 1, 1)
-                self.angle_dy = tmp.copy()
-                pyfrenctools.make_hgrid_wrappers.fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.dx, self.dy, n, 0, 1)
-                self.dx = tmp.copy()
-                pyfrenctools.make_hgrid_wrappers.fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.dy, self.dx, n, 1, 0)
-                self.dy = tmp.copy()
                 pyfrenctools.make_hgrid_wrappers.fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.area, self.area, n, 0, 0)
                 self.area = tmp.copy()
+                if output_length_angle:
+                    pyfrenctools.make_hgrid_wrappers.fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.dx, self.dy, n, 0, 1)
+                    self.dx = tmp.copy()
+                    pyfrenctools.make_hgrid_wrappers.fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.dy, self.dx, n, 1, 0)
+                    self.dy = tmp.copy()
+                    pyfrenctools.make_hgrid_wrappers.fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.angle_dx, self.angle_dx, n, 1, 1)
+                    self.angle_dx = tmp.copy()
+                    if conformal != "true":
+                        pyfrenctools.make_hgrid_wrappers.fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.angle_dy, self.angle_dy, n, 1, 1)
+                        self.angle_dy = tmp.copy()
+
+            if verbose:
+                print(f"About to close {outfile}")
 
             nx = self.nxl[n]
             ny = self.nyl[n]
             nxp = nx + 1
             nyp = ny + 1
+
+            if verbose:
+                print(f"[INFO] INDEX Before increment n: {n} pos_c {pos_c} nxp {nxp} nyp {nyp} nxp*nyp {nxp*nyp}\n", file=sys.stderr)
             pos_c += nxp*nyp
+            if verbose:
+                print(f"[INFO] INDEX After increment n: {n} pos_c {pos_c}\n.", file=sys.stderr)
             pos_e += nxp*ny
             pos_n += nx*nyp
             pos_t += nx*ny
@@ -199,7 +259,7 @@ class HGridObj():
 
         if self.x is not None:
             x = xr.DataArray(
-                data=self.x[:(nyp*nxp)].reshape((nyp,nxp)),
+                data=self.x.reshape((nyp,nxp)),
                 dims=["nyp", "nxp"],
                 attrs=dict(
                     units="degree_east", 
@@ -214,7 +274,7 @@ class HGridObj():
             
         if self.y is not None:
             y = xr.DataArray(
-                data=self.y[:(nyp*nxp)].reshape((nyp, nxp)),
+                data=self.y.reshape((nyp, nxp)),
                 dims=["nyp", "nxp"],
                 attrs=dict(
                     units="degree_north", 
@@ -230,7 +290,7 @@ class HGridObj():
         if output_length_angle:
             if self.dx is not None:
                 dx = xr.DataArray(
-                    data=self.dx[:(nyp*nx)].reshape((nyp, nx)),
+                    data=self.dx.reshape((nyp, nx)),
                     dims=["nyp", "nx"],
                     attrs=dict(
                         units="meters", 
@@ -245,7 +305,7 @@ class HGridObj():
 
             if self.dy is not None:    
                 dy = xr.DataArray(
-                    data=self.dy[:(ny*nxp)].reshape((ny, nxp)),
+                    data=self.dy.reshape((ny, nxp)),
                     dims=["ny", "nxp"],
                     attrs=dict(
                         units="meters", 
@@ -260,7 +320,7 @@ class HGridObj():
 
             if self.angle_dx is not None:   
                 angle_dx = xr.DataArray(
-                    data=self.angle_dx[:(nyp*nxp)].reshape((nyp, nxp)),
+                    data=self.angle_dx.reshape((nyp, nxp)),
                     dims=["nyp", "nxp"],
                     attrs=dict(
                         units="degrees_east",
@@ -291,7 +351,7 @@ class HGridObj():
 
         if self.area is not None:
             area = xr.DataArray(
-                data=self.area[:(ny*nx)].reshape((ny, nx)),
+                data=self.area.reshape((ny, nx)),
                 dims=["ny", "nx"],
                 attrs=dict(
                     units="m2",

@@ -55,6 +55,11 @@ def make_hgrid():
     help="When specified, great_circle_algorithm will be used to compute grid \
          cell area.",
 )
+@click.option(
+    "--verbose",
+    is_flag=True,
+    default=False,
+)
 def lonlat(
     nlon, 
     nlat, 
@@ -62,7 +67,8 @@ def lonlat(
     ybnds, 
     dlon, 
     dlat, 
-    use_great_circle_algorithm
+    use_great_circle_algorithm,
+    verbose,
 ):
     make_lonlat_grid(
         nlon=nlon,
@@ -72,4 +78,5 @@ def lonlat(
         dlon=dlon,
         dlat=dlat,
         use_great_circle_algorithm=use_great_circle_algorithm,
+        verbose=verbose,
     )

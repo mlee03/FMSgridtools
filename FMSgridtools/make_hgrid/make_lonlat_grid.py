@@ -10,7 +10,8 @@ def make_lonlat_grid(
         ybnds: str = None,
         dlon: str = None,
         dlat: str = None, 
-        use_great_circle_algorithm: bool = False
+        use_great_circle_algorithm: bool = False,
+        verbose: bool = False,
 ):
     center = "none"
     grid_obj = HGridObj()
@@ -48,6 +49,7 @@ def make_lonlat_grid(
         nybnds=nybnds,
         nlon=nlon,
         nlat=nlat,
+        verbose=verbose,
     )
     
     pyfrenctools.make_hgrid_wrappers.create_regular_lonlat_grid(
@@ -74,7 +76,7 @@ def make_lonlat_grid(
         use_great_circle_algorithm=use_great_circle_algorithm,
     )
 
-    grid_obj.write_out_hgrid()
+    grid_obj.write_out_hgrid(verbose=verbose)
 
 
     
