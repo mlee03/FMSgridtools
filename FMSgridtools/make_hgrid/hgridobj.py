@@ -225,7 +225,7 @@ class HGridObj():
 
             if out_halo == 0:
                 if verbose:
-                    print(f"[INFO] START NC XARRAY write out_halo={out_halo} tile number = {n} offset = pos_c: {pos_c}", file=sys.stderr)
+                    print(f"[INFO] START NC XARRAY write out_halo = {out_halo} tile number = {n} offset = pos_c: {pos_c}", file=sys.stderr)
                     print(f"[INFO] XARRAY: n: {n} x[0]: {self.x[pos_c]} x[1]: {self.x[pos_c+1]} x[2]: {self.x[pos_c+2]} x[3]: {self.x[pos_c+3]} x[4]: {self.x[pos_c+4]} x[5]: {self.x[pos_c+5]} x[10]: {self.x[pos_c+10]}", file=sys.stderr)
                     if n > 0:
                         print(f"[INFO] XARRAY: n: {n} x[0]: {self.x[pos_c]} x[-1]: {self.x[pos_c-1]} x[-2]: {self.x[pos_c-2]} x[-3]: {self.x[pos_c-3]} x[-4]: {self.x[pos_c-4]} x[-5]: {self.x[pos_c-5]} x[-10]: {self.x[pos_c-10]}", file=sys.stderr)
@@ -408,7 +408,7 @@ class HGridObj():
                 print(f"[INFO] INDEX Before increment n: {n} pos_c {pos_c} nxp {nxp} nyp {nyp} nxp*nyp {nxp*nyp}\n", file=sys.stderr)
             pos_c += nxp*nyp
             if verbose:
-                print(f"[INFO] INDEX After increment n: {n} pos_c {pos_c}\n.", file=sys.stderr)
+                print(f"[INFO] INDEX After increment n: {n} pos_c {pos_c}\n", file=sys.stderr)
             pos_e += nxp*ny
             pos_n += nx*nyp
             pos_t += nx*ny
