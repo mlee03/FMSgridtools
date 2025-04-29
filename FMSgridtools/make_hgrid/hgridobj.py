@@ -171,6 +171,7 @@ class HGridObj():
         pos_e = 0
         pos_t = 0
         pos_n = 0
+
         for n in range(ntiles):
             self.tile = "tile" + str(n+1)
             if ntiles > 1:
@@ -180,6 +181,39 @@ class HGridObj():
 
             if verbose:
                 print(f"Writing out {outfile}\n", file=sys.stderr)
+
+            tile = xr.DataArray(
+                [self.tile],
+                attrs=dict(
+                    standard_name="grid_tile_spec",
+                    geometry=geometry,
+                    discretization=discretization,
+                    conformal=conformal,
+                )
+            )
+            if north_pole_tile is "none":
+                tile = tile.assign_attrs(projection=projection)
+            if projection is "none":
+                tile = tile.assign_attrs(north_pole_tile=north_pole_tile)
+            var_dict['tile'] = tile
+
+            if north_pole_arcx == "none":
+                arcx = xr.DataArray(
+                    [self.arcx],
+                    attrs=dict(
+                        standard_name="grid_edge_x_arc_type",
+                    )
+                )
+            else:
+                arcx = xr.DataArray(
+                    [self.arcx],
+                    attrs=dict(
+                        standard_name="grid_edge_x_arc_type",
+                        north_pole=north_pole_arcx,
+                    )
+                )
+
+            var_dict['arcx'] = arcx
         
             """define dimension"""
             nx = self.nxl[n]
@@ -195,38 +229,175 @@ class HGridObj():
                     print(f"[INFO] XARRAY: n: {n} x[0]: {self.x[pos_c]} x[1]: {self.x[pos_c+1]} x[2]: {self.x[pos_c+2]} x[3]: {self.x[pos_c+3]} x[4]: {self.x[pos_c+4]} x[5]: {self.x[pos_c+5]} x[10]: {self.x[pos_c+10]}", file=sys.stderr)
                     if n > 0:
                         print(f"[INFO] XARRAY: n: {n} x[0]: {self.x[pos_c]} x[-1]: {self.x[pos_c-1]} x[-2]: {self.x[pos_c-2]} x[-3]: {self.x[pos_c-3]} x[-4]: {self.x[pos_c-4]} x[-5]: {self.x[pos_c-5]} x[-10]: {self.x[pos_c-10]}", file=sys.stderr)
-                self.x = self.x[pos_c:]
-                self.y = self.y[pos_c:]
-                self.area = self.area[pos_t:]
+                x = xr.DataArray(
+                    data=self.x[pos_c:].reshape((nyp,nxp)),
+                    dims=["nyp", "nxp"],
+                    attrs=dict(
+                        units="degree_east", 
+                        standard_name="geographic_longitude",
+                    )
+                )
+                var_dict['x'] = x
+
+                y = xr.DataArray(
+                    data=self.y[pos_c:].reshape((nyp, nxp)),
+                    dims=["nyp", "nxp"],
+                    attrs=dict(
+                        units="degree_north", 
+                        standard_name="geographic_latitude",
+                    )
+                )
+                var_dict['y'] = y
+
+                area = xr.DataArray(
+                    data=self.area[pos_t:].reshape((ny, nx)),
+                    dims=["ny", "nx"],
+                    attrs=dict(
+                        units="m2",
+                        standard_name="grid_cell_area",
+                    )
+                )
+                var_dict['area'] = area
+
                 if output_length_angle:
-                    self.dx = self.dx[pos_n:]
-                    self.dy = self.dy[pos_e:]
-                    self.angle_dx = self.angle_dx[pos_c:]
+                    dx = xr.DataArray(
+                        data=self.dx[pos_n:].reshape((nyp, nx)),
+                        dims=["nyp", "nx"],
+                        attrs=dict(
+                            units="meters", 
+                            standard_name="grid_edge_x_distance",
+                        )
+                    )
+                    var_dict['dx'] = dx
+
+                    dy = xr.DataArray(
+                        data=self.dy[pos_e:].reshape((ny, nxp)),
+                        dims=["ny", "nxp"],
+                        attrs=dict(
+                            units="meters", 
+                            standard_name="grid_edge_y_distance",
+                        )
+                    )
+                    var_dict['dy'] = dy
+
+                    angle_dx = xr.DataArray(
+                        data=self.angle_dx[pos_c:].reshape((nyp, nxp)),
+                        dims=["nyp", "nxp"],
+                        attrs=dict(
+                            units="degrees_east",
+                            standard_name="grid_vertex_x_angle_WRT_geographic_east",
+                        )
+                    )
+                    var_dict['angle_dx'] = angle_dx
+
                     if conformal != "true":
-                        self.angle_dy = self.angle_dy[pos_c:]
+                        angle_dy = xr.DataArray(
+                            data=self.angle_dy[pos_c:].reshape((nyp, nxp)),
+                            dims=["nyp", "nxp"],
+                            attrs=dict(
+                                units="degrees_north",
+                                standard_name="grid_vertex_y_angle_WRT_geographic_north",
+                            )
+                        )
+                        var_dict['angle_dy'] = angle_dy
             else:
                 tmp = np.empty(shape=(nxp+2*out_halo)*(nyp+2*out_halo), dtype=np.float64)
+
                 if verbose:
                     print(f"[INFO] INDEX NC write with halo tile number = n: {n}", file=sys.stderr)
+
                 pyfrenctools.make_hgrid_wrappers.fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.x, self.x, n, 1, 1)
                 self.x = tmp.copy()
+                x = xr.DataArray(
+                    data=self.x.reshape((nyp,nxp)),
+                    dims=["nyp", "nxp"],
+                    attrs=dict(
+                        units="degree_east", 
+                        standard_name="geographic_longitude",
+                        _FillValue=-9999.,
+                    )
+                )
+                var_dict['x'] = x
+
                 pyfrenctools.make_hgrid_wrappers.fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.y, self.y, n, 1, 1)
                 self.y = tmp.copy()
+                y = xr.DataArray(
+                    data=self.y.reshape((nyp, nxp)),
+                    dims=["nyp", "nxp"],
+                    attrs=dict(
+                        units="degree_north", 
+                        standard_name="geographic_latitude",
+                        _FillValue = -9999.,
+                    )
+                )
+                var_dict['y'] = y
+
                 pyfrenctools.make_hgrid_wrappers.fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.area, self.area, n, 0, 0)
                 self.area = tmp.copy()
+                area = xr.DataArray(
+                    data=self.area.reshape((ny, nx)),
+                    dims=["ny", "nx"],
+                    attrs=dict(
+                        units="m2",
+                        standard_name="grid_cell_area",
+                        _FillValue=-9999.,
+                    )
+                )
+                var_dict['area'] = area
+
                 if output_length_angle:
                     pyfrenctools.make_hgrid_wrappers.fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.dx, self.dy, n, 0, 1)
                     self.dx = tmp.copy()
+                    dx = xr.DataArray(
+                        data=self.dx.reshape((nyp, nx)),
+                        dims=["nyp", "nx"],
+                        attrs=dict(
+                            units="meters", 
+                            standard_name="grid_edge_x_distance",
+                            _FillValue=-9999.,
+                        )
+                    )
+                    var_dict['dx'] = dx
+
                     pyfrenctools.make_hgrid_wrappers.fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.dy, self.dx, n, 1, 0)
                     self.dy = tmp.copy()
+                    dy = xr.DataArray(
+                        data=self.dy.reshape((ny, nxp)),
+                        dims=["ny", "nxp"],
+                        attrs=dict(
+                            units="meters", 
+                            standard_name="grid_edge_y_distance",
+                            _FillValue=-9999.,
+                        )
+                    )
+                    var_dict['dy'] = dy
+
                     pyfrenctools.make_hgrid_wrappers.fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.angle_dx, self.angle_dx, n, 1, 1)
                     self.angle_dx = tmp.copy()
+                    angle_dx = xr.DataArray(
+                        data=self.angle_dx.reshape((nyp, nxp)),
+                        dims=["nyp", "nxp"],
+                        attrs=dict(
+                            units="degrees_east",
+                            standard_name="grid_vertex_x_angle_WRT_geographic_east",
+                            _FillValue=-9999.,
+                        )
+                    )
+                    var_dict['angle_dx'] = angle_dx
+
                     if conformal != "true":
                         pyfrenctools.make_hgrid_wrappers.fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.angle_dy, self.angle_dy, n, 1, 1)
                         self.angle_dy = tmp.copy()
-
-            if verbose:
-                print(f"About to close {outfile}")
+                        angle_dy = xr.DataArray(
+                            data=self.angle_dy.reshape((nyp, nxp)),
+                            dims=["nyp", "nxp"],
+                            attrs=dict(
+                                units="degrees_north",
+                                standard_name="grid_vertex_y_angle_WRT_geographic_north",
+                                _FillValue=-9999.,
+                            )
+                        )
+                        var_dict['angle_dy'] = angle_dy
 
             nx = self.nxl[n]
             ny = self.nyl[n]
@@ -242,154 +413,17 @@ class HGridObj():
             pos_n += nx*nyp
             pos_t += nx*ny
 
-        tile = xr.DataArray(
-            [self.tile],
-            attrs=dict(
-                standard_name="grid_tile_spec",
-                geometry=geometry,
-                discretization=discretization,
-                conformal=conformal,
+            if verbose:
+                print(f"About to close {outfile}")
+
+            prov_attrs = get_provenance_attrs(great_circle_algorithm=True)   
+
+            dataset = xr.Dataset(
+                data_vars=var_dict
             )
-        )
-        if north_pole_tile is "none":
-            tile = tile.assign_attrs(projection=projection)
-        if projection is "none":
-            tile = tile.assign_attrs(north_pole_tile=north_pole_tile)
-        var_dict['tile'] = tile
-
-        if self.x is not None:
-            x = xr.DataArray(
-                data=self.x.reshape((nyp,nxp)),
-                dims=["nyp", "nxp"],
-                attrs=dict(
-                    units="degree_east", 
-                    standard_name="geographic_longitude",
-                )
-            )
-
-            if out_halo > 0:
-                x.attrs["_FillValue"] = -9999.
-
-            var_dict['x'] = x
-            
-        if self.y is not None:
-            y = xr.DataArray(
-                data=self.y.reshape((nyp, nxp)),
-                dims=["nyp", "nxp"],
-                attrs=dict(
-                    units="degree_north", 
-                    standard_name="geographic_latitude",
-                )
-            )
-
-            if out_halo > 0:
-                y.attrs["_FillValue"] = -9999.
-
-            var_dict['y'] = y
-    
-        if output_length_angle:
-            if self.dx is not None:
-                dx = xr.DataArray(
-                    data=self.dx.reshape((nyp, nx)),
-                    dims=["nyp", "nx"],
-                    attrs=dict(
-                        units="meters", 
-                        standard_name="grid_edge_x_distance",
-                    )
-                )
-
-                if out_halo > 0:
-                    dx.attrs["_FillValue"] = -9999.
-
-                var_dict['dx'] = dx
-
-            if self.dy is not None:    
-                dy = xr.DataArray(
-                    data=self.dy.reshape((ny, nxp)),
-                    dims=["ny", "nxp"],
-                    attrs=dict(
-                        units="meters", 
-                        standard_name="grid_edge_y_distance",
-                    )
-                )
-
-                if out_halo > 0:
-                    dy.attrs["_FillValue"] = -9999.
-
-                var_dict['dy'] = dy
-
-            if self.angle_dx is not None:   
-                angle_dx = xr.DataArray(
-                    data=self.angle_dx.reshape((nyp, nxp)),
-                    dims=["nyp", "nxp"],
-                    attrs=dict(
-                        units="degrees_east",
-                        standard_name="grid_vertex_x_angle_WRT_geographic_east",
-                    )
-                )
-
-                if out_halo > 0:
-                    angle_dx.attrs["_FillValue"] = -9999.
-
-                var_dict['angle_dx'] = angle_dx
-                    
-            if conformal != "true":
-                if self.angle_dy is not None:
-                    angle_dy = xr.DataArray(
-                        data=self.angle_dy.reshape((nyp, nxp)),
-                        dims=["nyp", "nxp"],
-                        attrs=dict(
-                            units="degrees_north",
-                            standard_name="grid_vertex_y_angle_WRT_geographic_north",
-                        )
-                    )
-
-                    if out_halo > 0:
-                        angle_dy.attrs["_FillValue"] = -9999.
-
-                    var_dict['angle_dy'] = angle_dy
-
-        if self.area is not None:
-            area = xr.DataArray(
-                data=self.area.reshape((ny, nx)),
-                dims=["ny", "nx"],
-                attrs=dict(
-                    units="m2",
-                    standard_name="grid_cell_area",
-                )
-            )
-
-            if out_halo > 0:
-                area.attrs["_FillValue"] = -9999.
-
-            var_dict['area'] = area
-
-        if north_pole_arcx == "none":
-            arcx = xr.DataArray(
-                [self.arcx],
-                attrs=dict(
-                    standard_name="grid_edge_x_arc_type",
-                )
-            )
-        else:
-            arcx = xr.DataArray(
-                [self.arcx],
-                attrs=dict(
-                    standard_name="grid_edge_x_arc_type",
-                    north_pole=north_pole_arcx,
-                )
-            )
-
-        var_dict['arcx'] = arcx
-
-        prov_attrs = get_provenance_attrs(great_circle_algorithm=True)   
-
-        dataset = xr.Dataset(
-            data_vars=var_dict
-        )
-        dataset.attrs = prov_attrs
-        self.dataset = dataset
-        dataset.to_netcdf(outfile)
+            dataset.attrs = prov_attrs
+            self.dataset = dataset
+            dataset.to_netcdf(outfile)
 
     def make_gridobj(self) -> "GridObj":
         var_dict = {}
