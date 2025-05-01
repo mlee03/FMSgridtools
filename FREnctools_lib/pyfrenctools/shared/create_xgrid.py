@@ -87,38 +87,38 @@ class create_xgrid():
                                lon_src, lat_src, lon_tgt, lat_tgt, mask_src,
                                i_src, j_src, i_tgt, j_tgt, xarea)
 
-        return dict(nxgrid=nxgrid,
-                    xgrid_ij1=j_src[:nxgrid]*nlon_src + i_src[:nxgrid],
-                    xgrid_ij2=j_tgt[:nxgrid]*nlon_tgt + i_tgt[:nxgrid],
-                    xgrid_area=xarea[:nxgrid])
+        return dict(nxcells=nxcells,
+                    src_ij=j_src[:nxcells]*nlon_src + i_src[:nxcells],
+                    tgt_ij=j_tgt[:nxcells]*nlon_tgt + i_tgt[:nxcells],
+                    xarea=xarea[:nxcells])
                     
     @classmethod
-    def transfer_data_gpu(cls, nxgrid: int):
+    def transfer_data_gpu(cls, nxcells: int):
 
         _create_xgrid_transfer_data = cls.lib.create_xgrid_transfer_data
 
-        nxgrid_t = ctypes.c_int
-        xgrid_ij1_t = np.ctypeslib.ndpointer(dtype=np.int32, shape=(nxgrid))
-        xgrid_ij2_t = np.ctypeslib.ndpointer(dtype=np.int32, shape=(nxgrid))
-        xgrid_area_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=(nxgrid))
+        nxcells_t = ctypes.c_int
+        src_ij_t = np.ctypeslib.ndpointer(dtype=np.int32, shape=(nxcells))
+        tgt_ij_t = np.ctypeslib.ndpointer(dtype=np.int32, shape=(nxcells))
+        xarea_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=(nxcells))
         
         _create_xgrid_transfer_data.restype = None
-        _create_xgrid_transfer_data.argtypes = [nxgrid_t,
-                                                xgrid_ij1_t,
-                                                xgrid_ij2_t,
-                                                xgrid_area_t]
+        _create_xgrid_transfer_data.argtypes = [nxcells_t,
+                                                src_ij_t,
+                                                tgt_ij_t,
+                                                xarea_t]
 
-        nxgrid_c = nxgrid_t(nxgrid)
-        xgrid_ij1 = np.zeros((nxgrid), dtype=np.int32)
-        xgrid_ij2 = np.zeros((nxgrid), dtype=np.int32)
-        xgrid_area = np.zeros((nxgrid), dtype=np.float64)
+        nxcells_c = nxcells_t(nxcells)
+        src_ij = np.zeros((nxcells), dtype=np.int32)
+        tgt_ij = np.zeros((nxcells), dtype=np.int32)
+        xarea = np.zeros((nxcells), dtype=np.float64)
 
-        _create_xgrid_transfer_data(nxgrid, xgrid_ij1, xgrid_ij2, xgrid_area)
+        _create_xgrid_transfer_data(nxcells, src_ij, tgt_ij, xarea)
 
-        return dict(xgrid_ij1=xgrid_ij1,
-                    xgrid_ij2=xgrid_ij2,
-                    xgrid_area=xgrid_area,
-                    nxgrid=nxgrid)
+        return dict(src_ij=src_ij,
+                    tgt_ij=tgt_ij,
+                    xarea=xarea,
+                    nxcells=nxcells)
 
     @classmethod
     def get_2dx2d_order1_gpu(cls,
@@ -165,12 +165,12 @@ class create_xgrid():
                                                      lat_tgt_t,
                                                      mask_t]
     
-        nxgrid = _create_xgrid_order1_gpu_wrapper(nlon_src_c, nlat_src_c,
+        nxcells = _create_xgrid_order1_gpu_wrapper(nlon_src_c, nlat_src_c,
                                                   nlon_tgt_c, nlat_tgt_c,
                                                   lon_src, lat_src,
                                                   lon_tgt, lat_tgt, mask_src)
         
-        return cls.transfer_data_gpu(nxgrid)
+        return cls.transfer_data_gpu(nxcells)
     
 
         
