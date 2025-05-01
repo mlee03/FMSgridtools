@@ -35,7 +35,7 @@ class MosaicObj:
             self.dataset = xr.open_dataset(self.mosaic_file)
             self.gridfiles = self.get_gridfiles()
 
-    def get_gridfiles(self) -> List:
+    def get_gridfiles(self) -> list:
         try:
             return [ifile.decode('ascii') for
                     ifile in self.dataset.gridfiles.values]
@@ -43,14 +43,14 @@ class MosaicObj:
                 print("Error: Mosaic file not provided as an attribute, \
                     unable to return gridfiles")
 
-    def get_ntiles(self) -> List:
+    def get_ntiles(self) -> list:
         try:
             return  self.dataset.sizes['ntiles']
         except AttributeError:
             print("Error: Mosaic file not provided as an attribute, \
                   unable to return number of tiles")
 
-    def griddict(self) -> Dict:
+    def griddict(self) -> dict:
         if self.gridtiles is None:
             gridtiles = [tile.decode('ascii') for
                          tile in self.dataset.gridtiles.values]

@@ -1,6 +1,8 @@
 import ctypes
 import os
+
 from .shared.create_xgrid import create_xgrid
+from .make_hgrid.make_hgrid_wrappers import make_hgrid_wrappers
 
 class cfrenctools():
 
@@ -10,6 +12,7 @@ class cfrenctools():
     @classmethod
     def init(cls):        
         create_xgrid.init(cls.libpath, cls.lib)
+        make_hgrid_wrappers.init(cls.libpath, cls.lib)
 
     @classmethod
     def changelib(cls, libpath):
