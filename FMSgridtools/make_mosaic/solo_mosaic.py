@@ -33,17 +33,16 @@ def make(num_tiles,
         gridtiles = [f'tile{i}' for i in range(1,nfiles+1)]
 
 
-        read = MosaicObj(ntiles=num_tiles, gridfiles = tilefiles,
-                        gridtiles = gridtiles)
-        read.griddict()
-
+        grid = MosaicObj(ntiles=num_tiles, gridfiles = tilefiles,
+                        gridtiles = gridtiles).griddict()
+        
         grid_data = {}
         for tile in gridtiles:
             grid_data[tile] = {}
-            grid_data[tile]['x'] = read.grid_dict[tile].x
-            grid_data[tile]['y'] = read.grid_dict[tile].y
-            grid_data[tile]['nxp'] = read.grid_dict[tile].nxp
-            grid_data[tile]['nyp'] = read.grid_dict[tile].nyp
+            grid_data[tile]['x'] = grid[tile].x
+            grid_data[tile]['y'] = grid[tile].y
+            grid_data[tile]['nxp'] = grid[tile].nxp
+            grid_data[tile]['nyp'] = grid[tile].nyp
 
         ncontact = 0
         #FIND CONTACT REGIONS
