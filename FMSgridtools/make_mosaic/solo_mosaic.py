@@ -70,10 +70,10 @@ def make(num_tiles,
         print(f"NOTE: There are {ncontact} contacts\n")
 
         if ncontact > 0:
-            mosaic = MosaicObj(mosaic_name=mosaic_name,
+            grid = MosaicObj(mosaic_name=mosaic_name,
                                gridlocation=dir_name,
                                gridfiles=tilefiles,
                                gridtiles=gridtiles,
                                contacts=contacts,
                                contact_index=contact_index)
-            mosaic.write_out_mosaic(f'{mosaic_name}.nc')
+            grid.write_out_mosaic(f'{mosaic_name}.nc')
