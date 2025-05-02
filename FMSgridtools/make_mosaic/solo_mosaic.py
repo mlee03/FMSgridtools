@@ -33,17 +33,17 @@ def make(num_tiles,
         gridtiles = [f'tile{i}' for i in range(1,nfiles+1)]
 
 
-        mosaic = MosaicObj(ntiles=num_tiles, gridfiles = np.asarray(tilefiles),
-                        gridtiles = np.asarray(gridtiles))
-        mosaic.griddict()
+        read = MosaicObj(ntiles=num_tiles, gridfiles = tilefiles,
+                        gridtiles = gridtiles)
+        read.griddict()
 
         grid_data = {}
         for tile in gridtiles:
             grid_data[tile] = {}
-            grid_data[tile]['x'] = mosaic.grid_dict[tile].x
-            grid_data[tile]['y'] = mosaic.grid_dict[tile].y
-            grid_data[tile]['nxp'] = mosaic.grid_dict[tile].nxp
-            grid_data[tile]['nyp'] = mosaic.grid_dict[tile].nyp
+            grid_data[tile]['x'] = read.grid_dict[tile].x
+            grid_data[tile]['y'] = read.grid_dict[tile].y
+            grid_data[tile]['nxp'] = read.grid_dict[tile].nxp
+            grid_data[tile]['nyp'] = read.grid_dict[tile].nyp
 
         ncontact = 0
         #FIND CONTACT REGIONS
@@ -64,16 +64,8 @@ def make(num_tiles,
                     contacts.append(f"{mosaic_name}:tile{n}::{mosaic_name}:tile{m}")
                     ncontact+=1
 
-                    tile1_istart = istart1
-                    tile1_iend = iend1
-                    tile1_jstart = jstart1
-                    tile1_jend = jend1
-                    tile2_istart = istart2
-                    tile2_iend = iend2
-                    tile2_jstart = jstart2
-                    tile2_jend = jend2
 
-                    contact_index.append(f"{tile1_istart}:{tile1_iend},{tile1_jstart}:{tile1_jend}::{tile2_istart}:{tile2_iend},{tile2_jstart}:{tile2_jend}")
+                    contact_index.append(f"{istart1}:{iend1},{jstart1}:{jend1}::{istart2}:{iend2},{jstart2}:{jend2}")
 
         print("\nCongratulations: You have successfully run solo mosaic")
         print(f"NOTE: There are {ncontact} contacts\n")
@@ -82,7 +74,7 @@ def make(num_tiles,
             mosaic = MosaicObj(mosaic_name=mosaic_name,
                                gridlocation=dir_name,
                                gridfiles=tilefiles,
-                               gridtiles=np.asarray(gridtiles),
-                               contacts=np.asarray(contacts),
-                               contact_index=np.asarray(contact_index))
+                               gridtiles=gridtiles,
+                               contacts=contacts,
+                               contact_index=contact_index)
             mosaic.write_out_mosaic(f'{mosaic_name}.nc')
