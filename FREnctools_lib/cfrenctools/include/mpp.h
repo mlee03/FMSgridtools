@@ -21,7 +21,7 @@
 /*********************************************************************
                     mpp.h
   This header contains subroutine for parallel programming.
-  only MPI parallel is implemented. 
+  only MPI parallel is implemented.
   Contact: Zhi.Liang@noaa.gov
  ********************************************************************/
 #ifndef MPP_H_

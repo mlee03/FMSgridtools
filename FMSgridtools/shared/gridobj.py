@@ -7,6 +7,7 @@ import xarray as xr
 
 from FMSgridtools.shared.gridtools_utils import check_file_is_there
 
+
 """
 GridObj:
 
@@ -36,7 +37,7 @@ class GridObj:
             dataset=xr.open_dataset(filepath),
             grid_file=filepath,
         )
-        
+
     """
     write_out_grid:
 
@@ -72,7 +73,7 @@ class GridObj:
                 a_lat[i] = y_flat[(2*j+1)*(2*nx+1)+1]*D2R
 
         return np.ascontiguousarray(a_lon), np.ascontiguousarray(a_lat)
-    
+
     """
     get_variable_list:
 
@@ -80,63 +81,63 @@ class GridObj:
     """
     def get_variable_list(self) -> List:
         return list(self.dataset.data_vars)
-    
+
     @property
     def tile(self):
         if self.dataset is not None:
             return self.dataset.tile.values.item().decode('ascii')
         else:
             return None
-        
+
     @property
     def x(self):
         if self.dataset is not None:
             return np.ascontiguousarray(self.dataset.x.values)
         else:
             return None
-    
+
     @property
     def y(self):
         if self.dataset is not None:
             return np.ascontiguousarray(self.dataset.y.values)
         else:
             return None
-        
+
     @property
     def dx(self):
         if self.dataset is not None:
             return np.ascontiguousarray(self.dataset.dx.values)
         else:
             return None
-        
+
     @property
     def dy(self):
         if self.dataset is not None:
             return np.ascontiguousarray(self.dataset.dy.values)
         else:
             return None
-    
+
     @property
     def area(self):
         if self.dataset is not None:
             return np.ascontiguousarray(self.dataset.area.values)
         else:
             return None
-        
+
     @property
     def angle_dx(self):
         if self.dataset is not None:
             return np.ascontiguousarray(self.dataset.angle_dx.values)
         else:
             return None
-        
+
     @property
     def angle_dy(self):
         if self.dataset is not None:
             return np.ascontiguousarray(self.dataset.angle_dy.values)
         else:
             return None
-        
+
     @property
     def arcx(self):
         if self.dataset is not None:
@@ -150,21 +151,21 @@ class GridObj:
             return self.dataset.sizes['nx']
         else:
             return None
-        
+
     @property
     def ny(self):
         if self.dataset is not None:
             return self.dataset.sizes['ny']
         else:
             return None
-        
+
     @property
     def nxp(self):
         if self.dataset is not None:
                 return self.dataset.sizes['nxp']
         else:
             return None
-        
+
     @property
     def nyp(self):
         if self.dataset is not None:

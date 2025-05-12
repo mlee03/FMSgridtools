@@ -1534,4 +1534,3 @@ void reset_in_format(int format) {
     in_format = format;
   }
 }
-

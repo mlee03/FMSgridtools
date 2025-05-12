@@ -26,14 +26,14 @@ void create_gaussian_topog(int nx, int ny, const double *x, const double *y, dou
 			   double slope_y, double *depth);
 void create_idealized_topog( int nx, int ny, const double *x, const double *y,
 			     double bottom_depth, double min_depth, double *depth);
-void create_realistic_topog(int nx_dst, int ny_dst, const double *x_dst, const double *y_dst, const char *vgrid_file, 
+void create_realistic_topog(int nx_dst, int ny_dst, const double *x_dst, const double *y_dst, const char *vgrid_file,
 			    const char* topog_file, const char* topog_field, double scale_factor,
-			    int tripolar_grid, int cyclic_x, int cyclic_y, 
+			    int tripolar_grid, int cyclic_x, int cyclic_y,
 			    int fill_first_row, int filter_topog, int num_filter_pass,
 			    int smooth_topo_allow_deepening, int round_shallow, int fill_shallow,
 			    int deepen_shallow, int full_cell, int flat_bottom, int adjust_topo,
 			    int fill_isolated_cells, int dont_change_landmask, int kmt_min, double min_thickness,
-			    int open_very_this_cell, double fraction_full_cell, double *depth, 
+			    int open_very_this_cell, double fraction_full_cell, double *depth,
                             int *num_levels, domain2D domain, int debug, int great_circle_algorithm,
                 int on_grid, int gpu);
 

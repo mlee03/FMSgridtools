@@ -1,11 +1,13 @@
 import ctypes
+
 import numpy as np
 import numpy.typing as npt
-import xarray as xr
-import pyfrenctools
 import pyfms
-from .gridtools_utils import check_file_is_there
+import pyfrenctools
+import xarray as xr
+
 from .gridobj import GridObj
+from .gridtools_utils import check_file_is_there
 from .mosaicobj import MosaicObj
 
 
@@ -34,29 +36,29 @@ class XGridObj() :
         self.tgt_ij = None
         self.xarea = None
         self.nxcells = None
-        
+
         self._check_restart_remap_file()
         self._check_mosaic()
-        
+
         raise RuntimeError("""
-        Exchange grids can be generated from 
+        Exchange grids can be generated from
         (1) a restart remap_file
         (2) input and tgt mosaic files with grid file information
-        (3) input and output grids as instances of GridObj 
-        Please provide either the src_mosaic with the tgt_mosaic, 
-                                  src_grid with the tgt_grid, 
+        (3) input and output grids as instances of GridObj
+        Please provide either the src_mosaic with the tgt_mosaic,
+                                  src_grid with the tgt_grid,
                                   or a restart_remap_file"""
         )
-                    
+
     def read(self, infile: str = None):
 
         if infile is None:
             infile = self.restart_remap_file
-            
+
         self.dataset = xr.open_dataset(infile)
         for key in self.dataset.data_vars.keys():
             setattr(self, key, self.dataset[key])
-                        
+
     def write(self, outfile: str = None):
 
         if outfile is None:
@@ -67,7 +69,7 @@ class XGridObj() :
     def create_xgrid(self, mask: dict[str,npt.NDArray] = None) -> dict():
 
         DEG_TO_RAD = pyfms.constants.DEG_TO_RAD
-        
+
         if self.order not in (1,2):
             raise RuntimeError("conservative order must be 1 or 2")
 
@@ -92,7 +94,7 @@ class XGridObj() :
                 itile = itile + 1
 
         return self.create_dataset(xgrid)
-                
+
     def create_dataset(self, xgrid: dict()):
 
         for i_xgrid in xgrid.values():
@@ -103,21 +105,21 @@ class XGridObj() :
                                  attrs=dict(standard_name="tile number in input mosaic)")
             )
             for src_tile in i_xgrid.keys(): del i_xgrid[src_tile]["tile"]
-            
+
             src_ij_data = np.concatenate([i_xgrid[src_tile]["src_ij"] for src_tile in i_xgrid.keys()])
             src_ij = xr.DataArray(data=src_ij_data,
                                   dims=["nxcells"],
                                   attrs=dict(standard_name="parent cell indices from src mosaic")
             )
             for src_tile in i_xgrid.keys(): del i_xgrid[src_tile]["src_ij"]
-            
+
             tgt_ij_data = np.concatenate([i_xgrid[src_tile]["tgt_ij"] for src_tile in i_xgrid.keys()])
             tgt_ij = xr.DataArray(data=tgt_ij_data,
                                   dims=["nxcells"],
                                   attrs=dict(standard_name="parent cell indices from tgt mosaic")
             )
             for src_tile in i_xgrid.keys(): del i_xgrid[src_tile]["tgt_ij"]
-            
+
             xarea_data = np.concatenate([i_xgrid[src_tile]["xarea"] for src_tile in i_xgrid.keys()])
             xarea = xr.DataArray(data=xarea_data,
                                  dims=["nxcells"],
@@ -129,15 +131,15 @@ class XGridObj() :
                                                      tgt_ij=tgt_ij,
                                                      xarea=xarea)
             )
-    
+
     def _check_restart_remap_file(self):
-        
+
         if self.restart_remap_file is not None :
             check_file_is_there(self.restart_remap_file)
             self.read()
-        
+
     def _check_mosaic(self):
-        
+
         if self.src_mosaic is not None and self.tgt_mosaic is not None:
             self.src_grid = MosaicObj(self.src_mosaic).griddict()
-            self.tgt_grid = MosaicObj(self.tgt_mosaic).griddict()         
+            self.tgt_grid = MosaicObj(self.tgt_mosaic).griddict()

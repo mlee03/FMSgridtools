@@ -1,8 +1,10 @@
-import numpy as np
 import os
+
+import numpy as np
 import xarray as xr
 
 import FMSgridtools
+
 
 def generate_mosaic(nx: int = 360, ny:int = 90, refine: int = 1):
 
@@ -17,7 +19,7 @@ def generate_mosaic(nx: int = 360, ny:int = 90, refine: int = 1):
     nxp_tgt, nyp_tgt = nx_tgt+1, ny_tgt+1
     dx_tgt = dx_src/refine
     dy_tgt = dy_src/refine
-    
+
     x_src, y_src = [], []
     for j in range(nyp_src):
         x_src.append([xstart+i*dx_src for i in range(nxp_src)])
@@ -38,14 +40,14 @@ def generate_mosaic(nx: int = 360, ny:int = 90, refine: int = 1):
                                   gridfiles=(["ntiles"], [gridfile.encode()]),
                                   gridtiles=(["ntiles"], [gridtile.encode()]))
         ).to_netcdf(mosaicfile)
-        
 
-    for (x, y, prefix) in [(x_src, y_src, "src"), (x_tgt, y_tgt, "tgt")]:                                                 
+
+    for (x, y, prefix) in [(x_src, y_src, "src"), (x_tgt, y_tgt, "tgt")]:
         xr.Dataset(data_vars=dict(x=(["nyp", "nxp"], x),
                                   y=(["nyp", "nxp"], y))
         ).to_netcdf(prefix+"_grid.nc")
 
-        
+
 def test_create_xgrid() :
 
     nx, ny, refine = 180, 45, 2
@@ -54,13 +56,13 @@ def test_create_xgrid() :
     xgrid = FMSgridtools.XGridObj(src_mosaic="src_mosaic.nc", tgt_mosaic="tgt_mosaic.nc")
     xgrid.create_xgrid()
     xgrid.write()
-    
+
     del xgrid
-    
+
     xgrid = FMSgridtools.XGridObj(restart_remap_file="remap.nc").dataset
 
-    nxgrid = nx * refine * ny * refine 
-    assert(xgrid.sizes["nxcells"] == nxgrid)    
+    nxgrid = nx * refine * ny * refine
+    assert(xgrid.sizes["nxcells"] == nxgrid)
 
     tile1_cells = np.repeat([i for i in range(nx*ny)],4)
     assert(np.all(xgrid["src_ij"].values==tile1_cells))

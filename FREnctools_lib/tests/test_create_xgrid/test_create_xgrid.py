@@ -1,6 +1,7 @@
 import numpy as np
 import pyfrenctools
 
+
 def test_create_xgrid_gpu():
 
     nlon_src = 180
@@ -22,10 +23,9 @@ def test_create_xgrid_gpu():
 
     results_cpu = pyfrenctools.create_xgrid.get_2dx2d_order1(nlon_src, nlat_src, nlon_tgt, nlat_tgt,
                                                              lon_src, lat_src, lon_tgt, lat_tgt)
-    
+
     assert(results_gpu["nxgrid"]==nlon_src*nlat_src)
     assert(np.all(results_gpu["xgrid_ij1"]==results_gpu["xgrid_ij2"]))
 
     assert(results_cpu["nxgrid"]==nlon_src*nlat_src)
     assert(np.all(results_cpu["xgrid_ij1"]==results_cpu["xgrid_ij2"]))
-
