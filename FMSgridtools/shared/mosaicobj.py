@@ -1,26 +1,35 @@
-from typing import Optional, Dict, List
-import dataclasses
-from dataclasses import field
 import xarray as xr
 import numpy as np
 import numpy.typing as npt
 from FMSgridtools.shared.gridobj import GridObj
 from FMSgridtools.shared.gridtools_utils import check_file_is_there
 
-@dataclasses.dataclass
-class MosaicObj:
-    mosaic_file: Optional[str] = None
-    ntiles: Optional[int] = None
-    mosaic_name: Optional[str] = None
-    gridlocation: Optional[str] = None
-    gridfiles: Optional[npt.NDArray[np.str_]] = None
-    gridtiles: Optional[npt.NDArray[np.str_]] = None
-    contacts: Optional[npt.NDArray[np.str_]] = None
-    contact_index: Optional[npt.NDArray[np.str_]] = None
-    dataset: object = field(init=False)
-    grid_dict: Optional[Dict] | None = field(default_factory=dict)
 
-    def __post_init__(self):
+class MosaicObj:
+    def __init__(self, mosaic_file: str = None,
+                 ntiles: int = None, 
+                 mosaic_name : str = None,
+                 gridlocation: str = None, 
+                 gridfiles: npt.NDArray[np.str_] = None,
+                 gridtiles: npt.NDArray[np.str_] = None,
+                 contacts: npt.NDArray[np.str_] = None,
+                 contact_index: npt.NDArray[np.str_] = None,
+                 dataset: object = None,
+                 grid_dict: dict | None = None):
+
+        self.mosaic_file = mosaic_file
+        self.ntiles = ntiles
+        self.mosaic_name = mosaic_name 
+        self.gridlocation = gridlocation
+        self.gridfiles = gridfiles
+        self.gridtiles = gridtiles
+        self.contacts = contacts
+        self.contact_index = contact_index
+        self.grid_dict = {}
+        self._post_init_()
+
+        
+    def _post_init_(self):
         if self.mosaic_file is not None and self.gridfiles is None:
             check_file_is_there(self.mosaic_file)
             self.dataset = xr.open_dataset(self.mosaic_file)
@@ -42,13 +51,17 @@ class MosaicObj:
                   unable to return number of tiles")
 
     def griddict(self) -> Dict:
+
         if self.gridtiles is None: 
-            gridtiles = [tile.decode('ascii') for tile in self.dataset.gridtiles.values]
+            gridtiles = [tile.decode('ascii') for
+                         tile in self.dataset.gridtiles.values]
             for i in range(self.get_ntiles()): 
-                self.grid_dict[gridtiles[i]] = GridObj.from_file(self.gridfiles[i]) 
+                self.grid_dict[
+                    gridtiles[i]] = GridObj.from_file(self.gridfiles[i]) 
         else: 
             for i in range(len(self.gridfiles)): 
                 self.grid_dict[self.gridtiles[i]] = GridObj.from_file(self.gridfiles[i]) 
+
         return self.grid_dict
                 
     def write_out_mosaic(self, outfile:str):

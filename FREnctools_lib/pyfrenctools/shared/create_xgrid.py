@@ -148,6 +148,3 @@ def get_2dx2d_order1_gpu(nlon_src: int,
                                               lon_tgt, lat_tgt, mask_src)
     
     return transfer_data_gpu(nxcells)
-    
-
-        
