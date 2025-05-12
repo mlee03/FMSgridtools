@@ -29,16 +29,15 @@ class XGridObj() :
         self.order: int = 1
         self.on_gpu: bool = False
         self.dataset = None
-        self.tile1 = None
-        self.tile1_cell = None
-        self.tile2_cell = None
-        self.xgrid_area = None
-        self.ncells = None
+        self.src_tile = None
+        self.src_ij = None
+        self.tgt_ij = None
+        self.xarea = None
+        self.nxcells = None
         
-        if self._check_restart_remap_file() or \
-           self._check_mosaic() or \
-           self._check_grids(): return
- 
+        self._check_restart_remap_file()
+        self._check_mosaic()
+        
         raise RuntimeError("""
         Exchange grids can be generated from 
         (1) a restart remap_file
@@ -50,33 +49,39 @@ class XGridObj() :
         )
                     
     def read(self, infile: str = None):
-        infile = self.restart_remap_file if infile is None else infile
+
+        if infile is None:
+            infile = self.restart_remap_file
+            
         self.dataset = xr.open_dataset(infile)
         for key in self.dataset.data_vars.keys():
             setattr(self, key, self.dataset[key])
-        
-                
+                        
     def write(self, outfile: str = None):
-        outfile = self.write_remap_file if outfile is None else outfile
-        print(outfile)
+
+        if outfile is None:
+            outfile = self.write_remap_file
+
         self.dataset.to_netcdf(outfile)
 
-
-    def create_xgrid(self, mask: dict[str,npt.NDArray[np.float64]] = None) -> dict():
+    def create_xgrid(self, mask: dict[str,npt.NDArray] = None) -> dict():
 
         DEG_TO_RAD = pyfms.constants.DEG_TO_RAD
         
-        if self.order not in (1,2) : raise RuntimeError("conservative order must be 1 or 2")
+        if self.order not in (1,2):
+            raise RuntimeError("conservative order must be 1 or 2")
+
         for tgt_tile in self.tgt_grid:
-            xgrid={tgt_tile: dict()}
 
             itile = 1
+            xgrid={tgt_tile: dict()}
+
             for src_tile in self.src_grid.keys():
                 xgrid_out = pyfrenctools.create_xgrid.get_2dx2d_order1(
-                    nlon_src=self.src_grid[src_tile].nxp-1,
-                    nlat_src=self.src_grid[src_tile].nyp-1,
-                    nlon_tgt=self.tgt_grid[tgt_tile].nxp-1,
-                    nlat_tgt=self.tgt_grid[tgt_tile].nyp-1,
+                    nlon_src=self.src_grid[src_tile].nxp - 1,
+                    nlat_src=self.src_grid[src_tile].nyp - 1,
+                    nlon_tgt=self.tgt_grid[tgt_tile].nxp - 1,
+                    nlat_tgt=self.tgt_grid[tgt_tile].nyp - 1,
                     lon_src=self.src_grid[src_tile].x * DEG_TO_RAD,
                     lat_src=self.src_grid[src_tile].y * DEG_TO_RAD,
                     lon_tgt=self.tgt_grid[tgt_tile].x * DEG_TO_RAD,
@@ -85,11 +90,13 @@ class XGridObj() :
                 xgrid_out["tile"] = np.full(xgrid_out["nxcells"], itile, dtype=np.int32)
                 xgrid[tgt_tile][src_tile] = xgrid_out
                 itile = itile + 1
+
         return self.create_dataset(xgrid)
                 
-
     def create_dataset(self, xgrid: dict()):
+
         for i_xgrid in xgrid.values():
+
             src_tile_data = np.concatenate([i_xgrid[src_tile]["tile"] for src_tile in i_xgrid.keys()])
             src_tile = xr.DataArray(data=src_tile_data,
                                  dims=["nxcells"],
@@ -122,27 +129,15 @@ class XGridObj() :
                                                      tgt_ij=tgt_ij,
                                                      xarea=xarea)
             )
-
     
     def _check_restart_remap_file(self):
         
         if self.restart_remap_file is not None :
             check_file_is_there(self.restart_remap_file)
             self.read()
-            return True
-        else : return False
-
         
     def _check_mosaic(self):
         
         if self.src_mosaic is not None and self.tgt_mosaic is not None:
-            # file checks are done in mosaic
             self.src_grid = MosaicObj(self.src_mosaic).griddict()
-            self.tgt_grid = MosaicObj(self.tgt_mosaic).griddict()
-            return True
-        else : return False
-
-        
-    def _check_grids(self):
-        return self.src_grid is not None and self.tgt_grid is not None
-        
+            self.tgt_grid = MosaicObj(self.tgt_mosaic).griddict()         

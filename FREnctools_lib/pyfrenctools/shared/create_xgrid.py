@@ -74,25 +74,25 @@ def get_2dx2d_order1(nlon_src: int,
 
 def transfer_data_gpu(nxcells: int):
 
-    _create_xgrid_transfer_data = _lib.create_xgrid_transfer_data
+    create_xgrid_transfer_data = _lib.create_xgrid_transfer_data
     
     nxcells_t = c_int
     src_ij_t = np.ctypeslib.ndpointer(dtype=np.int32, shape=(nxcells))
     tgt_ij_t = np.ctypeslib.ndpointer(dtype=np.int32, shape=(nxcells))
     xarea_t = np.ctypeslib.ndpointer(dtype=np.float64, shape=(nxcells))
     
-    _create_xgrid_transfer_data.restype = None
-    _create_xgrid_transfer_data.argtypes = [nxcells_t,
-                                            src_ij_t,
-                                            tgt_ij_t,
-                                            xarea_t]
+    create_xgrid_transfer_data.restype = None
+    create_xgrid_transfer_data.argtypes = [nxcells_t,
+                                           src_ij_t,
+                                           tgt_ij_t,
+                                           xarea_t]
     
     nxcells_c = nxcells_t(nxcells)
     src_ij = np.zeros((nxcells), dtype=np.int32)
     tgt_ij = np.zeros((nxcells), dtype=np.int32)
     xarea = np.zeros((nxcells), dtype=np.float64)
     
-    _create_xgrid_transfer_data(nxcells, src_ij, tgt_ij, xarea)
+    create_xgrid_transfer_data(nxcells, src_ij, tgt_ij, xarea)
     
     return dict(src_ij=src_ij,
                 tgt_ij=tgt_ij,
@@ -109,7 +109,7 @@ def get_2dx2d_order1_gpu(nlon_src: int,
                          lat_tgt: npt.NDArray,
                          mask_src: npt.NDArray[np.float64] = None):
     
-    _create_xgrid_order1_gpu_wrapper = _lib.create_xgrid_order1_gpu_wrapper
+    create_xgrid_order1_gpu_wrapper = _lib.create_xgrid_order1_gpu_wrapper
     
     ngrid_src = (nlon_src+1)*(nlat_src+1)
     ngrid_tgt = (nlon_tgt+1)*(nlat_tgt+1)
@@ -131,21 +131,21 @@ def get_2dx2d_order1_gpu(nlon_src: int,
     
     if mask_src is None: mask_src = np.ones((nlon_src*nlat_src), dtype=np.float64)
     
-    _create_xgrid_order1_gpu_wrapper.restype = np.int32
-    _create_xgrid_order1_gpu_wrapper.argtypes = [nlon_src_t,
-                                                 nlat_src_t,
-                                                 nlon_tgt_t,
-                                                 nlat_tgt_t,
-                                                 lon_src_t,
-                                                 lat_src_t,
-                                                 lon_tgt_t,
-                                                 lat_tgt_t,
-                                                 mask_t]
+    create_xgrid_order1_gpu_wrapper.restype = np.int32
+    create_xgrid_order1_gpu_wrapper.argtypes = [nlon_src_t,
+                                                nlat_src_t,
+                                                nlon_tgt_t,
+                                                nlat_tgt_t,
+                                                lon_src_t,
+                                                lat_src_t,
+                                                lon_tgt_t,
+                                                lat_tgt_t,
+                                                mask_t]
     
-    nxcells = _create_xgrid_order1_gpu_wrapper(nlon_src_c, nlat_src_c,
-                                               nlon_tgt_c, nlat_tgt_c,
-                                               lon_src, lat_src,
-                                               lon_tgt, lat_tgt, mask_src)
+    nxcells = create_xgrid_order1_gpu_wrapper(nlon_src_c, nlat_src_c,
+                                              nlon_tgt_c, nlat_tgt_c,
+                                              lon_src, lat_src,
+                                              lon_tgt, lat_tgt, mask_src)
     
     return transfer_data_gpu(nxcells)
     
