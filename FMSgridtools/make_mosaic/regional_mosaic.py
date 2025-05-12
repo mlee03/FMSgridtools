@@ -1,10 +1,9 @@
 import xarray as xr
 import numpy as np
 from FMSgridtools.shared.mosaicobj import MosaicObj
-from .regionalgridobj import RegionalGridObj
 
 def make(global_mosaic,
-        regional_file): -> None
+        regional_file):
         """ Generates a horizontal grid and solo mosaic for a regional output.
         The created grid and solo mosaic could be used to regrid regional
         output data onto regular lat-lon grid."""
@@ -29,22 +28,51 @@ def make(global_mosaic,
         if j_max-j_min+1 != ny:
             print("Error: make_regional_mosaic: j_max-j_min+1 != ny")
 
-        global_m = MosaicObj(global_mosaic)
-        global_m.griddict()
-        xt = global_m.grid_dict[f'tile{tile}'].x
-        xarr = xt[round(2*j_min - 2):round(2*j_min - 2 + 2*ny+1), round(2*i_min - 2):round(2*i_min - 2 + 2*nx+1)]
-        yt = global_m.grid_dict[f'tile{tile}'].y
-        yarr = yt[round(2*j_min - 2):round(2*j_min - 2 + 2*ny+1), round(2*i_min - 2):round(2*i_min - 2 + 2*nx+1)]
+        grid = MosaicObj(global_mosaic).griddict()
+        x = grid[f'tile{tile}'].x
+        xarr = x[round(2*j_min - 2):round(2*j_min - 2 + 2*ny+1), round(2*i_min - 2):round(2*i_min - 2 + 2*nx+1)]
+        y = grid[f'tile{tile}'].y
+        yarr = y[round(2*j_min - 2):round(2*j_min - 2 + 2*ny+1), round(2*i_min - 2):round(2*i_min - 2 + 2*nx+1)]
 
         outfile = f"regional_grid.tile{tile}.nc"
+        write_out_regional_grid(tile, xarr,
+                                yarr, outfile)
+
         mosaic = "regional_mosaic.nc"
-        regional_grid = RegionalGridObj(tile, xarr,
-                                        yarr)
-        regional_grid.write_out_regional_grid(outfile)
-        regional_mosaic = MosaicObj(mosaic_name="regoinal_mosaic",
+        regional_mosaic = MosaicObj(mosaic_name="regional_mosaic",
                                gridfiles=np.array([outfile]),
                                gridtiles=np.array([f"tile{tile}"]))
         regional_mosaic.write_out_regional_mosaic(mosaic)
 
         print("\nCongratulations: You have successfully run regional mosaic")
+
+
+def write_out_regional_grid(tile, xarr, yarr, outfile):
+
+        tile = xr.DataArray(
+            data=f'tile{tile}',
+            attrs=dict(standard_name="grid_tile_spec")).astype('|S255')
+
+        x = xr.DataArray(
+            data=xarr,
+            dims=["nyp", "nxp"],
+            attrs=dict(
+            standard_name="geographic_longitude", units="degree_east"))
+
+        y = xr.DataArray(
+            data=yarr,
+            dims=["nyp", "nxp"],
+            attrs=dict(
+            standard_name="geographic_latitude", units="degree_north"))
+
+        ds = xr.Dataset(
+            data_vars={"tile": tile,
+                       "x": x,
+                       "y": y})
+
+        encoding = {'x': {'_FillValue': None},
+                    'y': {'_FillValue': None}}
+
+        ds.to_netcdf(outfile, encoding=encoding)
+
 
