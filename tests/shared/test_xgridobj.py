@@ -48,26 +48,26 @@ def generate_mosaic(nx: int = 360, ny:int = 90, refine: int = 1):
         
 def test_create_xgrid() :
 
-    nx, ny, refine = 360, 90, 2
+    nx, ny, refine = 180, 45, 2
     generate_mosaic(nx=nx, ny=ny, refine=refine)
 
     xgrid = FMSgridtools.XGridObj(src_mosaic="src_mosaic.nc", tgt_mosaic="tgt_mosaic.nc")
     xgrid.create_xgrid()
-    xgrid.write_remap_file()
+    xgrid.write()
     
     del xgrid
     
     xgrid = FMSgridtools.XGridObj(restart_remap_file="remap.nc").dataset
 
     nxgrid = nx * refine * ny * refine 
-    assert(xgrid.sizes["ncells"] == nxgrid)    
+    assert(xgrid.sizes["nxcells"] == nxgrid)    
 
     tile1_cells = np.repeat([i for i in range(nx*ny)],4)
-    assert(np.all(xgrid["tile1_cell"].values==tile1_cells))
+    assert(np.all(xgrid["src_ij"].values==tile1_cells))
 
     tile2_cells = []
     for j in range(ny):
         for i in range(nx):
             base = (refine*j)*(refine*nx) + refine*i
             tile2_cells.extend([base, base+1, base+refine*nx, base+refine*nx+1])
-    assert(np.all(xgrid["tile2_cell"].values==np.array(tile2_cells)))
+    assert(np.all(xgrid["tgt_ij"].values==np.array(tile2_cells)))
