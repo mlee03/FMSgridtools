@@ -56,9 +56,14 @@ class XGridObj() :
             infile = self.restart_remap_file
 
         self.dataset = xr.open_dataset(infile)
+
         for key in self.dataset.data_vars.keys():
             setattr(self, key, self.dataset[key])
 
+        for key in self.dataset.sizes:
+            setattr(self, key, self.dataset.sizes[key])
+
+            
     def write(self, outfile: str = None):
 
         if outfile is None:
@@ -73,13 +78,18 @@ class XGridObj() :
         if self.order not in (1,2):
             raise RuntimeError("conservative order must be 1 or 2")
 
+        if self.on_gpu:
+            create_xgrid_2dx2d_order1 = pyfrenctools.create_xgrid.get_2dx2d_order1_gpu
+        else:
+            create_xgrid_2dx2d_order1 = pyfrenctools.create_xgrid.get_2dx2d_order1
+            
         for tgt_tile in self.tgt_grid:
 
             itile = 1
             xgrid={tgt_tile: dict()}
 
             for src_tile in self.src_grid.keys():
-                xgrid_out = pyfrenctools.create_xgrid.get_2dx2d_order1(
+                xgrid_out = create_xgrid_2dx2d_order1(
                     nlon_src=self.src_grid[src_tile].nxp - 1,
                     nlat_src=self.src_grid[src_tile].nyp - 1,
                     nlon_tgt=self.tgt_grid[tgt_tile].nxp - 1,

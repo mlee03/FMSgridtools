@@ -73,8 +73,6 @@ def transfer_data_gpu(nxcells: int):
 
     create_xgrid_transfer_data = _lib.create_xgrid_transfer_data
 
-    nxcells_t = c_int
-    
     arrayptr_int = np.ctypeslib.ndpointer(dtype=np.int32, flags="C_CONTIGUOUS")
     arrayptr_double = np.ctypeslib.ndpointer(dtype=np.float64, flags="C_CONTIGUOUS")
 
