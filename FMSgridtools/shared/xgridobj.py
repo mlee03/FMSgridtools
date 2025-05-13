@@ -63,7 +63,7 @@ class XGridObj() :
         for key in self.dataset.sizes:
             setattr(self, key, self.dataset.sizes[key])
 
-            
+
     def write(self, outfile: str = None):
 
         if outfile is None:
@@ -82,7 +82,7 @@ class XGridObj() :
             create_xgrid_2dx2d_order1 = pyfrenctools.create_xgrid.get_2dx2d_order1_gpu
         else:
             create_xgrid_2dx2d_order1 = pyfrenctools.create_xgrid.get_2dx2d_order1
-            
+
         for tgt_tile in self.tgt_grid:
 
             itile = 1
@@ -104,7 +104,7 @@ class XGridObj() :
                 itile = itile + 1
 
         return self.create_dataset(xgrid)
-    
+
     def create_dataset(self, xgrid: dict()):
 
         for i_xgrid in xgrid.values():
