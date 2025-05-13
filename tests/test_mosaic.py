@@ -21,23 +21,21 @@ def test_create_tile():
     xstart, xend = 0, 360
     ystart, yend = -90, 90
 
-    x = np.arange(xstart, xend, dtype=float)
-    y = np.arange(ystart, yend, dtype=float)
+    x = np.arange(xstart, xend, dtype=np.float64)
+    y = np.arange(ystart, yend, dtype=np.float64)
     x, y = np.meshgrid(x, y)
 
     xarr = xr.DataArray(
             data = x,
-            dims = ["nyp", "nxp"]).astype(np.float64)
+            dims = ["nyp", "nxp"])
 
     yarr = xr.DataArray(
             data = y,
-            dims = ["nyp", "nxp"]).astype(np.float64)
+            dims = ["nyp", "nxp"])
 
     tile = xr.Dataset(
         data_vars={"x": xarr,
-                "y": yarr
-        }).astype({"x": np.float64, "y": np.float64})
-    tile.to_netcdf(tilefile)
+                   "y": yarr}).to_netcdf(tilefile)
 
 def test_create_regional_input():
     grid_size = DEFAULT_GRID_SIZE
@@ -81,7 +79,7 @@ def test_write_function():
                     contacts=np.full(6, "", dtype=str),
                     contact_index=np.full(6, "", dtype=str))
     mosaic.write_out_mosaic(output)
-    assert os.path.exists(output) is True
+    assert os.path.exists(output)
 
 def test_getntiles():
     mosaic = MosaicObj(mosaic_file=output)
