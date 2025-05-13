@@ -6,30 +6,19 @@ import xarray as xr
 
 import FMSgridtools
 
-def generate_mosaic(nx: int = 90, ny:int = 45, refine: int = 2):
+def generate_mosaic(nx: int = 90, ny: int = 45, refine: int = 2):
 
     xstart, xend = 0, 360
     ystart, yend = -45, 45
-    nx_src, ny_src = nx, ny
-    nxp_src, nyp_src = nx_src+1, ny_src+1
-    dx_src = (xend-xstart)/(nxp_src-1)
-    dy_src = (yend-ystart)/(nyp_src-1)
 
-    nx_tgt, ny_tgt = nx_src*refine, ny_src*refine
-    nxp_tgt, nyp_tgt = nx_tgt+1, ny_tgt+1
-    dx_tgt = dx_src/refine
-    dy_tgt = dy_src/refine
+    x_src = np.linspace(xstart, xend, nx+1)
+    y_src = np.linspace(ystart, yend, ny+1)
+    x_src, y_src = np.meshgrid(x_src, y_src)
 
-    x_src, y_src = [], []
-    for j in range(nyp_src):
-        x_src.append([xstart+i*dx_src for i in range(nxp_src)])
-        y_src.append([ystart+j*dy_src]*nxp_src)
-
-    x_tgt, y_tgt = [], []
-    for j in range(nyp_tgt):
-        x_tgt.append([xstart+i*dx_tgt for i in range(nxp_tgt)])
-        y_tgt.append([ystart+j*dy_tgt]*nxp_tgt)
-
+    x_tgt = np.linspace(xstart, xend, nx*refine+1)
+    y_tgt = np.linspace(ystart, yend, ny*refine+1)
+    x_tgt, y_tgt = np.meshgrid(x_tgt, y_tgt)
+    
     for ifile in ("src", "tgt"):
         mosaicfile = ifile + "_mosaic.nc"
         gridfile = ifile + "_grid.nc"
