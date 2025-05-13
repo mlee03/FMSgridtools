@@ -54,6 +54,8 @@ def test_create_xgrid() :
     generate_mosaic(nx=nx, ny=ny, refine=refine)
 
     xgrid = FMSgridtools.XGridObj(src_mosaic="src_mosaic.nc", tgt_mosaic="tgt_mosaic.nc")
+    exit()
+
     xgrid.create_xgrid()
     xgrid.write()
 

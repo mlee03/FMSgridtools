@@ -37,8 +37,8 @@ class XGridObj() :
         self.xarea = None
         self.nxcells = None
 
-        self._check_restart_remap_file()
-        self._check_mosaic()
+        if self._check_restart_remap_file(): return
+        if self._check_mosaic(): return
 
         raise RuntimeError("""
         Exchange grids can be generated from
@@ -94,7 +94,7 @@ class XGridObj() :
                 itile = itile + 1
 
         return self.create_dataset(xgrid)
-
+    
     def create_dataset(self, xgrid: dict()):
 
         for i_xgrid in xgrid.values():
@@ -137,9 +137,15 @@ class XGridObj() :
         if self.restart_remap_file is not None :
             check_file_is_there(self.restart_remap_file)
             self.read()
+            return True
+        else:
+            return False
 
     def _check_mosaic(self):
 
         if self.src_mosaic is not None and self.tgt_mosaic is not None:
             self.src_grid = MosaicObj(self.src_mosaic).griddict()
             self.tgt_grid = MosaicObj(self.tgt_mosaic).griddict()
+            return True
+        else:
+            return False
