@@ -9,7 +9,10 @@ def make(global_mosaic,
         output data onto regular lat-lon grid."""
 
         #get tile number from regional file
-        tile = int(list(filter(str.isdigit, regional_file))[0])
+        try:
+            tile = int(list(filter(str.isdigit, regional_file))[0])
+        except IndexError: 
+            sys.exit("make_regional_mosaic: tile number not found in the regional_file name")
 
         ds = xr.open_dataset(regional_file)
         nx = ds.sizes['grid_xt_sub01']
@@ -29,9 +32,11 @@ def make(global_mosaic,
             print("Error: make_regional_mosaic: j_max-j_min+1 != ny")
 
         grid = MosaicObj(global_mosaic).griddict()
-        x = grid[f'tile{tile}'].x
+        try:
+            x,y = grid[f'tile{tile}'].x, grid[f'tile{tile}'].y
+        except KeyError:
+            sys.exit("make_regional_mosaic: gridtile with matching tile number not found")
         xarr = x[round(2*j_min - 2):round(2*j_min - 2 + 2*ny+1), round(2*i_min - 2):round(2*i_min - 2 + 2*nx+1)]
-        y = grid[f'tile{tile}'].y
         yarr = y[round(2*j_min - 2):round(2*j_min - 2 + 2*ny+1), round(2*i_min - 2):round(2*i_min - 2 + 2*nx+1)]
 
         outfile = f"regional_grid.tile{tile}.nc"
