@@ -8,4 +8,3 @@ int create_xgrid_order1_gpu_wrapper(int nx_src, int ny_src, int nx_dst, int ny_d
 void create_xgrid_transfer_data(long int nxgrid, *xgrid_ij1_in, int *xgrid_ij2_in, double *xgrid_area_in);
 
 #endif
-
