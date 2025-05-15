@@ -1,10 +1,12 @@
 import os
 import sys
+from subprocess import run
 from time import ctime
+from typing import Optional
+
 from git import Repo
 from pkg_resources import get_distribution
-from typing import Optional
-from subprocess import run
+
 
 def check_file_is_there( check_file: str, debug: bool = False ) :
 

@@ -46,11 +46,11 @@ void mpp_domain_init( )
 {
   pe      = mpp_pe();
   npes    = mpp_npes();
-  root_pe = mpp_root_pe();  
+  root_pe = mpp_root_pe();
 
 }; /* mpp_domain_init */
 
-/*********************************************************** 
+/***********************************************************
          void mpp_domain_end()
          release memory.
 ***********************************************************/
@@ -72,7 +72,7 @@ void mpp_define_layout(int ni, int nj, int ndivs, int layout[])
 
   /*first try to divide ndivs in the domain aspect ratio:
     if imperfect aspect, reduce idiv till it divides ndivs */
-  fdiv = sqrt((1.0*ndivs*ni)/nj); 
+  fdiv = sqrt((1.0*ndivs*ni)/nj);
   idiv = floor(fdiv);
   if(fdiv-idiv > 0.5) idiv = idiv + 1;
   idiv = (idiv>1) ? idiv : 1;  /*for isz=1 line above can give 0*/
@@ -104,7 +104,7 @@ void mpp_compute_extent(int npts, int ndivs, int *ibegin, int *iend)
   int isg, ieg, is, ie;
   int imax, ndmax, ndmirror;
   int ndiv;
-  
+
   if(ndivs > npts ) {
      mpp_error("mpp_compute_extent: more divisions requested than rows available. " );
   }
@@ -112,7 +112,7 @@ void mpp_compute_extent(int npts, int ndivs, int *ibegin, int *iend)
   ndivs_is_odd = ndivs%2;
   npts_is_odd = npts%2;
   symmetrize = 0;
-  if( ndivs_is_odd && npts_is_odd ) symmetrize = 1; 
+  if( ndivs_is_odd && npts_is_odd ) symmetrize = 1;
   if( ndivs_is_odd == 0 && npts_is_odd == 0 ) symmetrize = 1;
   if( ndivs_is_odd && npts_is_odd == 0 && ndivs < npts/2 ) symmetrize = 1;
 
@@ -148,7 +148,7 @@ void mpp_compute_extent(int npts, int ndivs, int *ibegin, int *iend)
 	ie = is + ceil((imax-is+1.0)/(ndmax-ndiv)) - 1;
       }
     }
- 
+
     ibegin[ndiv] = is;
     iend[ndiv] = ie;
     if( ie < is )mpp_error("mpp_domains(mpp_compute_extent): domain extents must be positive definite." );
@@ -172,14 +172,14 @@ void mpp_define_domain_1d(int npts, int ndivs, domain1D *domain )
   domain->endlist = (int *)malloc(ndivs*sizeof(int));
 
   mpp_compute_extent(npts, ndivs, domain->beglist, domain->endlist);
-  
+
   if(npes == ndivs) {
     domain->start = domain->beglist[pe];
     domain->end   = domain->endlist[pe];
     domain->size  = domain->end - domain->start + 1;
     domain->sizeg = npts;
   }
-  
+
 }; /* mpp_define_domain_1d */
 
 
@@ -191,15 +191,15 @@ void mpp_define_domain_1d(int npts, int ndivs, domain1D *domain )
 void mpp_define_domain2d(int ni, int nj, int layout[], int xhalo, int yhalo, domain2D *domain )
 {
   domain1D domx, domy;
-  int i, j, posx, posy, n; 
+  int i, j, posx, posy, n;
 
   domain->isclist = (int *)malloc(layout[0]*layout[1]*sizeof(int));
   domain->ieclist = (int *)malloc(layout[0]*layout[1]*sizeof(int));
   domain->jsclist = (int *)malloc(layout[0]*layout[1]*sizeof(int));
-  domain->jeclist = (int *)malloc(layout[0]*layout[1]*sizeof(int));  
+  domain->jeclist = (int *)malloc(layout[0]*layout[1]*sizeof(int));
 
   mpp_define_domain_1d(ni, layout[0], &domx);
-  mpp_define_domain_1d(nj, layout[1], &domy); 
+  mpp_define_domain_1d(nj, layout[1], &domy);
 
   n = 0;
   for(j=0; j<layout[1]; j++) {
@@ -221,7 +221,7 @@ void mpp_define_domain2d(int ni, int nj, int layout[], int xhalo, int yhalo, dom
   domain->isd   = domain->isc - xhalo;
   domain->ied   = domain->iec + xhalo;
   domain->jsd   = domain->jsc - yhalo;
-  domain->jed   = domain->jec + yhalo;  
+  domain->jed   = domain->jec + yhalo;
   domain->nxc   = domain->iec - domain->isc + 1;
   domain->nyc   = domain->jec - domain->jsc + 1;
   domain->nxd   = domain->ied - domain->isd + 1;
@@ -231,7 +231,7 @@ void mpp_define_domain2d(int ni, int nj, int layout[], int xhalo, int yhalo, dom
 
   mpp_delete_domain1d(&domx);
   mpp_delete_domain1d(&domy);
-  
+
 }; /* mpp_define_domain2d */
 
 /****************************************************************************
@@ -243,7 +243,7 @@ void mpp_delete_domain1d(domain1D *domain)
 
   free(domain->beglist);
   free(domain->endlist);
-  
+
 }; /* mpp_delete_domain1d */
 
 /****************************************************************************
@@ -257,7 +257,7 @@ void mpp_delete_domain2d(domain2D *domain)
   free(domain->ieclist);
   free(domain->jsclist);
   free(domain->jeclist);
-  
+
 }; /* mpp_delete_domain2d */
 
 
@@ -283,7 +283,7 @@ void mpp_get_compute_domain2d(domain2D domain, int *is, int *ie, int *js, int *j
 void mpp_get_compute_domains2d(domain2D domain, int *is, int *ie, int *js, int *je)
 {
   int n;
-  
+
   for(n=0; n<npes;n++) {
     is[n] = domain.isclist[n];
     ie[n] = domain.ieclist[n];
@@ -304,7 +304,7 @@ void mpp_get_data_domain2d(domain2D domain, int *is, int *ie, int *js, int *je)
   *ie = domain.ied;
   *js = domain.jsd;
   *je = domain.jed;
-}; /* mpp_get_data_domain */ 
+}; /* mpp_get_data_domain */
 
 /**********************************************************
     void mpp_get_global_domain(int *nx, int *ny )
@@ -315,7 +315,7 @@ void mpp_get_global_domain2d(domain2D domain, int *nx, int *ny )
 {
   *nx = domain.nxg;
   *ny = domain.nyg;
-}; /* mpp_get_global_domain */ 
+}; /* mpp_get_global_domain */
 
 /****************************************************************
    void mpp_get_shift(int sizex, int sizey, int *ishift, int *jshift)
@@ -326,23 +326,23 @@ void mpp_get_global_domain2d(domain2D domain, int *nx, int *ny )
 void mpp_get_shift(domain2D domain, int sizex, int sizey, int *ishift, int *jshift)
 {
   int nxc, nyc, nxd, nyd;
-  
+
   nxc = domain.nxc; nyc = domain.nyc;
   nxd = domain.nxd; nyd = domain.nyd;
 
-  if( (sizex == nxc && sizey == nyc) || (sizex == nxd && sizey == nyd) ) { 
+  if( (sizex == nxc && sizey == nyc) || (sizex == nxd && sizey == nyd) ) {
     *ishift = 0;
     *jshift = 0;
   }
-  else if ( (sizex == nxc+1 && sizey == nyc) || (sizex == nxd+1 && sizey == nyd)) { 
+  else if ( (sizex == nxc+1 && sizey == nyc) || (sizex == nxd+1 && sizey == nyd)) {
     *ishift = 1;
     *jshift = 0;
   }
-  else if ( (sizex == nxc && sizey == nyc+1) || (sizex == nxd && sizey == nyd+1) ) { 
+  else if ( (sizex == nxc && sizey == nyc+1) || (sizex == nxd && sizey == nyd+1) ) {
     *ishift = 0;
     *jshift = 1;
   }
-  else if ( (sizex == nxc+1 && sizey == nyc+1) || (sizex == nxd+1 && sizey == nyd+1) ) { 
+  else if ( (sizex == nxc+1 && sizey == nyc+1) || (sizex == nxd+1 && sizey == nyd+1) ) {
     *ishift = 1;
     *jshift = 1;
   }
@@ -369,7 +369,7 @@ void mpp_global_field_all_double(domain2D domain, int sizex, int sizey, const do
   ie = domain.iec + ishift;
   js = domain.jsc;
   je = domain.jec + jshift;
-  
+
   nxc = ie-is+1;
   nyc = je-js+1;
   isd = domain.isd;
@@ -407,7 +407,7 @@ void mpp_global_field_all_double(domain2D domain, int sizex, int sizey, const do
   }
   else
     mpp_error("mpp_domain(mpp_global_field_all_double: data should be on compute/data domain");
-  
+
   /* send the data */
   for(p=0;p<npes;p++) {
     mpp_send_double(send_buffer, nxc*nyc, p);
@@ -428,7 +428,7 @@ void mpp_global_field_all_double(domain2D domain, int sizex, int sizey, const do
   }
 
   mpp_sync_self();
-  
+
   free(send_buffer);
 }; /* mpp_global_field_all_double */
 
@@ -444,13 +444,13 @@ void mpp_global_field_double(domain2D domain, int sizex, int sizey, const double
   int i, j, n, ni, nj, ii, jj, l, p, recv_size;
   int ishift, jshift, nxc, nyc, nxd, nyd, nxg;
   int is, ie, js, je, isd, jsd;
-  
+
   mpp_get_shift( domain, sizex, sizey, &ishift, &jshift);
   is = domain.isc;
   ie = domain.iec + ishift;
   js = domain.jsc;
   je = domain.jec + jshift;
-  
+
   nxc = ie-is+1;
   nyc = je-js+1;
   isd = domain.isd;
@@ -458,7 +458,7 @@ void mpp_global_field_double(domain2D domain, int sizex, int sizey, const double
   nxd = domain.nxd + ishift;
   nyd = domain.nyd + jshift;
   nxg = domain.nxg + ishift;
-  
+
   /* all other pe except root pe will send data to root pe */
   if( pe != root_pe) {
     if( sizex == nxc && sizey == nyc ){ /* data is on compute domain */
@@ -508,7 +508,7 @@ void mpp_global_field_double(domain2D domain, int sizex, int sizey, const double
   }
 
   mpp_sync_self();
-  
+
   if(send_buffer != NULL) free(send_buffer);
 }; /* mpp_global_field_double */
 
@@ -523,13 +523,13 @@ void mpp_global_field_int(domain2D domain, int sizex, int sizey, const int* ldat
   int i, j, n, ni, nj, ii, jj, l, p, recv_size;
   int ishift, jshift, nxc, nyc, nxd, nyd, nxg;
   int is, ie, js, je, isd, jsd;
-  
+
   mpp_get_shift( domain, sizex, sizey, &ishift, &jshift);
   is = domain.isc;
   ie = domain.iec + ishift;
   js = domain.jsc;
   je = domain.jec + jshift;
-  
+
   nxc = ie-is+1;
   nyc = je-js+1;
   isd = domain.isd;
@@ -537,7 +537,7 @@ void mpp_global_field_int(domain2D domain, int sizex, int sizey, const int* ldat
   nxd = domain.nxd + ishift;
   nyd = domain.nyd + jshift;
   nxg = domain.nxg + ishift;
-  
+
   /* all other pe except root pe will send data to root pe */
   if( pe != root_pe) {
     if( sizex == nxc && sizey == nyc ){ /* data is on compute domain */
@@ -587,7 +587,7 @@ void mpp_global_field_int(domain2D domain, int sizex, int sizey, const int* ldat
   }
 
   mpp_sync_self();
-  
+
   if(send_buffer != NULL) free(send_buffer);
 }; /* mpp_global_field_int */
 
@@ -604,14 +604,14 @@ void mpp_global_field_double_3D(domain2D domain, int sizex, int sizey, int sizez
   int i, j, k, n, ni, nj, ii, jj, l, p, recv_size;
   int ishift, jshift, nxc, nyc, nxd, nyd, nxg, nyg;
   int is, ie, js, je, isd, jsd;
-  int send_size;  
+  int send_size;
 
   mpp_get_shift( domain, sizex, sizey, &ishift, &jshift);
   is = domain.isc;
   ie = domain.iec + ishift;
   js = domain.jsc;
   je = domain.jec + jshift;
-  
+
   nxc = ie-is+1;
   nyc = je-js+1;
   isd = domain.isd;
@@ -709,7 +709,7 @@ void mpp_gather_field_int(int lsize, int *ldata, int *gdata)
 
   rsize = (int *)malloc(npes*sizeof(int));
 
-  
+
   for(p = 0; p<npes; p++) {
     if(pe != p) { /* send to other pe. */
       mpp_send_int(&lsize, 1, p);
@@ -728,7 +728,7 @@ void mpp_gather_field_int(int lsize, int *ldata, int *gdata)
     if(pe != p) { /* send to other pe. */
       if(lsize>0) mpp_send_int(ldata, lsize, p);
     }
-  }  
+  }
   n = 0;
   /* receive from other pe and fill the gdata */
   for(p = 0; p<npes; p++) {
@@ -747,7 +747,7 @@ void mpp_gather_field_int(int lsize, int *ldata, int *gdata)
 
   mpp_sync_self();
   free(rsize);
-  
+
 }; /* mpp_gather_field_int */
 
 /*******************************************************************************
@@ -761,7 +761,7 @@ void mpp_gather_field_int_root(int lsize, int *ldata, int *gdata)
   int *rsize=NULL;
 
   rsize = (int *)malloc(npes*sizeof(int));
-  
+
   /* all other pe except root pe will send data to root pe */
   if( pe != root_pe) {
       mpp_send_int(&lsize, 1, root_pe);
@@ -777,7 +777,7 @@ void mpp_gather_field_int_root(int lsize, int *ldata, int *gdata)
 
   if( pe != root_pe) {
       if(lsize>0) mpp_send_int(ldata, lsize, root_pe);
-  }  
+  }
   else {
     int cur_size;
     n = 0;
@@ -804,7 +804,7 @@ void mpp_gather_field_int_root(int lsize, int *ldata, int *gdata)
 
   mpp_sync_self();
   free(rsize);
-  
+
 }; /* mpp_gather_field_int_root */
 
 
@@ -819,7 +819,7 @@ void mpp_gather_field_double_root(int lsize, double *ldata, double *gdata)
   int *rsize=NULL;
 
   rsize = (int *)malloc(npes*sizeof(int));
-  
+
   /* all other pe except root pe will send data to root pe */
   if( pe != root_pe) {
       mpp_send_int(&lsize, 1, root_pe);
@@ -872,7 +872,7 @@ void mpp_gather_field_double(int lsize, double *ldata, double *gdata)
   int *rsize=NULL;
 
   rsize = (int *)malloc(npes*sizeof(int));
-  
+
   for(p = 0; p<npes; p++) {
     if(pe != p) { /* send to other pe. */
       mpp_send_int(&lsize, 1, p);
@@ -891,7 +891,7 @@ void mpp_gather_field_double(int lsize, double *ldata, double *gdata)
     if(pe != p) { /* send to other pe. */
       if(lsize>0) mpp_send_double(ldata, lsize, p);
     }
-  }  
+  }
   n = 0;
   /* receive from other pe and fill the gdata */
   for(p = 0; p<npes; p++) {
@@ -910,6 +910,5 @@ void mpp_gather_field_double(int lsize, double *ldata, double *gdata)
 
   mpp_sync_self();
   free(rsize);
-  
-}; /* mpp_gather_field_double*/
 
+}; /* mpp_gather_field_double*/

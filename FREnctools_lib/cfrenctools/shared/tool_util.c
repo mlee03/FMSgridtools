@@ -813,4 +813,3 @@ void print_provenance_gv(int fid, const char * history, char * grid_version){
 void print_provenance(int fid,  const char * history){
   print_provenance_gv_gca(fid, history, NULL, 0 );
 }
-

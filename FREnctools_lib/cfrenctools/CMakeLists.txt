@@ -46,7 +46,7 @@ set(SRC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 # Create the shared library target
 add_library(clib SHARED ${c_source_files})
 
-target_include_directories(clib PUBLIC 
+target_include_directories(clib PUBLIC
     ${SRC_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/shared
     ${NetCDF_C_INCLUDE_DIRS}
@@ -59,7 +59,7 @@ target_link_libraries(clib PUBLIC NetCDF::NetCDF_C
 
 # Set the output directory
 set_target_properties(
-    clib PROPERTIES 
+    clib PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/c_build
     POSITION_INDEPENDENT_CODE ON
     PREFIX ""

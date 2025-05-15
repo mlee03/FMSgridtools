@@ -1,9 +1,9 @@
 import os
+import subprocess
 from pathlib import Path
 from typing import List
-import subprocess
 
-from setuptools import setup, find_namespace_packages
+from setuptools import find_namespace_packages, setup
 from setuptools.command.install import install
 
 def local_pkg(name: str, relative_path: str) -> str:
