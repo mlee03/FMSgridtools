@@ -52,7 +52,6 @@ class MosaicObj:
                   unable to return number of tiles")
 
     def griddict(self) -> dict:
-
         if self.gridtiles is None:
             gridtiles = [tile.decode('ascii') for
                          tile in self.dataset.gridtiles.values]
