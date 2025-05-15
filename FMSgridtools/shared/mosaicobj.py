@@ -48,25 +48,25 @@ class MosaicObj:
         self.get_attributes()
         return self
 
-    def get_attributes(self):
+    def get_attributes(self) -> None:
         for key in self.dataset.data_vars:
             setattr(self, key, self.dataset[key].astype(str).values)
 
         for key in self.dataset.sizes:
             setattr(self, key, self.dataset.sizes[key])
 
-    def add_attributes(self, attribute: str, value: Any = None):
+    def add_attributes(self, attribute: str, value: Any = None) -> None:
 
         setattr(self, attribute, value)
 
-    def get_grid(self) -> Dict:
+    def get_grid(self) -> dict:
 
         for i in range(self.ntiles):
             self.grid[self.gridtiles[i]] = GridObj(gridfile=self.gridfiles[i]).read()
 
         return self.grid
 
-    def write(self, outfile: str = None):
+    def write(self, outfile: str = None) -> None:
 
         dataset = {}
 
