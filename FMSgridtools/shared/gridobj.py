@@ -45,7 +45,6 @@ class GridObj:
         return self
 
     def get_attributes(self):
-        numbers = [np.ndarray]
 
         for key in self.dataset.data_vars:
             if isinstance(self.dataset.data_vars[key].values, np.ndarray):
