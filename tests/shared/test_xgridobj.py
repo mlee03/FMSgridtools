@@ -1,4 +1,4 @@
-from gridtools import XGridObj, GridObj
+from FMSgridtools import XGridObj, GridObj
 import numpy as np
 import os
 import pytest

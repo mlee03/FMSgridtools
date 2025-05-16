@@ -1,5 +1,5 @@
-from gridtools import check_file_is_there
-from gridtools import get_provenance_attrs
+from fmsgridtools import check_file_is_there
+from fmsgridtools import get_provenance_attrs
 import os
 import pytest
 
