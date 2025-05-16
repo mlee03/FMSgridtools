@@ -1,11 +1,9 @@
 import dataclasses
 from typing import List, Optional
-
 import numpy as np
 import numpy.typing as npt
 import xarray as xr
-
-#from FMSgridtools.shared.gridtools_utils import check_file_is_there
+from FMSgridtools.shared.gridtools_utils import check_file_is_there
 
 
 """
@@ -40,7 +38,7 @@ class GridObj:
     """
     def read(self):
 
-        #check_file_is_there(self.gridfile)
+        check_file_is_there(self.gridfile)
         self.dataset = xr.open_dataset(self.gridfile)
         self.get_attributes()
 
