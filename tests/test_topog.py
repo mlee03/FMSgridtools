@@ -1,12 +1,14 @@
 # unit test for Topog.py functionality
 
-from FMSgridtools import TopogObj
-from FMSgridtools import get_provenance_attrs
+from os import remove
+from pathlib import Path
+
 import numpy as np
 import pytest
-from pathlib import Path
-from os import remove
 import xarray
+
+from FMSgridtools import TopogObj, get_provenance_attrs
+
 
 def test_generate_rectangular_basin_single_tile():
     out_file = "test_topog_rectangular_basin_single_tile.nc"

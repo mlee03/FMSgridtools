@@ -1,18 +1,19 @@
-from gridtools import check_file_is_there
-from gridtools import get_provenance_attrs
 import os
+
 import pytest
+from gridtools import check_file_is_there, get_provenance_attrs
+
 
 def test_check_file_is_there() :
 
-    testfile = 'file_is_here'    
+    testfile = 'file_is_here'
     with open(testfile, 'w') as myfile : pass
     check_file_is_there(testfile)
     os.remove(testfile)
 
 @pytest.mark.xfail
 def test_check_file_is_not_there() :
-    
+
     testfile = 'file_is_not_here'
     check_file_is_there(testfile)
 

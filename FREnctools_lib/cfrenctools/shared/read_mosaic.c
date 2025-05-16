@@ -808,4 +808,3 @@ void read_mosaic_grid_data(const char *mosaic_file, const char *name, int nx, in
   free(tmp);
 
 }; /* read_mosaic_grid_data */
-

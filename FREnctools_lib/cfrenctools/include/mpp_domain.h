@@ -18,11 +18,11 @@
  * <http://www.gnu.org/licenses/>.
  **********************************************************************/
 /****************************************************************
-                        mpp_domain.h 
-   This headers define interface to define domain layout, 
-   define domain decomposition and global field to root pe, 
+                        mpp_domain.h
+   This headers define interface to define domain layout,
+   define domain decomposition and global field to root pe,
    some utilities routine to return domain decomposition.
-   Currently it only used in tools and assume only one domain is created. 
+   Currently it only used in tools and assume only one domain is created.
    If more domains are needed, we may define a struct to hold domain informaiton.
    contact: Zhi.Liang@noaa.gov
 

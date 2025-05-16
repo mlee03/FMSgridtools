@@ -1,8 +1,11 @@
-import xarray as xr
-import numpy as np
-import dataclasses
 import ctypes
+import dataclasses
+
+import numpy as np
+import xarray as xr
+
 from ..shared.gridtools_utils import check_file_is_there
+
 
 # macro value from tool_util.h
 VERSION_2 = 2
@@ -14,9 +17,9 @@ class TopogObj():
     mosaic_filename: str = None
     output_name: str = None
     ntiles: int = None
-    x_tile: dict = dataclasses.field(default_factory=dict) 
+    x_tile: dict = dataclasses.field(default_factory=dict)
     y_tile: dict = dataclasses.field(default_factory=dict)
-    nx_tile: dict = dataclasses.field(default_factory=dict) # TODO nx/ny can probably be a property 
+    nx_tile: dict = dataclasses.field(default_factory=dict) # TODO nx/ny can probably be a property
     ny_tile: dict = dataclasses.field(default_factory=dict)
     x_refine: int = None
     y_refine: int = None
@@ -57,7 +60,7 @@ class TopogObj():
             print("Warning: write routine called but depth data not yet generated")
 
         depth_attrs = { "standard_name":"topographic depth at T-cell centers",
-                        "units" : "meters" }      
+                        "units" : "meters" }
         if(self.has_vgrid):
             num_levels_attrs = {"standard_name":"number of vertical T-cells",
                                 "units":"none"}
@@ -74,13 +77,13 @@ class TopogObj():
                     data = self.depth_vals['num_levels_tile1'],
                     dims = self.dims,
                     attrs = num_levels_attrs)
-        # multi-tile 
+        # multi-tile
         else:
             i = 0
             for tname in self.x_tile.keys():
                 i = i + 1
                 self.depth_vars[f'depth_{tname}'] = xr.DataArray(
-                    data = self.depth_vals[f'depth_{tname}'], 
+                    data = self.depth_vals[f'depth_{tname}'],
                     dims = self.dims[(i-1)*2:(i-1)*2+2],
                     attrs = depth_attrs)
                 if self.has_vgrid:
@@ -91,7 +94,7 @@ class TopogObj():
 
         # create dataset (this excludes ntiles, since it is not used in a variable)
         self.dataset = xr.Dataset( data_vars=self.depth_vars )
-        
+
         # add any global attributes
         if self.global_attrs is not None:
             self.dataset.attrs = self.global_attrs
@@ -137,7 +140,7 @@ class TopogObj():
         generate_realistic_c.argtypes = [ ctypes.c_int, ctypes.c_int,                        # nx_dst, ny_dst
                                           ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int), # x_dst, y_dst
                                           ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, # vgrid_file, topog_file, topog_field
-                                          ctypes.c_double, ctypes.c_int,                     # scale_factor, tripolar_grid, 
+                                          ctypes.c_double, ctypes.c_int,                     # scale_factor, tripolar_grid,
                                           ctypes.c_int, ctypes.c_int,                        # cyclic_x, cyclic_y
                                           ctypes.c_int, ctypes.c_int, ctypes.c_int,          # fill_first_row, filter_topog, num_filter_pass
                                           ctypes.c_int, ctypes.c_int, ctypes.c_int,          # smooth_topo_allow_deepening, round_shallow, fill_shallow
@@ -145,12 +148,12 @@ class TopogObj():
                                           ctypes.c_int, ctypes.c_int, ctypes.c_int,          # adjust_topo, fill_isolated_cells, dont_change_landmask
                                           ctypes.c_int, ctypes.c_double, ctypes.c_int,       # kmt_min, min_thickness, open_very_this_cell,
                                           ctypes.c_double, ctypes.c_void_p, ctypes.c_void_p, # fraction_full_cell, depth, num_levels
-                                          ctypes.c_int, ctypes.c_int,                        # debug, use_great_circle_algo 
+                                          ctypes.c_int, ctypes.c_int,                        # debug, use_great_circle_algo
                                           ctypes.c_int, ctypes.c_int, ctypes.c_int,          # on_grid, x_refine, y_refine
                                           ctypes.c_char_p, ctypes.c_int, ctypes.c_int ]      # tile_names, rotate_poly, gpu
         get_boundary_type_c.argtypes = [ctypes.c_char_p, ctypes.c_int, ctypes.POINTER(ctypes.c_int),
                                         ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int)]
-                                          
+
         # TODO (done in c for now)
         # if optional vgrid file is provided, read in the dimension and zeta values
         #if(vgrid_file is not None):
@@ -166,15 +169,15 @@ class TopogObj():
                 #raise ValueError("topog: size of dimension nzv should be 2*nk+1, where nk is the number of model vertical level");
             #nk = (nzv-1)/2
             ## allocate zw[nk]
-            #zw = [None] * nk 
-            ## read in zeta value from file 
+            #zw = [None] * nk
+            ## read in zeta value from file
             ##for(k=0; k<nk; k++) zw[k] = zeta[2*(k+1)];
             #for k in range(nk):
                 #zw[k] = zeta[2*(k+1)]
 
-        ## check required arguments 
+        ## check required arguments
         if topog_file is None:
-            raise ValueError("No argument given for topog_file") 
+            raise ValueError("No argument given for topog_file")
         check_file_is_there(topog_file)
         if topog_field is None:
             raise ValueError("No argument given for topog_field")
@@ -185,7 +188,7 @@ class TopogObj():
             check_file_is_there(vgrid_file)
             self.has_vgrid = True
 
-        # set boundary type arguments based on the mosaic 
+        # set boundary type arguments based on the mosaic
         cyclic_x = ctypes.c_int(0)
         cyclic_y = ctypes.c_int(0)
         tripolar_grid = ctypes.c_int(0)
@@ -199,13 +202,13 @@ class TopogObj():
         _nx_dst = self.nx_tile[tileName]
         _ny_dst = self.ny_tile[tileName]
         # get x/y values from grid objs
-        _x_dst = self.x_tile[tileName] 
-        _y_dst = self.y_tile[tileName] 
+        _x_dst = self.x_tile[tileName]
+        _y_dst = self.y_tile[tileName]
         # set by 'get_boundary_type' call above
-        _tripolar_grid = tripolar_grid 
+        _tripolar_grid = tripolar_grid
         _cyclic_x = cyclic_x
         _cyclic_y = cyclic_y
-        # passed in flags (convert to ints) 
+        # passed in flags (convert to ints)
         _fill_first_row = bool_to_int(fill_first_row)
         _filter_topog = bool_to_int(filter_topog)
         _num_filter_pass = bool_to_int(num_filter_pass)
@@ -229,8 +232,8 @@ class TopogObj():
         _vgrid_file = None if vgrid_file is None else vgrid_file.encode('utf-8')
         _gpu = bool_to_int(gpu)
         # get the name of the grid file for the current tile
-        _grid_filename = grid_filenames[0].encode('utf-8') 
-        # TODO remove arg 
+        _grid_filename = grid_filenames[0].encode('utf-8')
+        # TODO remove arg
         _use_great_circle_algorithm = bool_to_int(False)
         # init return values for output arrays
         # this might not be neccessary since arrays are malloc'd in C
@@ -253,10 +256,10 @@ class TopogObj():
                               _fraction_full_cell, _depth.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                               _num_levels.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
                                _debug, _use_great_circle_algorithm, _on_grid, self.x_refine, self.y_refine,
-                               _grid_filename, _rotate_poly, _gpu) 
+                               _grid_filename, _rotate_poly, _gpu)
         # set depth for current tile to depth values generated by c function
-        self.depth_vals[f"depth_{tileName}"] = _depth 
-        # if a vgrid is used, add num_levels variable to the output data and set to returned array 
+        self.depth_vals[f"depth_{tileName}"] = _depth
+        # if a vgrid is used, add num_levels variable to the output data and set to returned array
         if(self.has_vgrid):
             self.depth_vals[f"num_levels_{tileName}"] = _num_levels
         self.__data_is_generated = True
@@ -306,7 +309,7 @@ class TopogObj():
         dome_embayment_south: float = None,
         dome_embayment_depth: float = None):
         pass
-    
+
 
 def bool_to_int(bool_val):
     if(bool_val):

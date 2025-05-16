@@ -1,3 +1,4 @@
+
 from typing import Optional, Dict, List, Any
 import xarray as xr
 from FMSgridtools.shared.gridobj import GridObj
@@ -69,7 +70,6 @@ class MosaicObj:
     def write(self, outfile: str = None) -> None:
 
         dataset = {}
-
         if self.mosaic_name is not None:
             dataset["mosaic"] = xr.DataArray(
                 data=self.mosaic_name.encode(),
