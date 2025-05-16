@@ -1,11 +1,12 @@
 #!/home/Ryan.Mulhall/.conda/envs/dev/bin/python3
 # make_topog entrypoint script
 
-import click
 from typing import Optional
 
-from FMSgridtools import TopogObj, MosaicObj
-from FMSgridtools import get_provenance_attrs, check_file_is_there
+import click
+
+from FMSgridtools import MosaicObj, TopogObj, check_file_is_there, get_provenance_attrs
+
 
 MOSAIC_FILE_OPT_HELP="Specify the mosaic file where topography data will be located."
 TOPOG_TYPE_OPT_HELP="""
@@ -30,7 +31,7 @@ FILL_SHALLOW_HELP="Make cells land if less than minimum depth"
 DEEPEN_SHALLOW_HELP="Make cells less than minimum depth equal to minimum depth"
 SMOOTH_TOPO_ALLOW_DEEPENING_HELP="Allow filter to deepen cells"
 VGRID_FILE_HELP="""Path to a vertical grid file. When a vgrid file is specified, an additional output variable
-'num_levels' will be written out to provide the number of vertical T-cells, and depth data 
+'num_levels' will be written out to provide the number of vertical T-cells, and depth data
 These following optional arguments are specific to when a vgrid file is provided:
     --dont_adjust_topo, --dont_fill_isolated_cells, --full_cell, --dont_open_very_this_cell, --flat_bottom
     --fraction_full_cell, --minimum_thickness, --dont_change_landmask, --kmt_min, --round_shallow, --fill_shallow,
@@ -209,7 +210,7 @@ More details on the topog_type options are below.
 
 'realistic':  Remap the topography onto the current grid from some source data file.
 
-              This is the default value if no --topog_type is provided. 
+              This is the default value if no --topog_type is provided.
 
               --topog_file and --topog_field must be specified.
 
@@ -233,9 +234,9 @@ More details on the topog_type options are below.
     prov_attrs = get_provenance_attrs()
 
     # read in object fields from file
-    inputMosaicObj = MosaicObj(mosaic_file=mosaic) 
+    inputMosaicObj = MosaicObj(mosaic_file=mosaic)
 
-    # get number of tiles and create dicts for x/y data 
+    # get number of tiles and create dicts for x/y data
     _ntiles = inputMosaicObj.get_ntiles()
     inputMosaicObj.griddict()
     x_tile = {}
@@ -249,11 +250,11 @@ More details on the topog_type options are below.
                         x_tile = x_tile, y_tile = y_tile, x_refine=x_refine, y_refine=y_refine,
                         scale_factor=scale_factor, debug=verbose)
 
-    # generate the topography data using the given topog_type algorithm 
+    # generate the topography data using the given topog_type algorithm
     if (topog_type == "realistic"):
         topogOut.make_topog_realistic(
             x_tile, y_tile, topog_file, topog_field, vgrid_file,
-            num_filter_pass, kmt_min, min_thickness, fraction_full_cell, 
+            num_filter_pass, kmt_min, min_thickness, fraction_full_cell,
             flat_bottom, fill_first_row, filter_topog, round_shallow, fill_shallow,
             deepen_shallow, smooth_topo_allow_deepening, full_cell, dont_fill_isolated_cells,
             on_grid, dont_change_landmask, dont_adjust_topo, open_very_this_cell, inputMosaicObj.gridfiles,

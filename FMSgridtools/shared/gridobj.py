@@ -7,6 +7,7 @@ import xarray as xr
 
 #from FMSgridtools.shared.gridtools_utils import check_file_is_there
 
+
 """
 GridObj:
 
@@ -56,7 +57,6 @@ class GridObj:
 
         for key in self.dataset.sizes:
             setattr(self, key, self.dataset.sizes[key])
-
 
     """
     write_out_grid:
@@ -152,7 +152,5 @@ class GridObj:
                 a_lat[i] = y_flat[(2*j+1)*(2*nx+1)+1]*D2R
 
         return np.ascontiguousarray(a_lon), np.ascontiguousarray(a_lat)
-
-
 
 #TODO: I/O method for passing to the host

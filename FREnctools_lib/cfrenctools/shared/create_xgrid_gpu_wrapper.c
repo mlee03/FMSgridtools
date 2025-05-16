@@ -68,7 +68,7 @@ int create_xgrid_order1_gpu_wrapper(int nx_src, int ny_src, int nx_dst, int ny_d
 
   //deallocate output_grid_cells
   return nxgrid;
-  
+
 }
 
 void create_xgrid_transfer_data(int nxgrid, int *xgrid_ij1_in, int *xgrid_ij2_in, double *xgrid_area_in)
@@ -79,10 +79,9 @@ void create_xgrid_transfer_data(int nxgrid, int *xgrid_ij1_in, int *xgrid_ij2_in
     xgrid_ij2_in[ix] = interp_gpu.output_parent_cell_index[ix];
     xgrid_area_in[ix] = interp_gpu.xcell_area[ix];
   }
-  
+
   free(interp_gpu.input_parent_cell_index);
   free(interp_gpu.output_parent_cell_index);
-  free(interp_gpu.xcell_area);  
+  free(interp_gpu.xcell_area);
 
 }
-

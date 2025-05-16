@@ -1,24 +1,25 @@
 import os
+import subprocess
 from pathlib import Path
 from typing import List
-import subprocess
 
-from setuptools import setup, find_namespace_packages
+from setuptools import find_namespace_packages, setup
 from setuptools.command.install import install
+
 
 class CustomInstall(install):
     def run(self):
         with open("compile_log.txt", "w") as f:
             subprocess.run(
-                ["cmake", ".."], 
-                cwd="./FREnctools_lib/cfrenctools/c_build", 
+                ["cmake", ".."],
+                cwd="./FREnctools_lib/cfrenctools/c_build",
                 stdout=f,
                 stderr=subprocess.STDOUT,
                 check=True,
             )
             subprocess.run(
-                ["make"], 
-                cwd="./FREnctools_lib/cfrenctools/c_build", 
+                ["make"],
+                cwd="./FREnctools_lib/cfrenctools/c_build",
                 stdout=f,
                 stderr=subprocess.STDOUT,
                 check=True,

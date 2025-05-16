@@ -44,4 +44,3 @@
 #define HPI (0.5*M_PI)
 
 #endif
-

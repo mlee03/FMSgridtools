@@ -117,5 +117,3 @@ void rotate_point( double rv[], double rmat [][3]);
 void rotate_poly(const double x[], const double y[], const int n,
   double xr[], double yr[]);
 void set_the_rotation_matrix();
-
-
