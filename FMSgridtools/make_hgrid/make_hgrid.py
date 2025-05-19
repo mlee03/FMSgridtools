@@ -61,14 +61,14 @@ def make_hgrid():
     default=False,
 )
 def lonlat(
-    nlon, 
-    nlat, 
-    xbnds, 
-    ybnds, 
-    dlon, 
-    dlat, 
-    use_great_circle_algorithm,
-    verbose,
+    nlon: str, 
+    nlat: str, 
+    xbnds: str, 
+    ybnds: str, 
+    dlon: str, 
+    dlat: str, 
+    use_great_circle_algorithm: bool,
+    verbose: bool,
 ):
     make_lonlat_grid(
         nlon=nlon,

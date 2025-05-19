@@ -1,6 +1,6 @@
+from ctypes import CDLL, POINTER, c_double, c_int
 import numpy as np
 import numpy.typing as npt
-import ctypes
 
 from pyfms.pyfms_utils.data_handling import (
     setscalar_Cint32,
@@ -10,179 +10,162 @@ from pyfms.pyfms_utils.data_handling import (
     set_Cchar,
 )
 
-# lib = ctypes.CDLL("./FREnctools_lib/cfrenctools/c_build/clib.so")
+_libpath = None
+_lib = None
 
-class make_hgrid_wrappers():
-    __libpath: str = None
-    __lib: ctypes.CDLL = None
+def init(libpath: str, lib: type[CDLL]):
 
-    @classmethod
-    def init(cls, libpath, lib):
-        cls.__libpath = libpath
-        cls.__lib = lib
+    global _libpath, _lib
 
-    @classmethod
-    @property
-    def lib(cls):
-        return cls.__lib
-
-    @classmethod
-    @property
-    def libpath(cls):
-        return cls.__libpath
+    _libpath = libpath
+    _lib = lib
     
-    @classmethod
-    def fill_cubic_grid_halo(
-            cls,
-            nx: int, 
-            ny: int, 
-            halo: int, 
-            data: npt.NDArray[np.float64], 
-            data1_all: npt.NDArray[np.float64],
-            data2_all: npt.NDArray[np.float64],
-            tile: int,
-            ioff: int,
-            joff: int,
-    ):
-        nxp = nx + ioff
-        nyp = ny + joff
-        nxph = nx + ioff + 2*halo
-        nyph = ny + joff + 2*halo
+def fill_cubic_grid_halo(
+        nx: int, 
+        ny: int, 
+        halo: int, 
+        data: npt.NDArray[np.float64], 
+        data1_all: npt.NDArray[np.float64],
+        data2_all: npt.NDArray[np.float64],
+        tile: int,
+        ioff: int,
+        joff: int,
+):
+    nxp = nx + ioff
+    nyp = ny + joff
+    nxph = nx + ioff + 2*halo
+    nyph = ny + joff + 2*halo
         
-        for i in range(nxph*nyph):
-            data[i] = -9999.
+    for i in range(nxph*nyph):
+        data[i] = -9999.
 
-        # first copy computing domain data
-        for j in range (nyp+1):
-            for i in range(nxp+1):
-                data[j*nxph+i] = data1_all[tile*nxp*nyp+(j-1)*nxp+(i-1)]
+    # first copy computing domain data
+    for j in range (nyp+1):
+        for i in range(nxp+1):
+            data[j*nxph+i] = data1_all[tile*nxp*nyp+(j-1)*nxp+(i-1)]
                 
-        ntiles = 6
+    ntiles = 6
         
-        if tile%2 == 1:
-            lw = (tile+ntiles-1)%ntiles
-            le = (tile+ntiles+2)%ntiles
-            ls = (tile+ntiles-2)%ntiles
-            ln = (tile+ntiles+1)%ntiles
-            for j in range(nyp+1):
-                data[j*nxph] = data1_all[lw*nxp*nyp+(j-1)*nxp+nx-1]       # west halo
-                data[j*nxph+nxp+1] = data2_all[le*nxp*nyp+ioff*nxp+nyp-j] # east halo
-            for i in range(nxp+1):
-                data[i] = data2_all[ls*nxp*nyp+(nxp-i)*nyp+(nx-1)]        # south halo
-                data[(nyp+1)*nxph+i] = data1_all[ln*nxp*nyp+joff*nxp+i-1] # north halo
-        else:
-            lw = (tile+ntiles-2)%ntiles
-            le = (tile+ntiles+1)%ntiles
-            ls = (tile+ntiles-1)%ntiles
-            ln = (tile+ntiles+2)%ntiles
-            for j in range(nyp+1):
-                data[j*nxph] = data2_all[lw*nxp*nyp+(ny-1)*nxp+nyp-j]     # west halo
-                data[j*nxph+nxp+1] = data1_all[le*nxp*nyp+(j-1)*nxp+ioff] # east halo
-            for i in range(nxp+1):
-                data[i] = data1_all[ls*nxp*nyp+(ny-1)*nxp+i-1]                # south halo
-                data[(nyp+1)*nxph+i] = data2_all[ln*nxp*nyp+(nxp-i)*nyp+joff] # north halo
+    if tile%2 == 1:
+        lw = (tile+ntiles-1)%ntiles
+        le = (tile+ntiles+2)%ntiles
+        ls = (tile+ntiles-2)%ntiles
+        ln = (tile+ntiles+1)%ntiles
+        for j in range(nyp+1):
+            data[j*nxph] = data1_all[lw*nxp*nyp+(j-1)*nxp+nx-1]       # west halo
+            data[j*nxph+nxp+1] = data2_all[le*nxp*nyp+ioff*nxp+nyp-j] # east halo
+        for i in range(nxp+1):
+            data[i] = data2_all[ls*nxp*nyp+(nxp-i)*nyp+(nx-1)]        # south halo
+            data[(nyp+1)*nxph+i] = data1_all[ln*nxp*nyp+joff*nxp+i-1] # north halo
+    else:
+        lw = (tile+ntiles-2)%ntiles
+        le = (tile+ntiles+1)%ntiles
+        ls = (tile+ntiles-1)%ntiles
+        ln = (tile+ntiles+2)%ntiles
+        for j in range(nyp+1):
+            data[j*nxph] = data2_all[lw*nxp*nyp+(ny-1)*nxp+nyp-j]     # west halo
+            data[j*nxph+nxp+1] = data1_all[le*nxp*nyp+(j-1)*nxp+ioff] # east halo
+        for i in range(nxp+1):
+            data[i] = data1_all[ls*nxp*nyp+(ny-1)*nxp+i-1]                # south halo
+            data[(nyp+1)*nxph+i] = data2_all[ln*nxp*nyp+(nxp-i)*nyp+joff] # north halo
 
-    @classmethod
-    def create_regular_lonlat_grid(
-        cls,
-        nxbnds: int,
-        nybnds: int,
-        xbnds: npt.NDArray,
-        ybnds: npt.NDArray,
-        nlon: npt.NDArray,
-        nlat: npt.NDArray,
-        dlon: npt.NDArray,
-        dlat: npt.NDArray,
-        use_legacy: int,
-        isc: int,
-        iec: int,
-        jsc: int,
-        jec: int,
-        x: npt.NDArray,
-        y: npt.NDArray,
-        dx: npt.NDArray,
-        dy: npt.NDArray,
-        area: npt.NDArray,
-        angle_dx: npt.NDArray,
-        center: str,
-        use_great_circle_algorithm: int
-    ):
-        _create_regular_lonlat_grid = cls.lib.create_regular_lonlat_grid
+def create_regular_lonlat_grid(
+    nxbnds: int,
+    nybnds: int,
+    xbnds: npt.NDArray,
+    ybnds: npt.NDArray,
+    nlon: npt.NDArray,
+    nlat: npt.NDArray,
+    dlon: npt.NDArray,
+    dlat: npt.NDArray,
+    use_legacy: int,
+    isc: int,
+    iec: int,
+    jsc: int,
+    jec: int,
+    x: npt.NDArray,
+    y: npt.NDArray,
+    dx: npt.NDArray,
+    dy: npt.NDArray,
+    area: npt.NDArray,
+    angle_dx: npt.NDArray,
+    center: str,
+    use_great_circle_algorithm: int
+):
+    _create_regular_lonlat_grid = _lib.create_regular_lonlat_grid
 
-        # nxbnds_c, nxbnds_t = ctypes.c_int(nxbnds), ctypes.POINTER(ctypes.c_int)
-        # nybnds_c, nybnds_t = ctypes.c_int(nybnds), ctypes.POINTER(ctypes.c_int)
-        nxbnds_c, nxbnds_t = setscalar_Cint32(nxbnds)
-        nybnds_c, nybnds_t = setscalar_Cint32(nybnds)
-        xbnds, xbnds_t = setarray_Cdouble(xbnds)
-        ybnds, ybnds_t = setarray_Cdouble(ybnds)
-        nlon, nlon_t = setarray_Cint32(nlon)
-        nlat, nlat_t = setarray_Cint32(nlat)
-        dlon, dlon_t = setarray_Cdouble(dlon)
-        dlat, dlat_t = setarray_Cdouble(dlat)
-        use_legacy_c, use_legacy_t = ctypes.c_int(use_legacy), ctypes.c_int
-        isc_c, isc_t = setscalar_Cint32(isc)
-        iec_c, iec_t = setscalar_Cint32(iec)
-        jsc_c, jsc_t = setscalar_Cint32(jsc)
-        jec_c, jec_t = setscalar_Cint32(jec)
-        x, x_t = setarray_Cdouble(x)
-        y, y_t = setarray_Cdouble(y)
-        dx, dx_t = setarray_Cdouble(dx)
-        dy, dy_t = setarray_Cdouble(dy)
-        area, area_t = setarray_Cdouble(area)
-        angle_dx, angle_dx_t = setarray_Cdouble(angle_dx)
-        center_c, center_t = set_Cchar(center)
-        use_great_circle_algorithm_c, use_great_circle_algorithm_t = ctypes.c_int(use_great_circle_algorithm), ctypes.c_int
+    nxbnds_c, nxbnds_t = setscalar_Cint32(nxbnds)
+    nybnds_c, nybnds_t = setscalar_Cint32(nybnds)
+    xbnds, xbnds_t = setarray_Cdouble(xbnds)
+    ybnds, ybnds_t = setarray_Cdouble(ybnds)
+    nlon, nlon_t = setarray_Cint32(nlon)
+    nlat, nlat_t = setarray_Cint32(nlat)
+    dlon, dlon_t = setarray_Cdouble(dlon)
+    dlat, dlat_t = setarray_Cdouble(dlat)
+    use_legacy_c, use_legacy_t = ctypes.c_int(use_legacy), ctypes.c_int
+    isc_c, isc_t = setscalar_Cint32(isc)
+    iec_c, iec_t = setscalar_Cint32(iec)
+    jsc_c, jsc_t = setscalar_Cint32(jsc)
+    jec_c, jec_t = setscalar_Cint32(jec)
+    x, x_t = setarray_Cdouble(x)
+    y, y_t = setarray_Cdouble(y)
+    dx, dx_t = setarray_Cdouble(dx)
+    dy, dy_t = setarray_Cdouble(dy)
+    area, area_t = setarray_Cdouble(area)
+    angle_dx, angle_dx_t = setarray_Cdouble(angle_dx)
+    center_c, center_t = set_Cchar(center)
+    use_great_circle_algorithm_c, use_great_circle_algorithm_t = ctypes.c_int(use_great_circle_algorithm), ctypes.c_int
 
-        _create_regular_lonlat_grid.argtypes = [
-            nxbnds_t,
-            nybnds_t,
-            xbnds_t,
-            ybnds_t,
-            nlon_t,
-            nlat_t,
-            dlon_t,
-            dlat_t,
-            use_legacy_t,
-            isc_t,
-            iec_t,
-            jsc_t,
-            jec_t,
-            x_t,
-            y_t,
-            dx_t,
-            dy_t,
-            area_t,
-            angle_dx_t,
-            center_t,
-            use_great_circle_algorithm_t,
-        ]   
-        _create_regular_lonlat_grid.restype = None
+    _create_regular_lonlat_grid.argtypes = [
+        nxbnds_t,
+        nybnds_t,
+        xbnds_t,
+        ybnds_t,
+        nlon_t,
+        nlat_t,
+        dlon_t,
+        dlat_t,
+        use_legacy_t,
+        isc_t,
+        iec_t,
+        jsc_t,
+        jec_t,
+        x_t,
+        y_t,
+        dx_t,
+        dy_t,
+        area_t,
+        angle_dx_t,
+        center_t,
+        use_great_circle_algorithm_t,
+    ] 
 
-        _create_regular_lonlat_grid(
-            nxbnds_c,
-            nybnds_c,
-            xbnds,
-            ybnds,
-            nlon,
-            nlat,
-            dlon,
-            dlat,
-            use_legacy_c,
-            isc_c,
-            iec_c,
-            jsc_c,
-            jec_c,
-            x,
-            y,
-            dx,
-            dy,
-            area,
-            angle_dx,
-            center_c,
-            use_great_circle_algorithm_c,
-        )
+    _create_regular_lonlat_grid.restype = None
 
-    @classmethod
+    _create_regular_lonlat_grid(
+        nxbnds_c,
+        nybnds_c,
+        xbnds,
+        ybnds,
+        nlon,
+        nlat,
+        dlon,
+        dlat,
+        use_legacy_c,
+        isc_c,
+        iec_c,
+        jsc_c,
+        jec_c,
+        x,
+        y,
+        dx,
+        dy,
+        area,
+        angle_dx,
+        center_c,
+        use_great_circle_algorithm_c,
+    )
+
     def create_tripolar_grid(
         cls,
         nxbnds: int,

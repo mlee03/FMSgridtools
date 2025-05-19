@@ -191,13 +191,13 @@ class HGridObj():
                     conformal=conformal,
                 )
             )
-            if north_pole_tile is "none":
+            if north_pole_tile is None:
                 tile = tile.assign_attrs(projection=projection)
             if projection is "none":
                 tile = tile.assign_attrs(north_pole_tile=north_pole_tile)
             var_dict['tile'] = tile
 
-            if north_pole_arcx == "none":
+            if north_pole_arcx is None:
                 arcx = xr.DataArray(
                     [self.arcx],
                     attrs=dict(
