@@ -5,7 +5,7 @@ from pyfrenctools.utils.ctypes import(
     set_c_int,
     set_list,
     set_c_str,
-    set_arr
+    set_array
 )
 import ctypes
 import numpy as np
@@ -28,7 +28,7 @@ def test_ctypes_utils():
     set_c_int(1, arglist)
     set_list([1,2,3], np.float32, arglist)
     set_c_str("test", arglist)
-    set_arr(np.array([1,2,3], dtype=np.float32), arglist)
+    set_array(np.array([1,2,3], dtype=np.float32), arglist)
 
     nargs = len(answers)
     
