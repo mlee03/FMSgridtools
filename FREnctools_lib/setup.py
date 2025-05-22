@@ -1,13 +1,11 @@
-import os
 import subprocess
-from pathlib import Path
 from typing import List
 
 from setuptools import find_namespace_packages, setup
-from setuptools.command.install import install
+from setuptools.command.build_py import build_py
 
 
-class CustomInstall(install):
+class CustomBuild_Py(build_py):
     def run(self):
         with open("compile_log.txt", "w") as f:
             subprocess.run(
@@ -28,7 +26,7 @@ class CustomInstall(install):
                 stdout=f,
                 stderr=subprocess.STDOUT,
             )
-        install.run(self)
+        build_py.run(self)
 
 test_requirements = ["pytest", "coverage"]
 develop_requirements = test_requirements + ["pre-commit"]
@@ -59,5 +57,5 @@ setup(
     include_package_data=True,
     version="0.0.1",
     zip_safe=False,
-    cmdclass={'install': CustomInstall}
+    cmdclass={'build_py': CustomBuild_Py}
 )

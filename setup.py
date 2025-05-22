@@ -27,7 +27,7 @@ requirements: List[str] = [
     "numpy",
     "xarray",
     "netCDF4",
-    local_pkg("pyfms", "pyFMS"),
+    "pyfms @ git+https://github.com/NOAA-GFDL/pyFMS.git@main",
     local_pkg("pyfrenctools", "FREnctools_lib")
 ]
 
