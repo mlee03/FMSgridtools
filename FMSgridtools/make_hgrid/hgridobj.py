@@ -6,7 +6,55 @@ import xarray as xr
 
 from FMSgridtools.shared.gridtools_utils import get_provenance_attrs
 from FMSgridtools.shared.gridobj import GridObj
-import pyfrenctools
+
+def fill_cubic_grid_halo(
+        nx: int, 
+        ny: int, 
+        halo: int, 
+        data: NDArray[np.float64], 
+        data1_all: NDArray[np.float64],
+        data2_all: NDArray[np.float64],
+        tile: int,
+        ioff: int,
+        joff: int,
+):
+    nxp = nx + ioff
+    nyp = ny + joff
+    nxph = nx + ioff + 2*halo
+    nyph = ny + joff + 2*halo
+        
+    for i in range(nxph*nyph):
+        data[i] = -9999.
+
+    # first copy computing domain data
+    for j in range (nyp+1):
+        for i in range(nxp+1):
+            data[j*nxph+i] = data1_all[tile*nxp*nyp+(j-1)*nxp+(i-1)]
+                
+    ntiles = 6
+        
+    if tile%2 == 1:
+        lw = (tile+ntiles-1)%ntiles
+        le = (tile+ntiles+2)%ntiles
+        ls = (tile+ntiles-2)%ntiles
+        ln = (tile+ntiles+1)%ntiles
+        for j in range(nyp+1):
+            data[j*nxph] = data1_all[lw*nxp*nyp+(j-1)*nxp+nx-1]       # west halo
+            data[j*nxph+nxp+1] = data2_all[le*nxp*nyp+ioff*nxp+nyp-j] # east halo
+        for i in range(nxp+1):
+            data[i] = data2_all[ls*nxp*nyp+(nxp-i)*nyp+(nx-1)]        # south halo
+            data[(nyp+1)*nxph+i] = data1_all[ln*nxp*nyp+joff*nxp+i-1] # north halo
+    else:
+        lw = (tile+ntiles-2)%ntiles
+        le = (tile+ntiles+1)%ntiles
+        ls = (tile+ntiles-1)%ntiles
+        ln = (tile+ntiles+2)%ntiles
+        for j in range(nyp+1):
+            data[j*nxph] = data2_all[lw*nxp*nyp+(ny-1)*nxp+nyp-j]     # west halo
+            data[j*nxph+nxp+1] = data1_all[le*nxp*nyp+(j-1)*nxp+ioff] # east halo
+        for i in range(nxp+1):
+            data[i] = data1_all[ls*nxp*nyp+(ny-1)*nxp+i-1]                # south halo
+            data[(nyp+1)*nxph+i] = data2_all[ln*nxp*nyp+(nxp-i)*nyp+joff] # north halo
 
 class HGridObj():
     def __init__(self):
@@ -306,7 +354,7 @@ class HGridObj():
                 if verbose:
                     print(f"[INFO] INDEX NC write with halo tile number = n: {n}", file=sys.stderr)
 
-                pyfrenctools.make_hgrid_wrappers.fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.x, self.x, n, 1, 1)
+                fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.x, self.x, n, 1, 1)
                 self.x = tmp.copy()
                 x = xr.DataArray(
                     data=self.x.reshape((nyp,nxp)),
@@ -319,7 +367,7 @@ class HGridObj():
                 )
                 var_dict['x'] = x
 
-                pyfrenctools.make_hgrid_wrappers.fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.y, self.y, n, 1, 1)
+                fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.y, self.y, n, 1, 1)
                 self.y = tmp.copy()
                 y = xr.DataArray(
                     data=self.y.reshape((nyp, nxp)),
@@ -332,7 +380,7 @@ class HGridObj():
                 )
                 var_dict['y'] = y
 
-                pyfrenctools.make_hgrid_wrappers.fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.area, self.area, n, 0, 0)
+                fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.area, self.area, n, 0, 0)
                 self.area = tmp.copy()
                 area = xr.DataArray(
                     data=self.area.reshape((ny, nx)),
@@ -346,7 +394,7 @@ class HGridObj():
                 var_dict['area'] = area
 
                 if output_length_angle:
-                    pyfrenctools.make_hgrid_wrappers.fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.dx, self.dy, n, 0, 1)
+                    fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.dx, self.dy, n, 0, 1)
                     self.dx = tmp.copy()
                     dx = xr.DataArray(
                         data=self.dx.reshape((nyp, nx)),
@@ -359,7 +407,7 @@ class HGridObj():
                     )
                     var_dict['dx'] = dx
 
-                    pyfrenctools.make_hgrid_wrappers.fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.dy, self.dx, n, 1, 0)
+                    fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.dy, self.dx, n, 1, 0)
                     self.dy = tmp.copy()
                     dy = xr.DataArray(
                         data=self.dy.reshape((ny, nxp)),
@@ -372,7 +420,7 @@ class HGridObj():
                     )
                     var_dict['dy'] = dy
 
-                    pyfrenctools.make_hgrid_wrappers.fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.angle_dx, self.angle_dx, n, 1, 1)
+                    fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.angle_dx, self.angle_dx, n, 1, 1)
                     self.angle_dx = tmp.copy()
                     angle_dx = xr.DataArray(
                         data=self.angle_dx.reshape((nyp, nxp)),
@@ -386,7 +434,7 @@ class HGridObj():
                     var_dict['angle_dx'] = angle_dx
 
                     if conformal != "true":
-                        pyfrenctools.make_hgrid_wrappers.fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.angle_dy, self.angle_dy, n, 1, 1)
+                        fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.angle_dy, self.angle_dy, n, 1, 1)
                         self.angle_dy = tmp.copy()
                         angle_dy = xr.DataArray(
                             data=self.angle_dy.reshape((nyp, nxp)),

@@ -1,11 +1,11 @@
 import click
 
-from FMSgridtools.make_hgrid.make_lonlat_grid import make_lonlat_grid
+import FMSgridtools.make_hgrid.lonlat_grid as lonlat_grid
 
 
 @click.group()
 def make_hgrid():
-    pass
+    """Make H-Grid CLI"""
 
 @make_hgrid.command()
 @click.option(
@@ -70,7 +70,7 @@ def lonlat(
     use_great_circle_algorithm: bool,
     verbose: bool,
 ):
-    make_lonlat_grid(
+    lonlat_grid.make(
         nlon=nlon,
         nlat=nlat,
         xbnds=xbnds,

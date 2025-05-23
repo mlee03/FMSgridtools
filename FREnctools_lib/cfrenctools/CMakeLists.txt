@@ -60,11 +60,11 @@ target_link_libraries(clib PUBLIC NetCDF::NetCDF_C
 # Set the output directory
 set_target_properties(
     clib PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/c_build
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../pyfrenctools/c_install
     POSITION_INDEPENDENT_CODE ON
     PREFIX ""
     COMPILE_FLAGS ${OpenACC_C_FLAGS}
 )
 
 # Install the shared library
-install(TARGETS clib DESTINATION c_build)
+install(TARGETS clib DESTINATION ../pyfrenctools/c_install)

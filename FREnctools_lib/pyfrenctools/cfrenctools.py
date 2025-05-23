@@ -2,9 +2,9 @@ import ctypes
 import os
 
 from .shared import create_xgrid
-from .make_hgrid.make_hgrid_wrappers import make_hgrid_wrappers
+from .make_hgrid import make_hgrid_wrappers
 
-_libpath = os.path.dirname(__file__) + "/../cfrenctools/c_build/clib.so"
+_libpath = os.path.dirname(__file__) + "/c_install/clib.so"
 _lib = ctypes.cdll.LoadLibrary(_libpath)
 
 def init(libpath: str = None):
