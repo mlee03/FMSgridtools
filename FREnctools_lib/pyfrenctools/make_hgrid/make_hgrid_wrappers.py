@@ -42,27 +42,6 @@ def create_regular_lonlat_grid(
     use_great_circle_algorithm: int
 ):
     _create_regular_lonlat_grid = _lib.create_regular_lonlat_grid
-    # nxbnds_c, nxbnds_t = setscalar_Cint32(nxbnds)
-    # nybnds_c, nybnds_t = setscalar_Cint32(nybnds)
-    # xbnds, xbnds_t = setarray_Cdouble(xbnds)
-    # ybnds, ybnds_t = setarray_Cdouble(ybnds)
-    # nlon, nlon_t = setarray_Cint32(nlon)
-    # nlat, nlat_t = setarray_Cint32(nlat)
-    # dlon, dlon_t = setarray_Cdouble(dlon)
-    # dlat, dlat_t = setarray_Cdouble(dlat)
-    # use_legacy_c, use_legacy_t = ctypes.c_int(use_legacy), ctypes.c_int
-    # isc_c, isc_t = setscalar_Cint32(isc)
-    # iec_c, iec_t = setscalar_Cint32(iec)
-    # jsc_c, jsc_t = setscalar_Cint32(jsc)
-    # jec_c, jec_t = setscalar_Cint32(jec)
-    # x, x_t = setarray_Cdouble(x)
-    # y, y_t = setarray_Cdouble(y)
-    # dx, dx_t = setarray_Cdouble(dx)
-    # dy, dy_t = setarray_Cdouble(dy)
-    # area, area_t = setarray_Cdouble(area)
-    # angle_dx, angle_dx_t = setarray_Cdouble(angle_dx)
-    # center_c, center_t = set_Cchar(center)
-    # use_great_circle_algorithm_c, use_great_circle_algorithm_t = ctypes.c_int(use_great_circle_algorithm), ctypes.c_int
     arglist = []
     set_c_int(nxbnds, arglist)
     set_c_int(nybnds, arglist)
