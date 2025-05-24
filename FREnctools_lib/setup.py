@@ -2,10 +2,10 @@ import subprocess
 from typing import List
 
 from setuptools import find_namespace_packages, setup
-from setuptools.command.build_py import build_py
+from setuptools.command.build import build
 
 
-class CustomBuild_Py(build_py):
+class CustomBuild(build):
     def run(self):
         with open("compile_log.txt", "w") as f:
             subprocess.run(
@@ -26,7 +26,7 @@ class CustomBuild_Py(build_py):
                 stdout=f,
                 stderr=subprocess.STDOUT,
             )
-        build_py.run(self)
+        build.run(self)
 
 test_requirements = ["pytest", "coverage"]
 develop_requirements = test_requirements + ["pre-commit"]
@@ -57,5 +57,5 @@ setup(
     include_package_data=True,
     version="0.0.1",
     zip_safe=False,
-    cmdclass={'build_py': CustomBuild_Py}
+    cmdclass={'build': CustomBuild}
 )
