@@ -2,6 +2,11 @@ name: Install package and run pytests
 
 on: [push, pull_request]
 
+# cancel running jobs if theres a newer push
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true   
+
 jobs:
   build-linux:
     runs-on: ubuntu-latest
@@ -18,15 +23,15 @@ jobs:
           # sets CONDA to wherever it may be on the image
           source /root/.bashrc
           # create env
-          conda create -y --name FMSgridtools cmake pip pytest
+          conda create -y --name fmsgridtools cmake pip pytest
           # add to path
           echo "$CONDA/envs/FMSgridtools/bin" >> $GITHUB_PATH
-      - name: Install FMSgridtools package
+      - name: Install fmsgridtools package
         run: |
           source /root/.bashrc
-          export PATH="$PATH:$CONDA/envs/FMSgridtools/bin"
+          export PATH="$PATH:$CONDA/envs/fmsgridtools/bin"
           which cmake
-          $CONDA/envs/FMSgridtools/bin/pip install .
-          cat FREnctools_lib/compile_log.txt
+          $CONDA/envs/fmsgridtools/bin/pip install .
+          cat frenctools/compile_log.txt
       - name: Run pytest (just link test for now)
         run: pytest tests/shared/test_libs.py
