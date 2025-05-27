@@ -9,7 +9,7 @@ from fmsgridtools.utils.utils import check_file_is_there
 """
 GridObj:
 
-Dataclass for containing basic grid data to be used by other grid objects
+Class for containing basic grid data to be used by other grid objects
 """
 class GridObj:
 
