@@ -1,7 +1,7 @@
 import sys
 import numpy as np 
-from FMSgridtools.shared.gridobj import GridObj
-from FMSgridtools.shared.mosaicobj import MosaicObj
+from fmsgridtools.shared.gridobj import GridObj
+from fmsgridtools.shared.mosaicobj import MosaicObj
 import pyfrenctools
 
 def make(num_tiles,

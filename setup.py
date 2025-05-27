@@ -34,7 +34,7 @@ extras_requires = {
     "develop": develop_requirements,
 }
 
-requirements: List[str] = [
+requirements = [
     "click",
     "gitpython",
     "h5netcdf",
@@ -52,15 +52,12 @@ setup(
     extras_require=extras_requires,
     name="fmsgridtools",
     license="",
-    packages=find_namespace_packages(include=["FMSgridtools", "FMSgridtools.*", "FREnctools_lib", "FREnctools_lib.pyfrenctools.*"]),
+    packages=find_namespace_packages(include=["fmsgridtools", "FMSgridtools.*", "frencctools", "frenctools.pyfrenctools.*"]),
     include_package_data=True,
     version="0.0.1",
     zip_safe=False,
     cmdclass={'install': CustomInstall},
     entry_points={
-        "console_scripts": [
-            "fmsgridtools make_hgrid = fmsgridtools.make_grid.hgrid.make_hgrid:main",
-            "make_topog = FMSgridtools.make_topog.make_topog:make_topog", # TODO fmsgridtools entrypoint
-        ]
+        "console_scripts": ["fmsgridtools = fmsgridtools.main:main"]
     },
 )

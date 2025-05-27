@@ -4,7 +4,7 @@ import dataclasses
 import numpy as np
 import xarray as xr
 
-from ..shared.gridtools_utils import check_file_is_there
+from fmsgridtools.utils.utils import check_file_is_there
 
 
 # macro value from tool_util.h
