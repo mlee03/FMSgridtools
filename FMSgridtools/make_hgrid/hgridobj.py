@@ -27,8 +27,8 @@ def fill_cubic_grid_halo(
         data[i] = -9999.
 
     # first copy computing domain data
-    for j in range (nyp+1):
-        for i in range(nxp+1):
+    for j in range (1, nyp+1):
+        for i in range(1, nxp+1):
             data[j*nxph+i] = data1_all[tile*nxp*nyp+(j-1)*nxp+(i-1)]
                 
     ntiles = 6
@@ -38,10 +38,10 @@ def fill_cubic_grid_halo(
         le = (tile+ntiles+2)%ntiles
         ls = (tile+ntiles-2)%ntiles
         ln = (tile+ntiles+1)%ntiles
-        for j in range(nyp+1):
+        for j in range(1, nyp+1):
             data[j*nxph] = data1_all[lw*nxp*nyp+(j-1)*nxp+nx-1]       # west halo
             data[j*nxph+nxp+1] = data2_all[le*nxp*nyp+ioff*nxp+nyp-j] # east halo
-        for i in range(nxp+1):
+        for i in range(1, nxp+1):
             data[i] = data2_all[ls*nxp*nyp+(nxp-i)*nyp+(nx-1)]        # south halo
             data[(nyp+1)*nxph+i] = data1_all[ln*nxp*nyp+joff*nxp+i-1] # north halo
     else:
@@ -49,10 +49,10 @@ def fill_cubic_grid_halo(
         le = (tile+ntiles+1)%ntiles
         ls = (tile+ntiles-1)%ntiles
         ln = (tile+ntiles+2)%ntiles
-        for j in range(nyp+1):
+        for j in range(1, nyp+1):
             data[j*nxph] = data2_all[lw*nxp*nyp+(ny-1)*nxp+nyp-j]     # west halo
             data[j*nxph+nxp+1] = data1_all[le*nxp*nyp+(j-1)*nxp+ioff] # east halo
-        for i in range(nxp+1):
+        for i in range(1, nxp+1):
             data[i] = data1_all[ls*nxp*nyp+(ny-1)*nxp+i-1]                # south halo
             data[(nyp+1)*nxph+i] = data2_all[ln*nxp*nyp+(nxp-i)*nyp+joff] # north halo
 
@@ -95,7 +95,7 @@ class HGridObj():
             jend_nest: NDArray=None,
             arcx: str="small_circle",
             grid_type: str=None,
-            conformal: str="true",
+            conformal: bool=True,
             output_length_angle: bool=True,
             verbose: bool=False,
     ):
@@ -192,7 +192,7 @@ class HGridObj():
             self.dx = np.empty(shape=size2.value, dtype=np.float64)
             self.dy = np.empty(shape=size3.value, dtype=np.float64)
             self.angle_dx = np.empty(shape=size1.value, dtype=np.float64)
-            if conformal != "true":
+            if not conformal:
                 self.angle_dy = np.empty(shape=size1.value, dtype=np.float64)
         self.isc = 0
         self.iec = self.nx - 1
@@ -201,14 +201,15 @@ class HGridObj():
 
     def write_out_hgrid(
             self,
+            grid_type = "regular_lonlat_grid",
             grid_name: str="horizontal_grid",
             ntiles: int=1,
             north_pole_tile: str="0.0 90.0",
             north_pole_arcx: str="0.0 90.0",
-            projection: str="none",
+            projection: str=None,
             geometry: str="spherical",
             discretization: str="logically_rectangular",
-            conformal: str="true",
+            conformal: bool=True,
             out_halo: int=0,
             output_length_angle: bool=True,
             verbose: bool=False,
@@ -236,12 +237,12 @@ class HGridObj():
                     standard_name="grid_tile_spec",
                     geometry=geometry,
                     discretization=discretization,
-                    conformal=conformal,
+                    conformal=f"{conformal}",
                 )
             )
             if north_pole_tile is None:
-                tile = tile.assign_attrs(projection=projection)
-            if projection is "none":
+                tile = tile.assign_attrs(projection=f"{projection}")
+            if projection is None:
                 tile = tile.assign_attrs(north_pole_tile=north_pole_tile)
             var_dict['tile'] = tile
 
@@ -338,7 +339,7 @@ class HGridObj():
                     )
                     var_dict['angle_dx'] = angle_dx
 
-                    if conformal != "true":
+                    if not conformal:
                         angle_dy = xr.DataArray(
                             data=self.angle_dy[pos_c:].reshape((nyp, nxp)),
                             dims=["nyp", "nxp"],
@@ -349,6 +350,8 @@ class HGridObj():
                         )
                         var_dict['angle_dy'] = angle_dy
             else:
+                if grid_type is not "gnomonic_ed":
+                    raise RuntimeError("make_hgrid: out_halo > 0, only working for grid_type = 'gnomonic_ed'")
                 tmp = np.empty(shape=(nxp+2*out_halo)*(nyp+2*out_halo), dtype=np.float64)
 
                 if verbose:
@@ -433,7 +436,7 @@ class HGridObj():
                     )
                     var_dict['angle_dx'] = angle_dx
 
-                    if conformal != "true":
+                    if not conformal:
                         fill_cubic_grid_halo(nx, ny, out_halo, tmp, self.angle_dy, self.angle_dy, n, 1, 1)
                         self.angle_dy = tmp.copy()
                         angle_dy = xr.DataArray(
