@@ -24,7 +24,7 @@ MANIFEST
 *__pycache__
 CMakeCache.txt
 *.so
-FREnctools_lib/cfrenctools/CMakeFiles/
-FREnctools_lib/cfrenctools/c_build/
+frenctools/cfrenctools/CMakeFiles/
+frenctools/cfrenctools/c_build/
 Makefile
 compile_log.txt

@@ -1,8 +1,8 @@
 
 from typing import Optional, Dict, List, Any
 import xarray as xr
-from FMSgridtools.shared.gridobj import GridObj
-from FMSgridtools.shared.gridtools_utils import check_file_is_there
+from fmsgridtools.shared.gridobj import GridObj
+from fmsgridtools.utils.utils import check_file_is_there
 
 
 class MosaicObj:

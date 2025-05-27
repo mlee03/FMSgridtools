@@ -4,7 +4,7 @@ import dataclasses
 import numpy as np
 import xarray as xr
 
-from ..shared.gridtools_utils import check_file_is_there
+from fmsgridtools.utils.utils import check_file_is_there
 
 
 # macro value from tool_util.h
@@ -133,7 +133,7 @@ class TopogObj():
         gpu: bool = None):
 
         # first load the C library (this will be replaced with a different method eventually)
-        frenct_lib = ctypes.cdll.LoadLibrary("./FREnctools_lib/cfrenctools/c_build/clib.so")
+        frenct_lib = ctypes.cdll.LoadLibrary("./frenctools/cfrenctools/c_build/clib.so")
         # get the C functions we need and set their arg types
         generate_realistic_c = frenct_lib.create_realistic_topog_wrapper
         get_boundary_type_c = frenct_lib.get_boundary_type

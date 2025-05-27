@@ -3,7 +3,7 @@ from typing import List, Optional
 import numpy as np
 import numpy.typing as npt
 import xarray as xr
-from FMSgridtools.shared.gridtools_utils import check_file_is_there
+from fmsgridtools.utils.utils import check_file_is_there
 
 
 """

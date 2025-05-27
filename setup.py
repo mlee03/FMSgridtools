@@ -19,7 +19,7 @@ extras_requires = {
     "develop": develop_requirements,
 }
 
-requirements: List[str] = [
+requirements = [
     "click",
     "gitpython",
     "h5netcdf",
@@ -28,7 +28,7 @@ requirements: List[str] = [
     "xarray",
     "netCDF4",
     "pyfms @ git+https://github.com/NOAA-GFDL/pyFMS.git@main",
-    local_pkg("pyfrenctools", "FREnctools_lib")
+    local_pkg("pyfrenctools", "frenctools")
 ]
 
 setup(
@@ -39,14 +39,9 @@ setup(
     extras_require=extras_requires,
     name="fmsgridtools",
     license="",
-    packages=find_namespace_packages(include=["FMSgridtools", "FMSgridtools.*"]),
+    packages=find_namespace_packages(include=["fmsgridtools", "fmsgridtools.*"]),
     include_package_data=True,
     version="0.0.1",
     zip_safe=False,
-    entry_points={
-        "console_scripts": [
-            "make_hgrid = FMSgridtools.make_hgrid.make_hgrid:make_hgrid", # TODO fmsggridtools entrypoint
-            "make_topog = FMSgridtools.make_topog.make_topog:make_topog", # TODO fmsgridtools entrypoint
-        ]
-    },
+    entry_points={"console_scripts": ["fmsgridtools = fmsgridtools.main:main"]},
 )

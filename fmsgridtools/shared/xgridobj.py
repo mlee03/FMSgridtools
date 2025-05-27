@@ -1,14 +1,11 @@
-import ctypes
-
 import numpy as np
 import numpy.typing as npt
-import pyfms
 import pyfrenctools
 import xarray as xr
 
-from .gridobj import GridObj
-from .gridtools_utils import check_file_is_there
-from .mosaicobj import MosaicObj
+from fmsgridtools.shared.gridobj import GridObj
+from fmsgridtools.utils.utils import check_file_is_there
+from fmsgridtools.shared.mosaicobj import MosaicObj
 
 
 class XGridObj() :

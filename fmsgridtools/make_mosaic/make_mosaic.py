@@ -1,6 +1,6 @@
 import click
-import solo_mosaic
-import regional_mosaic
+from fmsgridtools.make_mosaic import solo_mosaic
+from fmsgridtools.make_mosaic import regional_mosaic
 
 
 ATMOS_MOSAIC_HELP = "specify the atmosphere mosaic information \
@@ -27,12 +27,7 @@ ocean_topog = click.option('--ocean_topog',
               type=click.Path(exists=True))
 
 
-
-@click.group()
-def make_mosaic():
-    '''MAKE MOSAIC CLI'''
-
-@make_mosaic.command()
+@click.command()
 @mosaic_name
 @click.option("--num_tiles",
               type=int,
@@ -71,7 +66,7 @@ def solo(num_tiles,
                      periody)
 
 
-@make_mosaic.command()
+@click.command()
 @click.option('--global_mosaic',
               type=click.Path(exists=True),
               help="global_mosaic Specify the mosaic file for the global grid.")
@@ -86,7 +81,7 @@ def regional(global_mosaic,
     regional_mosaic.make(global_mosaic, 
                          regional_file)
 
-@make_mosaic.command()
+@click.command()
 @mosaic_name
 @sea_level
 @ocean_topog
@@ -101,7 +96,7 @@ def quick(input_mosaic,
           land_frac_field):
     pass
 
-@make_mosaic.command()
+@click.command()
 @mosaic_name
 @sea_level
 @ocean_topog
