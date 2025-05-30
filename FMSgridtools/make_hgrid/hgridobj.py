@@ -154,7 +154,7 @@ class HGridObj():
         size4 = ctypes.c_ulong(0)
 
         for n_nest in range(ntiles):
-            print(f"[INFO] tile: {n_nest}, {self.nxl[n_nest]}, {self.nyl[n_nest]}, ntiles: {ntiles}\n")
+            print(f"[INFO] tile: {n_nest}, nxl[{self.nxl[n_nest]}], nyl[{self.nyl[n_nest]}], ntiles: {ntiles}\n")
 
         if grid_type == "FROM_FILE":
             size1 = 0

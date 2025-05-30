@@ -20,6 +20,7 @@ def make(
     halo: int,
     out_halo: int,
     grid_name: str,
+    grid_type: str,
     output_length_angle: bool,
     do_schmidt: bool,
     do_cube_transform: bool,
@@ -73,7 +74,8 @@ def make(
     conformal = False
 
     if do_schmidt or do_cube_transform:
-        raise RuntimeError("make_hgrid: grid type is 'gnomonic_ed, --stretch_factor, --target_lon\
+        if stretch_factor == 0.0 and target_lon == 0.0 and target_lat == 0.0:
+            raise RuntimeError("make_hgrid: grid type is 'gnomonic_ed, --stretch_factor, --target_lon\
                   and --target_lat must be set when --do_schmidt or --do_cube_transform is set")
     
     for n in range(nest_grids):
@@ -116,62 +118,62 @@ def make(
         verbose=verbose,
     )
 
-    # if nest_grids == 1 and parent_tile[0] == 0:
-    #     pyfrenctools.make_hgrid_wrappers.create_gnomonic_cubic_grid_GR(
-    #         grid_type=grid_type,
-    #         nxl=grid_obj.nxl,
-    #         nyl=grid_obj.nyl,
-    #         x=grid_obj.x,
-    #         y=grid_obj.y,
-    #         dx=grid_obj.dx,
-    #         dy=grid_obj.dy,
-    #         area=grid_obj.area,
-    #         angle_dx=grid_obj.angle_dx,
-    #         angle_dy=grid_obj.angle_dy,
-    #         shift_fac=shift_fac,
-    #         do_schmidt=do_schmidt,
-    #         do_cube_transform=do_cube_transform,
-    #         stretch_factor=stretch_factor,
-    #         target_lon=target_lon,
-    #         target_lat=target_lat,
-    #         nest_grids=nest_grids,
-    #         parent_tile=parent_tile[0],
-    #         refine_ratio=refine_ratio[0],
-    #         istart_nest=istart_nest[0],
-    #         iend_nest=iend_nest[0],
-    #         jstart_nest=jstart_nest[0],
-    #         jend_nest=jend_nest[0],
-    #         halo=halo,
-    #         output_length_angle=output_length_angle,
-    #     )
-    # else:
-    #     pyfrenctools.make_hgrid_wrappers.create_gnomonic_cubic_grid(
-    #         grid_type=grid_type,
-    #         nxl=grid_obj.nxl,
-    #         nyl=grid_obj.nyl,
-    #         x=grid_obj.x,
-    #         y=grid_obj.y,
-    #         dx=grid_obj.dx,
-    #         dy=grid_obj.dy,
-    #         area=grid_obj.area,
-    #         angle_dx=grid_obj.angle_dx,
-    #         angle_dy=grid_obj.angle_dy,
-    #         shift_fac=shift_fac,
-    #         do_schmidt=do_schmidt,
-    #         do_cube_transform=do_cube_transform,
-    #         stretch_factor=stretch_factor,
-    #         target_lon=target_lon,
-    #         target_lat=target_lat,
-    #         nest_grids=nest_grids,
-    #         parent_tile=parent_tile,
-    #         refine_ratio=refine_ratio,
-    #         istart_nest=istart_nest,
-    #         iend_nest=iend_nest,
-    #         jstart_nest=jstart_nest,
-    #         jend_nest=jend_nest,
-    #         halo=halo,
-    #         output_length_angle=output_length_angle,
-    #     )
+    if nest_grids == 1 and parent_tile[0] == 0:
+        pyfrenctools.make_hgrid_wrappers.create_gnomonic_cubic_grid_GR(
+            grid_type=grid_type,
+            nlon=grid_obj.nxl,
+            nlat=grid_obj.nyl,
+            x=grid_obj.x,
+            y=grid_obj.y,
+            dx=grid_obj.dx,
+            dy=grid_obj.dy,
+            area=grid_obj.area,
+            angle_dx=grid_obj.angle_dx,
+            angle_dy=grid_obj.angle_dy,
+            shift_fac=shift_fac,
+            do_schmidt=int(do_schmidt),
+            do_cube_transform=int(do_cube_transform),
+            stretch_factor=stretch_factor,
+            target_lon=target_lon,
+            target_lat=target_lat,
+            nest_grids=nest_grids,
+            parent_tile=parent_tile[0],
+            refine_ratio=refine_ratio[0],
+            istart_nest=istart_nest[0],
+            iend_nest=iend_nest[0],
+            jstart_nest=jstart_nest[0],
+            jend_nest=jend_nest[0],
+            halo=halo,
+            output_length_angle=int(output_length_angle),
+        )
+    else:
+        pyfrenctools.make_hgrid_wrappers.create_gnomonic_cubic_grid(
+            grid_type=grid_type,
+            nlon=grid_obj.nxl,
+            nlat=grid_obj.nyl,
+            x=grid_obj.x,
+            y=grid_obj.y,
+            dx=grid_obj.dx,
+            dy=grid_obj.dy,
+            area=grid_obj.area,
+            angle_dx=grid_obj.angle_dx,
+            angle_dy=grid_obj.angle_dy,
+            shift_fac=shift_fac,
+            do_schmidt=int(do_schmidt),
+            do_cube_transform=int(do_cube_transform),
+            stretch_factor=stretch_factor,
+            target_lon=target_lon,
+            target_lat=target_lat,
+            num_nest_grids=nest_grids,
+            parent_tile=parent_tile,
+            refine_ratio=refine_ratio,
+            istart_nest=istart_nest,
+            iend_nest=iend_nest,
+            jstart_nest=jstart_nest,
+            jend_nest=jend_nest,
+            halo=halo,
+            output_length_angle=int(output_length_angle),
+        )
 
     # grid_obj.write_out_hgrid(
     #     grid_type="gnomonic_ed",

@@ -193,6 +193,13 @@ def lonlat(
           The default value will be horizontal_grid.",
 )
 @click.option(
+    "--grid_type",
+    type=str,
+    default="gnomonic_ed",
+    help="Specify the grid type. Options are 'gnomonic_ed'\
+          'gnomonic_dist', or 'gnomonic_angl'.",
+)
+@click.option(
     "--output_length_angle",
     is_flag=True,
     default=True,
@@ -238,7 +245,8 @@ def gnomonic(
     jend_nest: str,
     halo: int,
     out_halo: int,
-    grid_name: str, 
+    grid_name: str,
+    grid_type: str, 
     output_length_angle: bool,
     do_schmidt: bool,
     do_cube_transform: bool,
@@ -260,6 +268,7 @@ def gnomonic(
         halo=halo,
         out_halo=out_halo,
         grid_name=grid_name,
+        grid_type=grid_type,
         output_length_angle=output_length_angle,
         do_schmidt=do_schmidt,
         do_cube_transform=do_cube_transform,
