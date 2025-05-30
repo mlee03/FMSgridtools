@@ -4,23 +4,27 @@ from FMSgridtools.make_hgrid.hgridobj import HGridObj
 import pyfrenctools
 
 def make(
-        nlon: int, 
-        nlat: int, 
-        xbnds: str = None,
-        ybnds: str = None,
-        dlon: str = None,
-        dlat: str = None, 
-        use_great_circle_algorithm: bool = False,
-        verbose: bool = False,
+    nlon: str, 
+    nlat: str, 
+    xbnds: str = None,
+    ybnds: str = None,
+    dlon: str = None,
+    dlat: str = None, 
+    use_great_circle_algorithm: bool = False,
+    verbose: bool = False,
 ):
     center = "none"
     grid_obj = HGridObj()
     
     if nlon is not None:
         nlon = np.fromstring(nlon, dtype=np.int32, sep=',')
+    else:
+        nlon = np.empty(shape=99, dtype=np.int32)
 
     if nlat is not None:
         nlat = np.fromstring(nlat, dtype=np.int32, sep=',')
+    else:
+        nlat = np.empty(shape=99, dtype=np.int32)
 
     if xbnds is not None:
         xbnds = np.fromstring(xbnds, dtype=np.float64, sep=',')
