@@ -175,13 +175,13 @@ def make(
             output_length_angle=int(output_length_angle),
         )
 
-    # grid_obj.write_out_hgrid(
-    #     grid_type="gnomonic_ed",
-    #     grid_name=grid_name,
-    #     ntiles=ntiles,
-    #     projection=projection,
-    #     conformal=conformal,
-    #     out_halo=out_halo,
-    #     output_length_angle=output_length_angle,
-    #     verbose=verbose,
-    # )
+    grid_obj.write_out_hgrid(
+        grid_type="gnomonic_ed",
+        grid_name=grid_name,
+        ntiles=ntiles,
+        projection=projection,
+        conformal=conformal,
+        out_halo=out_halo,
+        output_length_angle=output_length_angle,
+        verbose=verbose,
+    )

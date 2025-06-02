@@ -11,6 +11,7 @@ def make(
     dlon: str = None,
     dlat: str = None, 
     use_great_circle_algorithm: bool = False,
+    grid_name: str = "horizontal_grid",
     verbose: bool = False,
 ):
     center = "none"
@@ -80,7 +81,10 @@ def make(
         use_great_circle_algorithm=use_great_circle_algorithm,
     )
 
-    grid_obj.write_out_hgrid(verbose=verbose)
+    grid_obj.write_out_hgrid(
+        grid_name=grid_name,
+        verbose=verbose
+    )
 
 
     

@@ -25,17 +25,13 @@ def make_hgrid():
     "--xbnds",
     type=str,
     default=None,
-    help="Specify boundaries for defining zonal regions of varying resolution.\
-          When --tripolar is present, x also defines the longitude of the two\
-          new poles. nxbnds must be 2 and lon_start = x(1), lon_end = x(nxbnds)\
-          are longitude of the two new poles.",
+    help="Specify boundaries for defining zonal regions of varying resolution."
 )
 @click.option(
     "--ybnds", 
     type=str, 
     default=None,
-    help="Specify boundaries for defining meridional regions of varying\
-          resolution",
+    help="Specify boundaries for defining meridional regions of varying resolution",
 )
 @click.option(
     "--dlon", 
@@ -53,17 +49,16 @@ def make_hgrid():
     "--use_great_circle_algorithm", 
     is_flag=True, 
     default=False,
-    help="When specified, great_circle_algorithm will be used to compute grid \
-         cell area.",
+    help="When specified, great_circle_algorithm will be used to compute grid cell area.",
 )
 @click.option(
     "--grid_name",
     type=str,
     default="horizontal_grid",
-    help="Specify the grid name. The output grid file name\
-          will be grid_name.nc if there is one tile and\
-          grid_name.tile#.nc if there is more than one tile.\
-          The default value will be horizontal_grid.",
+    help="""
+    Specify the grid name. The output grid file name will be grid_name.nc if there is one tile and 
+    grid_name.tile#.nc if there is more than one tile. The default value will be 'horizontal_grid'.
+    """,
 )
 @click.option(
     "--verbose",
@@ -128,9 +123,11 @@ def lonlat(
     "--nest_grids",
     type=int,
     default=0,
-    help="set to create this # nested grids as well as the global grid.\
-          When it is set, besides 6 tile grid files created, there are #\
-          more nest grids with file name = grid_name.tile${parent_tile}.nest.nc"
+    help="""
+    set to create this # nested grids as well as the global grid.
+    When it is set, besides 6 tile grid files created, there are #
+    more nest grids with file name = grid_name.tile${parent_tile}.nest.nc
+    """,
 )
 @click.option(
     "--parent_tile",
@@ -172,10 +169,12 @@ def lonlat(
     "--halo",
     type=int,
     default=0,
-    help="halo size is used in the atmosphere cubic sphere\
-          model. Its purpose is to make sure the nest,\
-          including the halo region, is fully contained\
-          within a single parent (coarse) tile."
+    help="""
+    halo size is used in the atmosphere cubic sphere
+    model. Its purpose is to make sure the nest,
+    including the halo region, is fully contained
+    within a single parent (coarse) tile.
+    """,
 )
 @click.option(
     "--out_halo",
@@ -187,17 +186,18 @@ def lonlat(
     "--grid_name",
     type=str,
     default="horizontal_grid",
-    help="Specify the grid name. The output grid file name\
-          will be grid_name.nc if there is one tile and\
-          grid_name.tile#.nc if there is more than one tile.\
-          The default value will be horizontal_grid.",
+    help="""
+    Specify the grid name. The output grid file name
+    will be grid_name.nc if there is one tile and
+    grid_name.tile#.nc if there is more than one tile.
+    The default value will be horizontal_grid.
+    """,
 )
 @click.option(
     "--grid_type",
     type=str,
     default="gnomonic_ed",
-    help="Specify the grid type. Options are 'gnomonic_ed'\
-          'gnomonic_dist', or 'gnomonic_angl'.",
+    help="Specify the grid type. Options are 'gnomonic_ed', 'gnomonic_dist', or 'gnomonic_angl'.",
 )
 @click.option(
     "--output_length_angle",
@@ -210,20 +210,24 @@ def lonlat(
     "--do_schmidt",
     is_flag=True,
     default=False,
-    help="Set to do Schmidt transformation to create\
-          stretched grid. When do_schmidt is set, the\
-          following must be set: --stretch_factor\
-          --target_lon and --target_lat."
+    help="""
+    Set to do Schmidt transformation to create
+    stretched grid. When do_schmidt is set, the
+    following must be set: --stretch_factor
+    --target_lon and --target_lat.
+    """,
 )
 @click.option(
     "--do_cube_transform",
     is_flag=True,
     default=False,
-    help="re-orient the rotated cubed sphere so that tile 6\
-          has 'north' facing upward, which would make\
-          analysis and explaining nest placement much easier.\
-          When do_cube_transform is set, the following must\
-          be set: --stretch_factor, --latget_lon, and --target_lat."
+    help="""
+    re-orient the rotated cubed sphere so that tile 6
+    has 'north' facing upward, which would make
+    analysis and explaining nest placement much easier.
+    When do_cube_transform is set, the following must
+    be set: --stretch_factor, --target_lon, and --target_lat.
+    """,
 )
 @click.option(
     "--verbose",

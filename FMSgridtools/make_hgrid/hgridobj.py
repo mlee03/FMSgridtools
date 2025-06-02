@@ -101,6 +101,10 @@ class HGridObj():
     ):
         """Get super grid size"""
 
+        if verbose:
+            print(f"[INFO] make_hgrid: Number of tiles (ntiles): {ntiles}", file=sys.stderr)
+            print(f"[INFO] make_hgrid: Number of global tiles (ntiles_global): {ntiles_global}", file=sys.stderr)
+
         self.nxl = np.empty(shape=ntiles, dtype=np.int32)
         self.nyl = np.empty(shape=ntiles, dtype=np.int32)
 
@@ -224,7 +228,7 @@ class HGridObj():
         for n in range(ntiles):
             self.tile = "tile" + str(n+1)
             if ntiles > 1:
-                outfile = grid_name + ".tile" + ".nc" + str(n+1)
+                outfile = grid_name + ".tile" + str(n+1) + ".nc"
             else:
                 outfile = grid_name + ".nc"
 
@@ -279,7 +283,7 @@ class HGridObj():
                     if n > 0:
                         print(f"[INFO] XARRAY: n: {n} x[0]: {self.x[pos_c]} x[-1]: {self.x[pos_c-1]} x[-2]: {self.x[pos_c-2]} x[-3]: {self.x[pos_c-3]} x[-4]: {self.x[pos_c-4]} x[-5]: {self.x[pos_c-5]} x[-10]: {self.x[pos_c-10]}", file=sys.stderr)
                 x = xr.DataArray(
-                    data=self.x[pos_c:].reshape((nyp,nxp)),
+                    data=self.x[pos_c:pos_c+nyp*nxp].reshape((nyp,nxp)),
                     dims=["nyp", "nxp"],
                     attrs=dict(
                         units="degree_east", 
@@ -289,7 +293,7 @@ class HGridObj():
                 var_dict['x'] = x
 
                 y = xr.DataArray(
-                    data=self.y[pos_c:].reshape((nyp, nxp)),
+                    data=self.y[pos_c:pos_c+nyp*nxp].reshape((nyp, nxp)),
                     dims=["nyp", "nxp"],
                     attrs=dict(
                         units="degree_north", 
@@ -299,7 +303,7 @@ class HGridObj():
                 var_dict['y'] = y
 
                 area = xr.DataArray(
-                    data=self.area[pos_t:].reshape((ny, nx)),
+                    data=self.area[pos_t:pos_t+ny*nx].reshape((ny, nx)),
                     dims=["ny", "nx"],
                     attrs=dict(
                         units="m2",
@@ -310,7 +314,7 @@ class HGridObj():
 
                 if output_length_angle:
                     dx = xr.DataArray(
-                        data=self.dx[pos_n:].reshape((nyp, nx)),
+                        data=self.dx[pos_n:pos_n+nyp*nx].reshape((nyp, nx)),
                         dims=["nyp", "nx"],
                         attrs=dict(
                             units="meters", 
@@ -320,7 +324,7 @@ class HGridObj():
                     var_dict['dx'] = dx
 
                     dy = xr.DataArray(
-                        data=self.dy[pos_e:].reshape((ny, nxp)),
+                        data=self.dy[pos_e:pos_e+ny*nxp].reshape((ny, nxp)),
                         dims=["ny", "nxp"],
                         attrs=dict(
                             units="meters", 
@@ -330,7 +334,7 @@ class HGridObj():
                     var_dict['dy'] = dy
 
                     angle_dx = xr.DataArray(
-                        data=self.angle_dx[pos_c:].reshape((nyp, nxp)),
+                        data=self.angle_dx[pos_c:pos_c+nyp*nxp].reshape((nyp, nxp)),
                         dims=["nyp", "nxp"],
                         attrs=dict(
                             units="degrees_east",
@@ -341,7 +345,7 @@ class HGridObj():
 
                     if not conformal:
                         angle_dy = xr.DataArray(
-                            data=self.angle_dy[pos_c:].reshape((nyp, nxp)),
+                            data=self.angle_dy[pos_c:pos_c+nyp*nxp].reshape((nyp, nxp)),
                             dims=["nyp", "nxp"],
                             attrs=dict(
                                 units="degrees_north",
