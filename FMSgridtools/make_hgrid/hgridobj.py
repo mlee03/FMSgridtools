@@ -172,9 +172,9 @@ class HGridObj():
                 size4.value += (nlon[n] + 1) * (nlat[n] + 1)
         else:
             size1 = ctypes.c_ulong(self.nxp * self.nyp * ntiles_global)
-            size2 = ctypes.c_ulong(self.nxp * (self.nyp + 1) * ntiles_global)
-            size3 = ctypes.c_ulong((self.nxp + 1) * self.nyp * ntiles_global)
-            size4 = ctypes.c_ulong(self.nxp * self.nyp * ntiles_global)
+            size2 = ctypes.c_ulong(self.nx * self.nyp * ntiles_global)
+            size3 = ctypes.c_ulong(self.nxp * self.ny * ntiles_global)
+            size4 = ctypes.c_ulong(self.nx * self.ny * ntiles_global)
 
         if not (nest_grids == 1 and parent_tile[0] == 0):
             for n_nest  in range(ntiles_global, ntiles_global+nest_grids):
@@ -360,7 +360,7 @@ class HGridObj():
                 if verbose:
                     print(f"[INFO] INDEX NC write with halo tile number = n: {n}", file=sys.stderr)
 
-                tmp_x = np.empty(shape=(nxp+2*out_halo)*(nyp+2*out_halo), dtype=np.float64)
+                tmp_x = np.zeros(shape=(nxp+2*out_halo)*(nyp+2*out_halo), dtype=np.float64)
                 fill_cubic_grid_halo(nx, ny, out_halo, tmp_x, self.x, self.x, n, 1, 1)
                 x = xr.DataArray(
                     data=tmp_x.reshape((nyp+2*out_halo,nxp+2*out_halo)),
@@ -373,7 +373,7 @@ class HGridObj():
                 )
                 var_dict['x'] = x
 
-                tmp_y = np.empty(shape=(nxp+2*out_halo)*(nyp+2*out_halo), dtype=np.float64)
+                tmp_y = np.zeros(shape=(nxp+2*out_halo)*(nyp+2*out_halo), dtype=np.float64)
                 fill_cubic_grid_halo(nx, ny, out_halo, tmp_y, self.y, self.y, n, 1, 1)
                 y = xr.DataArray(
                     data=tmp_y.reshape((nyp+2*out_halo, nxp+2*out_halo)),
@@ -386,10 +386,10 @@ class HGridObj():
                 )
                 var_dict['y'] = y
 
-                tmp_area = np.empty(shape=(nxp+2*out_halo)*(nyp+2*out_halo), dtype=np.float64)
+                tmp_area = np.zeros(shape=(nx+2*out_halo)*(ny+2*out_halo), dtype=np.float64)
                 fill_cubic_grid_halo(nx, ny, out_halo, tmp_area, self.area, self.area, n, 0, 0)
                 area = xr.DataArray(
-                    data=tmp_area[:(nx+2*out_halo)*(ny+2*out_halo)].reshape((ny+2*out_halo, nx+2*out_halo)),
+                    data=tmp_area.reshape((ny+2*out_halo, nx+2*out_halo)),
                     dims=["ny", "nx"],
                     attrs=dict(
                         units="m2",
@@ -400,10 +400,10 @@ class HGridObj():
                 var_dict['area'] = area
 
                 if output_length_angle:
-                    tmp_dx = np.empty(shape=(nxp+2*out_halo)*(nyp+2*out_halo), dtype=np.float64)
+                    tmp_dx = np.zeros(shape=(nx+2*out_halo)*(nyp+2*out_halo), dtype=np.float64)
                     fill_cubic_grid_halo(nx, ny, out_halo, tmp_dx, self.dx, self.dy, n, 0, 1)
                     dx = xr.DataArray(
-                        data=tmp_dx[:(nyp+2*out_halo)*(nx+2*out_halo)].reshape((nyp+2*out_halo, nx+2*out_halo)),
+                        data=tmp_dx.reshape((nyp+2*out_halo, nx+2*out_halo)),
                         dims=["nyp", "nx"],
                         attrs=dict(
                             units="meters", 
@@ -413,10 +413,10 @@ class HGridObj():
                     )
                     var_dict['dx'] = dx
 
-                    tmp_dy = np.empty(shape=(nxp+2*out_halo)*(nyp+2*out_halo), dtype=np.float64)
+                    tmp_dy = np.zeros(shape=(nxp+2*out_halo)*(ny+2*out_halo), dtype=np.float64)
                     fill_cubic_grid_halo(nx, ny, out_halo, tmp_dy, self.dy, self.dx, n, 1, 0)
                     dy = xr.DataArray(
-                        data=tmp_dy[:(ny+2*out_halo)*(nxp+2*out_halo)].reshape((ny+2*out_halo, nxp+2*out_halo)),
+                        data=tmp_dy.reshape((ny+2*out_halo, nxp+2*out_halo)),
                         dims=["ny", "nxp"],
                         attrs=dict(
                             units="meters", 
@@ -426,7 +426,7 @@ class HGridObj():
                     )
                     var_dict['dy'] = dy
 
-                    tmp_adx = np.empty(shape=(nxp+2*out_halo)*(nyp+2*out_halo), dtype=np.float64)
+                    tmp_adx = np.zeros(shape=(nxp+2*out_halo)*(nyp+2*out_halo), dtype=np.float64)
                     fill_cubic_grid_halo(nx, ny, out_halo, tmp_adx, self.angle_dx, self.angle_dx, n, 1, 1)
                     angle_dx = xr.DataArray(
                         data=tmp_adx.reshape((nyp+2*out_halo, nxp+2*out_halo)),
@@ -440,7 +440,7 @@ class HGridObj():
                     var_dict['angle_dx'] = angle_dx
 
                     if not conformal:
-                        tmp_ady = np.empty(shape=(nxp+2*out_halo)*(nyp+2*out_halo), dtype=np.float64)
+                        tmp_ady = np.zeros(shape=(nxp+2*out_halo)*(nyp+2*out_halo), dtype=np.float64)
                         fill_cubic_grid_halo(nx, ny, out_halo, tmp_ady, self.angle_dy, self.angle_dy, n, 1, 1)
                         angle_dy = xr.DataArray(
                             data=tmp_ady.reshape((nyp+2*out_halo, nxp+2*out_halo)),
