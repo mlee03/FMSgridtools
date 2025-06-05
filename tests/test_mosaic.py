@@ -87,7 +87,7 @@ def test_getntiles():
 
 def test_getgridfiles():
     mosaic = MosaicObj(mosaic_file=output).read()
-    assert set(mosaic.gridfiles) == (gridfiles)
+    assert set(mosaic.gridfiles) == set(gridfiles)
     os.remove(output)
 
 def test_solo_mosaic():
