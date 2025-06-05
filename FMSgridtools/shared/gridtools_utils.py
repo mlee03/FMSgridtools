@@ -1,10 +1,12 @@
 import os
 import sys
+from subprocess import run
 from time import ctime
+from typing import Optional
+
 from git import Repo
 from pkg_resources import get_distribution
-from typing import Optional
-from subprocess import run
+
 
 def check_file_is_there( check_file: str, debug: bool = False ) :
 
@@ -20,7 +22,7 @@ def get_provenance_attrs(
     # as global attributes for output netcdf files
     repo = Repo(search_parent_directories=True)
     git_hash = repo.head.object.hexsha
-    package_version = get_distribution("gridtools").version
+    package_version = get_distribution("fmsgridtools").version
     history = " ".join(sys.argv)
     hostname = run(["hostname"],capture_output=True,text=True).stdout
     g_attrs = {

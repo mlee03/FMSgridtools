@@ -384,11 +384,11 @@ void create_realistic_topog_wrapper(int nx_dst, int ny_dst, const double *x_dst,
     nread[i] = 0;
   }
 
-  // apply refinements 
+  // apply refinements
   nx_dst /= x_refine;
   ny_dst /= y_refine;
 
-  // some flags default to true, so we'll flip the values passed in from python 
+  // some flags default to true, so we'll flip the values passed in from python
   adjust_topo = !adjust_topo;
   fill_isolated_cells = !fill_isolated_cells;
   open_very_this_cell = !open_very_this_cell;
@@ -437,12 +437,12 @@ void create_realistic_topog_wrapper(int nx_dst, int ny_dst, const double *x_dst,
   vid = mpp_get_varid(g_fid, "x");
   mpp_get_var_value_block(g_fid, vid, start, nread, tmp);
 
-  // check if great circle algorithm was used in the grid tile 
+  // check if great circle algorithm was used in the grid tile
   // normally this is done for each grid tile, but this option currently only supports a single tile
   int using_gca = get_great_circle_algorithm(g_fid);
 
   /*
-  // TODO 
+  // TODO
   // need to recreate the tmp array using the passed in x_dst/y_dst data
   // will need to look closer at the arrays netcdf's calls are returning
   for(j = start[0]; j < nread[0]; j++)
@@ -482,7 +482,7 @@ void create_realistic_topog_wrapper(int nx_dst, int ny_dst, const double *x_dst,
 			    fill_isolated_cells, dont_change_landmask, kmt_min,min_thickness,
 			    open_very_this_cell,fraction_full_cell,depth,
 			    num_levels, domain, debug, using_gca, on_grid, gpu);
-  
+
   mpp_domain_end();
   mpp_end();
 
@@ -651,7 +651,7 @@ void create_realistic_topog(int nx_dst, int ny_dst, const double *x_dst, const d
 	      mask_src[i] = 1.0;
     }
   }
-  
+
   if(on_grid) {
      if(debug) printf("We do no topography interpolation!\n");
      for(i=0; i<nx_src*ny_now; i++) {
@@ -1353,5 +1353,3 @@ void create_dome_topog(int nx, int ny, const double *x, const double *y, double 
   }
 
 }
-
-
