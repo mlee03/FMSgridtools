@@ -1,33 +1,32 @@
-import os
-from pathlib import Path
-from typing import List
 import subprocess
+from typing import List
 
-from setuptools import setup, find_namespace_packages
-from setuptools.command.install import install
+from setuptools import find_namespace_packages, setup
+from setuptools.command.build import build
 
-class CustomInstall(install):
+
+class CustomBuild(build):
     def run(self):
         with open("compile_log.txt", "w") as f:
             subprocess.run(
-                ["mkdir", "-p","c_build"], 
-                cwd="./cfrenctools/", 
+                ["mkdir", "-p","c_build"],
+                cwd="./cfrenctools/",
                 stdout=f,
                 stderr=subprocess.STDOUT,
             )
             subprocess.run(
-                ["cmake", ".."], 
-                cwd="./cfrenctools/c_build", 
+                ["cmake", ".."],
+                cwd="./cfrenctools/c_build",
                 stdout=f,
                 stderr=subprocess.STDOUT,
             )
             subprocess.run(
-                ["make"], 
-                cwd="./cfrenctools/c_build", 
+                ["make"],
+                cwd="./cfrenctools/c_build",
                 stdout=f,
                 stderr=subprocess.STDOUT,
             )
-        install.run(self)
+        build.run(self)
 
 test_requirements = ["pytest", "coverage"]
 develop_requirements = test_requirements + ["pre-commit"]
@@ -58,7 +57,5 @@ setup(
     include_package_data=True,
     version="0.0.1",
     zip_safe=False,
-    cmdclass={'install': CustomInstall}
+    cmdclass={'build': CustomBuild}
 )
-
-

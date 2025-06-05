@@ -1,28 +1,25 @@
 import ctypes
 import os
-from .shared.create_xgrid import create_xgrid
 
-class cfrenctools():
+from .shared import create_xgrid
+from .make_hgrid import make_hgrid_wrappers
 
-    __libpath: str = os.path.dirname(__file__) + "/../cfrenctools/c_build/clib.so"
-    __lib: ctypes.CDLL = ctypes.CDLL(__libpath)
-    
-    @classmethod
-    def init(cls):        
-        create_xgrid.init(cls.libpath, cls.lib)
+_libpath = os.path.dirname(__file__) + "/c_install/clib.so"
+_lib = ctypes.cdll.LoadLibrary(_libpath)
 
-    @classmethod
-    def changelib(cls, libpath):
-        cls.__libpath = libpath
-        cls.__lib = ctypes.CDLL(cls.__libpath)
-        cls.init()
-        
-    @classmethod
-    @property
-    def lib(cls):
-        return cls.__lib
+def init(libpath: str = None):
 
-    @classmethod
-    @property
-    def libpath(cls):
-        return cls.__libpath
+    global _libpath, _lib
+
+    if libpath is not None:
+        _libpath = libpath
+        _lib = ctypes.cdll.LoadLibrary(_libpath)
+
+    create_xgrid.init(_libpath, _lib)
+    make_hgrid_wrappers.init(_libpath, _lib)
+
+def lib() -> type[ctypes.CDLL]:
+    return _lib
+
+def libpath() -> str:
+    return _libpath

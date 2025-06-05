@@ -46,7 +46,7 @@ set(SRC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 # Create the shared library target
 add_library(clib SHARED ${c_source_files})
 
-target_include_directories(clib PUBLIC 
+target_include_directories(clib PUBLIC
     ${SRC_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/shared
     ${NetCDF_C_INCLUDE_DIRS}
@@ -59,12 +59,12 @@ target_link_libraries(clib PUBLIC NetCDF::NetCDF_C
 
 # Set the output directory
 set_target_properties(
-    clib PROPERTIES 
-    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/c_build
+    clib PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../pyfrenctools/c_install
     POSITION_INDEPENDENT_CODE ON
     PREFIX ""
     COMPILE_FLAGS ${OpenACC_C_FLAGS}
 )
 
 # Install the shared library
-install(TARGETS clib DESTINATION c_build)
+install(TARGETS clib DESTINATION ../pyfrenctools/c_install)

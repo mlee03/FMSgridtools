@@ -32,11 +32,11 @@
                  NOAA-GFDL source. Kyle Ahern, AOML/HRD
   03/05/2020  -- Enable many level Telescoping nests
                  (Nests within nests). Joseph Mouallem FV3/GFDL
-  04/12/2021  -- Fixed several IMAs (Invalid Memory Access), memory leaks, and some 
+  04/12/2021  -- Fixed several IMAs (Invalid Memory Access), memory leaks, and some
                  non-critical compiler warnings. Some notes related to MAs are scattered below.
-                 Inorder to help reproduce the pre multinest GR (Global Refinement) awnsers, 
-                 the pre mulit-nest version of function create_gnomonic_cubic_grid was added back 
-                 as a second version of the function by that name. 
+                 Inorder to help reproduce the pre multinest GR (Global Refinement) awnsers,
+                 the pre mulit-nest version of function create_gnomonic_cubic_grid was added back
+                 as a second version of the function by that name.
                  Miguel Zuniga.
 *******************************************************************************/
 
@@ -389,8 +389,8 @@ void create_gnomonic_cubic_grid( char* grid_type, int *nlon, int *nlat, double *
     /*In general for a given stretch factor and target latitude the resulting stretch grid will not have the poles as grid points.
       This may cause issues later with other tools such as exchange grid generator manifested as tiling errors and cells with a wrong land mask.
       The following call searches for target latitudes close to the specified one that would allow both North and South poles
-      to be grid points in the resulting stretched grid. 
-      Currently this just prints the advisory target latitude values and will not change the grid in any way. It is possible to add an option later to use the adjusted value.  
+      to be grid points in the resulting stretched grid.
+      Currently this just prints the advisory target latitude values and will not change the grid in any way. It is possible to add an option later to use the adjusted value.
     */
     if(num_nest_grids == 0) suggest_target_lats(stretch_factor, 0, ni, 0, ni, target_lon*D2R, target_lat*D2R, ntiles, xc, yc);
 
@@ -702,7 +702,7 @@ void create_gnomonic_cubic_grid( char* grid_type, int *nlon, int *nlat, double *
     //since angle is used in the model, set angle to 0 for nested region
     for(nn=0; nn < num_nest_grids; nn++) {
       //Note: Changed "<=" to "<" below to remove one IMA (twice) for GR AND non-GR runs.
-      // For GR runs, it also changed four result numbers. 
+      // For GR runs, it also changed four result numbers.
       for(i=0; i<(nx_nest_arr[nn]+1)*(ny_nest_arr[nn]+1); i++) {
         angle_dx[tile_offset_supergrid[ntiles+nn] + i]=0;
         angle_dy[tile_offset_supergrid[ntiles+nn] + i]=0;
@@ -742,16 +742,16 @@ void create_gnomonic_cubic_grid( char* grid_type, int *nlon, int *nlat, double *
 
 /*
   Function create_gnomonic_cubic_grid_GR is mostly (some lines deleted) the version of
-  the function just prior to the multi nest version. 
+  the function just prior to the multi nest version.
 
   This function should only be called for GR  computations.
 
-  Unsuccessful attempts were made to make the current general purpose 
-  create_gnomonic_cubic_grid version reproduce the pre multi-nest version answers for 
+  Unsuccessful attempts were made to make the current general purpose
+  create_gnomonic_cubic_grid version reproduce the pre multi-nest version answers for
   GR computations. This current GR version does reproduce the answers within a small
   tolerance (e.g. to about the tenth decimal digit for fields x and y on gcc 9.3 compiler).
 
-  TODO: Update general purpose multi-nest version of create_gnomonic_cubic_grid so that it 
+  TODO: Update general purpose multi-nest version of create_gnomonic_cubic_grid so that it
   reproduces the pre multi-nest answers; remove the GR version below.
 */
 
@@ -834,7 +834,7 @@ void create_gnomonic_cubic_grid_GR( char* grid_type, int *nlon, int *nlat, doubl
     nj /= refine_ratio;
   }
   nip=ni+1;
-  
+
   if ( (do_schmidt || do_cube_transform) && fabs(stretch_factor-1.) > EPSLN5 ) stretched_grid = 1;
 
   lon = (double *)malloc(nip*nip*sizeof(double));
@@ -1170,7 +1170,7 @@ void create_gnomonic_cubic_grid_GR( char* grid_type, int *nlon, int *nlat, doubl
   free(lat);
   free(xc2);
   free(yc2);
-    
+
 }
 
 void calc_cell_area(int nx, int ny, const double *x, const double *y, double *area)
@@ -1266,30 +1266,30 @@ void direct_transform(double stretch_factor, int i1, int i2, int j1, int j2, dou
 /*
   void suggest_target_lats(double stretch_factor, int i1, int i2, int j1, int j2, double lon_p, double lat_p, int ntiles,
                          double *lon, double *lat)
-  
+
   This subroutine suggests values for target latitude close to the desired ones
   so that the stretched grid would include the North pole and/or the South pole as grid points.
-  
+
   South pole is a fixed point of the stretching transformation:
-       inter_lat   = asin( (c2m1+c2p1*sin(init_lat))/(c2p1+c2m1*sin(init_lat)) ); 
+       inter_lat   = asin( (c2m1+c2p1*sin(init_lat))/(c2p1+c2m1*sin(init_lat)) );
   After stretching the intermediate grid is rotated so that the South pole
   shifts to the target point of the final stretched grid:
-       final_latitude = -asin(sin_p*sin(inetr_lat) + cos_p*cos(inter_lat)*cos(init_lon[l]));    
+       final_latitude = -asin(sin_p*sin(inetr_lat) + cos_p*cos(inter_lat)*cos(init_lon[l]));
        final_longitude= lon_p + atan(-cos(inter_lat)*sin(init_lon) / -sin(inter_lat)*cos_p+cos(inter_lat)*sin_p*cos(init_lon));
-  Generally for a given target latitude the final grid will not have the N or S poles (they are not rotated into grid points).  
-  But it is possible to restrict the final grid to include one or both poles by slightly adjusting the target latitude. 
-  In the generating algorithm the intermediate grid is roateted by 90+lat_p, to shift the intemediate South pole to the target point. 
-  Hence the intermediate point with (lon,lat)=(180,-lat_p) would rotate to the North pole and (lon,lat)=(180,180-lat_p) would rotate to the South pole.  
+  Generally for a given target latitude the final grid will not have the N or S poles (they are not rotated into grid points).
+  But it is possible to restrict the final grid to include one or both poles by slightly adjusting the target latitude.
+  In the generating algorithm the intermediate grid is roateted by 90+lat_p, to shift the intemediate South pole to the target point.
+  Hence the intermediate point with (lon,lat)=(180,-lat_p) would rotate to the North pole and (lon,lat)=(180,180-lat_p) would rotate to the South pole.
   So if such points are in the intermediate grid they would generate the N&S poles in the final grid.
   There is no guarantee that (180,-lat_p) with arbitrary lat_p would be in the intermedaite grid.
   But, we can adjust lat_p a little to have the pre-image of the North pole in the intermedaite grid.
   We first find the latitude of the pre-image in the inital grid by inverting the formula for the stretch transformation:
        lam_North_pre=-asin((c2m1-c2p1*sin_p)/(c2p1-c2m1*sin_p))
   Then we find the closest point in the initial grid  with (lon,lat)=(180,lam_North_pre)
-  Then we find the target point latitude that would generate the pre-image of North pole in intermediate grid. 
+  Then we find the target point latitude that would generate the pre-image of North pole in intermediate grid.
   A similar formula applies to generate the South pole.
-  To have both poles as grid points an intermediate value for target can be found so that both N&S conditions hold. 
-*/    
+  To have both poles as grid points an intermediate value for target can be found so that both N&S conditions hold.
+*/
 void suggest_target_lats(double stretch_factor, int i1, int i2, int j1, int j2, double lon_p, double lat_p, int ntiles,
                          double *lon, double *lat)
 {
@@ -1325,7 +1325,7 @@ void suggest_target_lats(double stretch_factor, int i1, int i2, int j1, int j2, 
 	  NPtile = n;
 	  NPj = j;
 	  NPi = i;
-          //find the target point latitude that would generate the pre-image of North pole in intermediate grid. 
+          //find the target point latitude that would generate the pre-image of North pole in intermediate grid.
           adjusted_target_latN = -asin((c2m1+c2p1*sin(lat[l]))/(c2p1+c2m1*sin(lat[l])));
           printf("Suggested target latitude to have the North pole in the grid: %g\n",R2D*adjusted_target_latN);
 	  //printf("FoundN: %d,%d,%d,%g,%g,%g\n",NPtile,NPj,l,R2D*lon[l],R2D*lat[l],R2D*lam_North_pre);
@@ -1350,29 +1350,29 @@ void suggest_target_lats(double stretch_factor, int i1, int i2, int j1, int j2, 
   //printf("SPtile ,i,j: %d,%d,%d\n",SPtile,SPi,SPj);
 
   /*
-    In the following f=b is the condition that could generate both N & S poles in the final grid 
+    In the following f=b is the condition that could generate both N & S poles in the final grid
     for a given stretch factor. We search the initial grid points near what we found previously for
-    N and S separately to find a suitable target latitude so that the final grid includes both poles. 
+    N and S separately to find a suitable target latitude so that the final grid includes both poles.
   */
   f=(c2p1/c2m1 + c2m1/c2p1);
   for(in=NPi-10; in<=NPi+10; in++) {
      for(is=SPi-10; is<=SPi+10; is++) {
 	  ln = NPtile*nip*nip + NPj*nxp+in;
 	  ls = SPtile*nip*nip + SPj*nxp+is;
-	  b = -2*(1.0+sin(lat[ln])*sin(lat[ls]))/(sin(lat[ln])+sin(lat[ls]));         
+	  b = -2*(1.0+sin(lat[ln])*sin(lat[ls]))/(sin(lat[ln])+sin(lat[ls]));
 	  if(fabs(f-b)<0.0001){
 	    sS=sin(lat[ls]);
 	    sTS= (c2m1+c2p1*sS)/(c2p1+c2m1*sS);
 	    adjusted_target_latS = asin(sTS);
 	    printf("Suggested target latitude to have both North and South poles in the grid: %g\n",R2D*adjusted_target_latS);
-	    /* similarly 
+	    /* similarly
 	    sN=sin(lat[ln]);
 	    sTN=-(c2m1+c2p1*sN)/(c2p1+c2m1*sN);
 	    adjusted_target_latN = asin(sTN);
 	    but adjusted_target_latN should equal adjusted_target_latS and does not yield more info.
 	    */
 	    //printf("FoundSPj: %d,%d,%g,%g,%g\n",in,is,fabs(f-b),R2D*adjusted_target_latN,R2D*adjusted_target_latS);
-  	  } 
+  	  }
      }
   }
 } /*suggest_target_lats*/
@@ -2190,21 +2190,21 @@ void spherical_linear_interpolation(double beta, const double *p1, const double 
 /***
   Canculate the index into parent.
   Function index_an_gr is introduced to avoid IMAs (an array out of bounds access)
-  in some global_refinement situations. In other situations, attempting to 
+  in some global_refinement situations. In other situations, attempting to
   go outside the parent array should not occur and is considered a fatal error.
 ***/
 int index_an_gr(int jcf, int p_npi, int icf, int max_ni, int max_nj, int is_gr){
   if(jcf > max_nj){
     jcf = max_nj;//then use the uppr (last) row data
     //fprintf(stderr, "[INFO] index_an_gr : jcf=%d max_nj=%d\n",jcf, max_nj);
-    if(is_gr == 0){          
+    if(is_gr == 0){
       mpp_error("make_hgrid in index_ar_gr, jcf > max_nj");
     }
   }
   if(icf > max_ni){
     icf = max_ni;//then use the rightmost column data
     //fprintf(stderr, "[INFO] index_an_gr : icf=%d max_ni=%d\n",icf, max_ni);
-    if(is_gr == 0){          
+    if(is_gr == 0){
       mpp_error("make_hgrid in index_ar_gr, icf > max_ni");
     }
   }
@@ -2287,7 +2287,7 @@ void setup_aligned_nest(int parent_ni, int parent_nj, const double *parent_xc, c
         t2[1] = parent_yc[ idx_pjpi ];
         spherical_linear_interpolation( (double)jmod/refine_ratio, t1, t2, q2);
       }
-       
+
       if (imod == 0) {
         xc[j*npi+i] = q1[0];
         yc[j*npi+i] = q1[1];
