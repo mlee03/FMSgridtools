@@ -82,13 +82,12 @@ def test_write_function():
     assert os.path.exists(output)
 
 def test_getntiles():
-    mosaic = MosaicObj(mosaic_file=output)
-    ntiles = mosaic.get_ntiles()
-    assert ntiles == 6
+    mosaic = MosaicObj(mosaic_file=output).read()
+    assert mosaic.ntiles == 6
 
 def test_getgridfiles():
-    mosaic2 = MosaicObj(mosaic_file=output)
-    assert mosaic2.gridfiles == gridfiles
+    mosaic = MosaicObj(mosaic_file=output).read()
+    assert set(mosaic.gridfiles) == set(gridfiles)
     os.remove(output)
 
 def test_solo_mosaic():
