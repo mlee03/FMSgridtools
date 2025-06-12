@@ -660,13 +660,23 @@ void get_grid_cell_struct_gpu( const int nlon, const int nlat, double *lon, doub
   grid_cells->lon_vertices  = (double *)malloc(MAX_V*ncells*sizeof(double));
   grid_cells->lat_vertices  = (double *)malloc(MAX_V*ncells*sizeof(double));
 
+  double *lon_min = grid_cells->lon_min;
+  double *lon_max = grid_cells->lon_max;
+  double *lat_min = grid_cells->lat_min;
+  double *lat_max = grid_cells->lat_max;
+  double *lon_cent = grid_cells->lon_cent;
+  int *nvertices = grid_cells->nvertices;
+  double *area = grid_cells->area;
+  double *lon_vertices = grid_cells->lon_vertices;
+  double *lat_vertices = grid_cells->lat_vertices;
+  
 #pragma acc enter data create(grid_cells[:1])
-#pragma acc enter data create(grid_cells->lon_min[:ncells], grid_cells->lon_max[:ncells], \
-                              grid_cells->lat_min[:ncells], grid_cells->lat_max[:ncells], \
-                              grid_cells->lon_cent[:ncells], grid_cells->nvertices[:ncells],\
-                              grid_cells->area[:ncells])
-#pragma acc enter data create(grid_cells->lon_vertices[:MAX_V*ncells], \
-                              grid_cells->lat_vertices[:MAX_V*ncells])
+#pragma acc enter data create(lon_min[:ncells], lon_max[:ncells], \
+                              lat_min[:ncells], lat_max[:ncells], \
+                              lon_cent[:ncells], nvertices[:ncells],\
+                              area[:ncells])
+#pragma acc enter data create(lon_vertices[:MAX_V*ncells],  \
+                              lat_vertices[:MAX_V*ncells])
 
 #pragma acc data present(grid_cells[:1], lon[:npts], lat[:npts])
 #pragma acc parallel loop independent
@@ -700,15 +710,26 @@ void get_grid_cell_struct_gpu( const int nlon, const int nlat, double *lon, doub
 void free_grid_cell_struct_gpu( const int ncells, Grid_cells_struct_config *grid_cells)
 {
 
-#pragma acc exit data delete( grid_cells->lon_vertices,  \
-                              grid_cells->lat_vertices,  \
-                              grid_cells->lon_min,       \
-                              grid_cells->lon_max,       \
-                              grid_cells->lon_cent,      \
-                              grid_cells->lat_max,       \
-                              grid_cells->lat_min,       \
-                              grid_cells->nvertices,     \
-                              grid_cells->area)
+
+  double *lon_vertices = grid_cells->lon_vertices;
+  double *lat_vertices = grid_cells->lat_vertices;
+  double *lon_min = grid_cells->lon_min;
+  double *lon_max = grid_cells->lon_max;
+  double *lon_cent = grid_cells->lon_cent;
+  double *lat_max = grid_cells->lat_max;
+  double *lat_min = grid_cells->lat_min;
+  int *nvertices = grid_cells->nvertices;
+  double *area = grid_cells->area;
+  
+#pragma acc exit data delete( lon_vertices,  \
+                              lat_vertices,  \
+                              lon_min,       \
+                              lon_max,       \
+                              lon_cent,      \
+                              lat_max,       \
+                              lat_min,       \
+                              nvertices,     \
+                              area)
 #pragma acc exit data delete(grid_cells)
 
   free(grid_cells->lon_min);  grid_cells->lon_min = NULL;
@@ -803,12 +824,18 @@ void copy_data_to_interp_on_device_gpu(const int nxcells, const int input_ncells
       interp_for_input_tile->dcentroid_lat = (double *)malloc(nxcells*sizeof(double));
     }
 
+    int *input_parent_cell_index = interp_for_input_tile->input_parent_cell_index;
+    int *output_parent_cell_index = interp_for_input_tile->output_parent_cell_index;
+    double *dcentroid_lon = interp_for_input_tile->dcentroid_lon;
+    double *dcentroid_lat = interp_for_input_tile->dcentroid_lat;
+    double *xcell_area = interp_for_input_tile->xcell_area;
+    
 #pragma acc enter data copyin(interp_for_input_tile[:1])
-#pragma acc enter data create(interp_for_input_tile->input_parent_cell_index[:nxcells], \
-                              interp_for_input_tile->output_parent_cell_index[:nxcells], \
-                              interp_for_input_tile->xcell_area[:nxcells])
-#pragma acc enter data if(copy_xcentroid) create(interp_for_input_tile->dcentroid_lon[:nxcells], \
-                                                 interp_for_input_tile->dcentroid_lat[:nxcells])
+#pragma acc enter data create(input_parent_cell_index[:nxcells], \
+                              output_parent_cell_index[:nxcells], \
+                              xcell_area[:nxcells])
+#pragma acc enter data if(copy_xcentroid) create(dcentroid_lon[:nxcells], \
+                                                 dcentroid_lat[:nxcells])
 
 #pragma acc data present(xcells_per_ij1[:input_ncells], approx_xcells_per_ij1[:input_ncells], \
                          parent_input_index[:upbound_nxcells],        \

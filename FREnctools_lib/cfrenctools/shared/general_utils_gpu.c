@@ -34,7 +34,7 @@ const double from_pole_threshold_rad_gpu = 0.0174533;  // 1.0 deg
 int rotate_poly_flag_gpu = 0;
 double the_rotation_matrix_gpu[3][3] = { 0 };
 
-#pragma acc routine seq
+//#pragma acc routine seq
 void set_rotate_poly_true_gpu(void){
   rotate_poly_flag_gpu = 1;
   set_the_rotation_matrix_gpu();
