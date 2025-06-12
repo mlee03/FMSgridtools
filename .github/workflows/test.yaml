@@ -25,8 +25,8 @@ jobs:
         run: |
           source /root/.bashrc
           export PATH="$PATH:$CONDA/envs/FMSgridtools/bin"
-          export YAML_FLAGS="/opt/views/view/include/"
-          export YAML_LDFLAGS="/opt/views/view/lib/"
+          export YAML_FLAGS="-I/opt/views/view/include/"
+          export YAML_LDFLAGS="-L/opt/views/view/lib/"
           which cmake
           $CONDA/envs/FMSgridtools/bin/pip install .
           cat FREnctools_lib/compile_log.txt
