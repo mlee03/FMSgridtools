@@ -5,30 +5,17 @@ on: [push, pull_request]
 jobs:
   build-linux:
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/noaa-gfdl/fre-cli:miniconda24.7.1_gcc14.2.0
-      env:
-        NetCDF_INCLUDE_DIRS: "/opt/views/view/include/"
-    steps:
+  steps:
       - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
-      - name: Set up conda environment
+      - name: Step Python
+        uses: actions/setup-python@v4.6.0
+        with: python-version: '3.11.7'
+      - name: Install libraries
         run: |
-          # sets CONDA to wherever it may be on the image
-          source /root/.bashrc
-          # create env
-          conda create -y --name FMSgridtools cmake pip pytest
-          # add to path
-          echo "$CONDA/envs/FMSgridtools/bin" >> $GITHUB_PATH
+          sudo apt-get install libopenmpi-dev netcdf-bin libnetcdf-dev libnetcdff-dev libyaml-dev cmake
       - name: Install FMSgridtools package
-        run: |
-          source /root/.bashrc
-          export PATH="$PATH:$CONDA/envs/FMSgridtools/bin"
-          export YAML_FLAGS="-I/opt/views/view/include/"
-          export YAML_LDFLAGS="-L/opt/views/view/lib/"
-          which cmake
-          $CONDA/envs/FMSgridtools/bin/pip install .
-          cat FREnctools_lib/compile_log.txt
+        run: pip install .
       - name: Run pytest (just link test for now)
         run: pytest tests/shared/test_libs.py
