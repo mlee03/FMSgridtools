@@ -11,7 +11,8 @@ jobs:
           submodules: 'recursive'
       - name: Step Python
         uses: actions/setup-python@v4.6.0
-        with: python-version: '3.11.7'
+        with:
+          python-version: '3.11.7'
       - name: Install libraries
         run: |
           sudo apt-get install libopenmpi-dev netcdf-bin libnetcdf-dev libnetcdff-dev libyaml-dev cmake
