@@ -70,9 +70,13 @@ void conserve_interp_gpu(int nx_src, int ny_src, int nx_dst, int ny_dst, double 
                                              x_dst, y_dst, upbound_nxcells, mask_src, &output_grid_cells,
                                              approx_nxcells, ij2_start, ij2_end, &interp_gpu);
 
-#pragma acc exit data copyout(interp_gpu.input_parent_cell_index[:nxgrid],  \
-                              interp_gpu.output_parent_cell_index[:nxgrid], \
-                              interp_gpu.xcell_area[:nxgrid])
+  int *input_parent_cell_index = interp_gpu.input_parent_cell_index;
+  int *output_parent_cell_index = interp_gpu.output_parent_cell_index;
+  double *xcell_area = interp_gpu.xcell_area;
+  
+#pragma acc exit data copyout(input_parent_cell_index[:nxgrid],  \
+                              output_parent_cell_index[:nxgrid], \
+                              xcell_area[:nxgrid])
 
   int *xgrid_ij1 = interp_gpu.input_parent_cell_index;
   int *xgrid_ij2 = interp_gpu.output_parent_cell_index;
