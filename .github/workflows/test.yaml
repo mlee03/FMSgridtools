@@ -3,9 +3,9 @@ name: Install package and run pytests
 on: [push, pull_request]
 
 jobs:
-  build-linux:
+  fmsgridtools ci:
     runs-on: ubuntu-latest
-  steps:
+    steps:
       - name: checkout 
         uses: actions/checkout@v4
         with:
