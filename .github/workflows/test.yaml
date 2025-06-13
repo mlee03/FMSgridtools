@@ -23,6 +23,6 @@ jobs:
         run: |
           sudo apt-get install libopenmpi-dev netcdf-bin libnetcdf-dev libnetcdff-dev libyaml-dev cmake
       - name: Install FMSgridtools package
-        run: pip install .
+        run: pip install .[test]
       - name: Run pytest (just link test for now)
         run: pytest tests/shared/test_libs.py
