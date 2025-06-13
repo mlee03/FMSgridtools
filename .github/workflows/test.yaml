@@ -2,8 +2,13 @@ name: Install package and run pytests
 
 on: [push, pull_request]
 
+# cancel running jobs if theres a newer push
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  fmsgridtools ci:
+  fmsgridtools_ci:
     runs-on: ubuntu-latest
     steps:
       - name: checkout 
