@@ -1,7 +1,9 @@
 import numpy as np
 import numpy.typing as npt
-import pyfrenctools
 import xarray as xr
+
+import pyfrenctools
+import pyfms
 
 from fmsgridtools.shared.gridobj import GridObj
 from fmsgridtools.utils.utils import check_file_is_there
@@ -11,6 +13,7 @@ from fmsgridtools.shared.mosaicobj import MosaicObj
 class XGridObj() :
 
     def __init__(self,
+                 input_dir: str = "./", 
                  src_mosaic: str = None,
                  tgt_mosaic: str = None,
                  restart_remap_file: str = None,
@@ -19,6 +22,7 @@ class XGridObj() :
                  tgt_grid: type[GridObj] = None,
                  order: int = 1,
                  on_gpu: bool = False):
+        self.input_dir = input_dir
         self.src_mosaic = src_mosaic
         self.tgt_mosaic = tgt_mosaic
         self.restart_remap_file = restart_remap_file
@@ -68,7 +72,8 @@ class XGridObj() :
 
         self.dataset.to_netcdf(outfile)
 
-    def create_xgrid(self, mask: dict[str,npt.NDArray] = None) -> dict():
+        
+    def create_xgrid(self, on_agrid: bool = True, mask: dict[str,npt.NDArray] = None) -> dict():
 
         DEG_TO_RAD = pyfms.constants.DEG_TO_RAD
 
@@ -81,25 +86,26 @@ class XGridObj() :
             create_xgrid_2dx2d_order1 = pyfrenctools.create_xgrid.get_2dx2d_order1
 
         for tgt_tile in self.tgt_grid:
-
-            itile = 1
+            
+            x_tgt, y_tgt = self.tgt_grid[tgt_tile].agrid()
+            itile = 0
             xgrid={tgt_tile: dict()}
 
             for src_tile in self.src_grid.keys():
+                
+                x_src, y_src = self.src_grid[src_tile].agrid()
+                
                 xgrid_out = create_xgrid_2dx2d_order1(
-                    nlon_src=self.src_grid[src_tile].nxp - 1,
-                    nlat_src=self.src_grid[src_tile].nyp - 1,
-                    nlon_tgt=self.tgt_grid[tgt_tile].nxp - 1,
-                    nlat_tgt=self.tgt_grid[tgt_tile].nyp - 1,
-                    lon_src=self.src_grid[src_tile].x * DEG_TO_RAD,
-                    lat_src=self.src_grid[src_tile].y * DEG_TO_RAD,
-                    lon_tgt=self.tgt_grid[tgt_tile].x * DEG_TO_RAD,
-                    lat_tgt=self.tgt_grid[tgt_tile].y * DEG_TO_RAD
+                    lon_src=x_src * DEG_TO_RAD,
+                    lat_src=y_src * DEG_TO_RAD,
+                    lon_tgt=x_tgt * DEG_TO_RAD,
+                    lat_tgt=y_tgt * DEG_TO_RAD
                 )
                 xgrid_out["tile"] = np.full(xgrid_out["nxcells"], itile, dtype=np.int32)
                 xgrid[tgt_tile][src_tile] = xgrid_out
                 itile = itile + 1
 
+                
         return self.create_dataset(xgrid)
 
     def create_dataset(self, xgrid: dict()):
@@ -111,34 +117,35 @@ class XGridObj() :
                                  dims=["nxcells"],
                                  attrs=dict(standard_name="tile number in input mosaic)")
             )
-            for src_tile in i_xgrid.keys(): del i_xgrid[src_tile]["tile"]
+            for isrc_tile in i_xgrid.keys(): del i_xgrid[isrc_tile]["tile"]
 
             src_ij_data = np.concatenate([i_xgrid[src_tile]["src_ij"] for src_tile in i_xgrid.keys()])
             src_ij = xr.DataArray(data=src_ij_data,
-                                  dims=["nxcells"],
+                                  dims=["nxcells","two"],
                                   attrs=dict(standard_name="parent cell indices from src mosaic")
-            )
-            for src_tile in i_xgrid.keys(): del i_xgrid[src_tile]["src_ij"]
-
+            )            
+            for isrc_tile in i_xgrid.keys(): del i_xgrid[isrc_tile]["src_ij"]
+            
             tgt_ij_data = np.concatenate([i_xgrid[src_tile]["tgt_ij"] for src_tile in i_xgrid.keys()])
             tgt_ij = xr.DataArray(data=tgt_ij_data,
-                                  dims=["nxcells"],
+                                  dims=["nxcells","two"],
                                   attrs=dict(standard_name="parent cell indices from tgt mosaic")
             )
-            for src_tile in i_xgrid.keys(): del i_xgrid[src_tile]["tgt_ij"]
+            for isrc_tile in i_xgrid.keys(): del i_xgrid[isrc_tile]["tgt_ij"]
 
             xarea_data = np.concatenate([i_xgrid[src_tile]["xarea"] for src_tile in i_xgrid.keys()])
             xarea = xr.DataArray(data=xarea_data,
                                  dims=["nxcells"],
                                  attrs=dict(standard_name="exchange grid cell area", units="m2")
             )
-            del i_xgrid[src_tile]["xarea"]
+            for isrc_tile in i_xgrid.keys(): del i_xgrid[isrc_tile]["xarea"]
+            
             self.dataset = xr.Dataset(data_vars=dict(src_tile=src_tile,
                                                      src_ij=src_ij,
                                                      tgt_ij=tgt_ij,
                                                      xarea=xarea)
-            )
-
+            )                        
+            
     def _check_restart_remap_file(self):
 
         if self.restart_remap_file is not None :
@@ -151,8 +158,8 @@ class XGridObj() :
     def _check_mosaic(self):
 
         if self.src_mosaic is not None and self.tgt_mosaic is not None:
-            self.src_grid = MosaicObj(self.src_mosaic).griddict()
-            self.tgt_grid = MosaicObj(self.tgt_mosaic).griddict()
+            self.src_grid = MosaicObj(self.input_dir, self.src_mosaic).read().get_grid()
+            self.tgt_grid = MosaicObj(self.input_dir, self.tgt_mosaic).read().get_grid()
             return True
         else:
             return False

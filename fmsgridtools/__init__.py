@@ -2,6 +2,7 @@ from .make_mosaic import make_mosaic
 from .make_topog.topogobj import TopogObj
 from .make_topog import make_topog
 from .re_map import re_map
+from .re_map import conservative
 from .shared.gridobj import GridObj
 from .make_hgrid.make_hgrid import make_hgrid
 from .shared.mosaicobj import MosaicObj

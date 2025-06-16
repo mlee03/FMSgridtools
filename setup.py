@@ -27,7 +27,8 @@ requirements = [
     "numpy",
     "xarray",
     "netCDF4",
-    "pyfms @ git+https://github.com/NOAA-GFDL/pyFMS.git@main",
+    local_pkg("pyFMS", "pyFMS"),
+    #"pyfms @ git+https://github.com/NOAA-GFDL/pyFMS.git@main",
     local_pkg("pyfrenctools", "frenctools")
 ]
 

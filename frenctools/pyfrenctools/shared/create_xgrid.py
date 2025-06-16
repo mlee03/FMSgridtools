@@ -17,11 +17,7 @@ def init(libpath: str, lib: type[CDLL]):
     _lib = lib
 
 
-def get_2dx2d_order1(nlon_src: int,
-                     nlat_src: int,
-                     nlon_tgt: int,
-                     nlat_tgt: int,
-                     lon_src: npt.NDArray[np.float64],
+def get_2dx2d_order1(lon_src: npt.NDArray[np.float64],
                      lat_src: npt.NDArray[np.float64],
                      lon_tgt: npt.NDArray[np.float64],
                      lat_tgt: npt.NDArray[np.float64],
@@ -29,6 +25,9 @@ def get_2dx2d_order1(nlon_src: int,
 
     create_xgrid = _lib.create_xgrid_2dx2d_order1
 
+    nlat_src, nlon_src = lon_src.shape
+    nlat_tgt, nlon_tgt = lon_tgt.shape
+        
     if mask_src is None: mask_src = np.ones((nlon_src*nlat_src), dtype=np.float64)
 
     i_src = np.zeros(MAXXGRID, dtype=np.int32)
@@ -56,15 +55,19 @@ def get_2dx2d_order1(nlon_src: int,
                              arrayptr_int, #j_out
                              arrayptr_double] #xarea
 
-    nxcells = create_xgrid(c_int(nlon_src), c_int(nlat_src),
-                           c_int(nlon_tgt), c_int(nlat_tgt),
+
+    nxcells = create_xgrid(c_int(nlon_src-1), c_int(nlat_src-1),
+                           c_int(nlon_tgt-1), c_int(nlat_tgt-1),
                            lon_src, lat_src, lon_tgt, lat_tgt, mask_src,
                            i_src, j_src, i_tgt, j_tgt, xarea
     )
 
+    #src_ij=j_src[:nxcells]*nlon_src + i_src[:nxcells],
+    #tgt_ij=j_tgt[:nxcells]*nlon_tgt + i_tgt[:nxcells],
+    
     return dict(nxcells=nxcells,
-                src_ij=j_src[:nxcells]*nlon_src + i_src[:nxcells],
-                tgt_ij=j_tgt[:nxcells]*nlon_tgt + i_tgt[:nxcells],
+                src_ij=np.column_stack((i_src[:nxcells], j_src[:nxcells])),
+                tgt_ij=np.column_stack((i_tgt[:nxcells], j_tgt[:nxcells])),
                 xarea=xarea[:nxcells]
     )
 
