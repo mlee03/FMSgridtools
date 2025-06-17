@@ -62,12 +62,10 @@ def get_2dx2d_order1(lon_src: npt.NDArray[np.float64],
                            i_src, j_src, i_tgt, j_tgt, xarea
     )
 
-    #src_ij=j_src[:nxcells]*nlon_src + i_src[:nxcells],
-    #tgt_ij=j_tgt[:nxcells]*nlon_tgt + i_tgt[:nxcells],
     
     return dict(nxcells=nxcells,
-                src_ij=np.column_stack((i_src[:nxcells], j_src[:nxcells])),
-                tgt_ij=np.column_stack((i_tgt[:nxcells], j_tgt[:nxcells])),
+                src_ij=j_src[:nxcells]*nlon_src + i_src[:nxcells],
+                tgt_ij=j_tgt[:nxcells]*nlon_tgt + i_tgt[:nxcells],
                 xarea=xarea[:nxcells]
     )
 

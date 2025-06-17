@@ -31,7 +31,7 @@ class XGridObj() :
         self.tgt_grid = tgt_grid
         self.order: int = 1
         self.on_gpu: bool = False
-        self.dataset = None
+        self.dataset = {}
         self.src_tile = None
         self.src_ij = None
         self.tgt_ij = None
@@ -106,9 +106,9 @@ class XGridObj() :
                 itile = itile + 1
 
                 
-        return self.create_dataset(xgrid)
+        return self.create_dataset(xgrid, tgt_grid)
 
-    def create_dataset(self, xgrid: dict()):
+    def create_dataset(self, xgrid: dict(), tgt_grid: str = "tile1"):
 
         for i_xgrid in xgrid.values():
 
@@ -121,14 +121,14 @@ class XGridObj() :
 
             src_ij_data = np.concatenate([i_xgrid[src_tile]["src_ij"] for src_tile in i_xgrid.keys()])
             src_ij = xr.DataArray(data=src_ij_data,
-                                  dims=["nxcells","two"],
+                                  dims=["nxcells"],
                                   attrs=dict(standard_name="parent cell indices from src mosaic")
             )            
             for isrc_tile in i_xgrid.keys(): del i_xgrid[isrc_tile]["src_ij"]
             
             tgt_ij_data = np.concatenate([i_xgrid[src_tile]["tgt_ij"] for src_tile in i_xgrid.keys()])
             tgt_ij = xr.DataArray(data=tgt_ij_data,
-                                  dims=["nxcells","two"],
+                                  dims=["nxcells"],
                                   attrs=dict(standard_name="parent cell indices from tgt mosaic")
             )
             for isrc_tile in i_xgrid.keys(): del i_xgrid[isrc_tile]["tgt_ij"]
@@ -140,10 +140,10 @@ class XGridObj() :
             )
             for isrc_tile in i_xgrid.keys(): del i_xgrid[isrc_tile]["xarea"]
             
-            self.dataset = xr.Dataset(data_vars=dict(src_tile=src_tile,
-                                                     src_ij=src_ij,
-                                                     tgt_ij=tgt_ij,
-                                                     xarea=xarea)
+            self.dataset[tgt_grid] = xr.Dataset(data_vars=dict(src_tile=src_tile,
+                                                               src_ij=src_ij,
+                                                               tgt_ij=tgt_ij,
+                                                               xarea=xarea)
             )                        
             
     def _check_restart_remap_file(self):
