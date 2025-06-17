@@ -8,6 +8,7 @@ list(APPEND c_source_files
   make_hgrid/create_lonlat_grid.c
   make_mosaic/get_contact.c
   make_topog/topog.c
+  remap/remap.c
   shared/create_xgrid.c
   shared/create_xgrid_gpu.c
   shared/create_xgrid_utils_gpu.c
