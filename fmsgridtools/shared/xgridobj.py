@@ -70,7 +70,12 @@ class XGridObj() :
         if outfile is None:
             outfile = self.write_remap_file
 
-        self.dataset.to_netcdf(outfile)
+        if len(self.dataset) == 1:
+            for ikey in self.dataset: self.dataset[ikey].to_netcdf(outfile)
+        else:
+            for ikey in self.dataset:
+                self.dataset.to_netcdf(outfile[:-3]+ikey+".nc")
+        
 
         
     def create_xgrid(self, on_agrid: bool = True, mask: dict[str,npt.NDArray] = None) -> dict():
@@ -106,9 +111,9 @@ class XGridObj() :
                 itile = itile + 1
 
                 
-        return self.create_dataset(xgrid, tgt_grid)
+        return self.create_dataset(xgrid, tgt_tile)
 
-    def create_dataset(self, xgrid: dict(), tgt_grid: str = "tile1"):
+    def create_dataset(self, xgrid: dict(), tgt_tile: str = "tile1"):
 
         for i_xgrid in xgrid.values():
 
@@ -140,7 +145,7 @@ class XGridObj() :
             )
             for isrc_tile in i_xgrid.keys(): del i_xgrid[isrc_tile]["xarea"]
             
-            self.dataset[tgt_grid] = xr.Dataset(data_vars=dict(src_tile=src_tile,
+            self.dataset[tgt_tile] = xr.Dataset(data_vars=dict(src_tile=src_tile,
                                                                src_ij=src_ij,
                                                                tgt_ij=tgt_ij,
                                                                xarea=xarea)
