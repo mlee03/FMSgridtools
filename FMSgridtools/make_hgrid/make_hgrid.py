@@ -230,6 +230,12 @@ def lonlat(
     """,
 )
 @click.option(
+    "--transpose",
+    is_flag=True,
+    default=False,
+    help="This flag will transpose the x(lon) and y(lat) output arrays"
+)
+@click.option(
     "--verbose",
     is_flag=True,
     default=False,
@@ -254,6 +260,7 @@ def gnomonic(
     output_length_angle: bool,
     do_schmidt: bool,
     do_cube_transform: bool,
+    transpose: bool,
     verbose: bool
 ):
     gnomonic_grid.make(
@@ -276,5 +283,6 @@ def gnomonic(
         output_length_angle=output_length_angle,
         do_schmidt=do_schmidt,
         do_cube_transform=do_cube_transform,
+        transpose=transpose,
         verbose=verbose,
     )

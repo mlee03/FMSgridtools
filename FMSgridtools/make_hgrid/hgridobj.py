@@ -216,6 +216,7 @@ class HGridObj():
             conformal: bool=True,
             out_halo: int=0,
             output_length_angle: bool=True,
+            transpose: bool=False,
             verbose: bool=False,
     ):
         
@@ -283,7 +284,7 @@ class HGridObj():
                     if n > 0:
                         print(f"[INFO] XARRAY: n: {n} x[0]: {self.x[pos_c]} x[-1]: {self.x[pos_c-1]} x[-2]: {self.x[pos_c-2]} x[-3]: {self.x[pos_c-3]} x[-4]: {self.x[pos_c-4]} x[-5]: {self.x[pos_c-5]} x[-10]: {self.x[pos_c-10]}", file=sys.stderr)
                 x = xr.DataArray(
-                    data=self.x[pos_c:pos_c+nyp*nxp].reshape((nyp,nxp)),
+                    data=self.x[pos_c:pos_c+nyp*nxp].reshape((nyp,nxp)).T if transpose else self.x[pos_c:pos_c+nyp*nxp].reshape((nyp,nxp)),
                     dims=["nyp", "nxp"],
                     attrs=dict(
                         units="degree_east", 
@@ -293,7 +294,7 @@ class HGridObj():
                 var_dict['x'] = x
 
                 y = xr.DataArray(
-                    data=self.y[pos_c:pos_c+nyp*nxp].reshape((nyp, nxp)),
+                    data=self.y[pos_c:pos_c+nyp*nxp].reshape((nyp, nxp)).T if transpose else self.y[pos_c:pos_c+nyp*nxp].reshape((nyp, nxp)),
                     dims=["nyp", "nxp"],
                     attrs=dict(
                         units="degree_north", 
@@ -354,7 +355,7 @@ class HGridObj():
                         )
                         var_dict['angle_dy'] = angle_dy
             else:
-                if grid_type is not "gnomonic_ed":
+                if grid_type != "gnomonic_ed":
                     raise RuntimeError("make_hgrid: out_halo > 0, only working for grid_type = 'gnomonic_ed'")
 
                 if verbose:
@@ -363,7 +364,7 @@ class HGridObj():
                 tmp_x = np.zeros(shape=(nxp+2*out_halo)*(nyp+2*out_halo), dtype=np.float64)
                 fill_cubic_grid_halo(nx, ny, out_halo, tmp_x, self.x, self.x, n, 1, 1)
                 x = xr.DataArray(
-                    data=tmp_x.reshape((nyp+2*out_halo,nxp+2*out_halo)),
+                    data=tmp_x.reshape((nyp+2*out_halo,nxp+2*out_halo)).T if transpose else tmp_x.reshape((nyp+2*out_halo,nxp+2*out_halo)),
                     dims=["nyp", "nxp"],
                     attrs=dict(
                         units="degree_east", 
@@ -376,7 +377,7 @@ class HGridObj():
                 tmp_y = np.zeros(shape=(nxp+2*out_halo)*(nyp+2*out_halo), dtype=np.float64)
                 fill_cubic_grid_halo(nx, ny, out_halo, tmp_y, self.y, self.y, n, 1, 1)
                 y = xr.DataArray(
-                    data=tmp_y.reshape((nyp+2*out_halo, nxp+2*out_halo)),
+                    data=tmp_y.reshape((nyp+2*out_halo, nxp+2*out_halo)).T if transpose else tmp_y.reshape((nyp+2*out_halo, nxp+2*out_halo)),
                     dims=["nyp", "nxp"],
                     attrs=dict(
                         units="degree_north", 

@@ -24,6 +24,7 @@ def make(
     output_length_angle: bool,
     do_schmidt: bool,
     do_cube_transform: bool,
+    transpose: bool,
     verbose: bool,
 ):
     
@@ -183,5 +184,6 @@ def make(
         conformal=conformal,
         out_halo=out_halo,
         output_length_angle=output_length_angle,
+        transpose=transpose,
         verbose=verbose,
     )
