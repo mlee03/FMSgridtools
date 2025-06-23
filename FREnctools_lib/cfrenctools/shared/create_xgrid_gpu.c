@@ -435,14 +435,18 @@ int create_xgrid_2dx2d_order2_gpu(const int nlon_input_cells,  const int nlat_in
                                     store_xcell_dclon, store_xcell_dclat, approx_nxcells_per_ij1, parent_input_index,
                                     parent_output_index, store_xcell_area, interp_for_itile);
 
-#pragma acc parallel loop present(interp_for_itile->dcentroid_lat[:nxcells], \
-                                  interp_for_itile->dcentroid_lat[:nxcells], \
+  double *dcentroid_lat = interp_for_itile->dcentroid_lat;
+  double *dcentroid_lon = interp_for_itile->dcentroid_lon;
+  int *input_parent_cell_index = interp_for_itile->input_parent_cell_index;
+  
+#pragma acc parallel loop present(dcentroid_lat[:nxcells], \
+                                  dcentroid_lon[:nxcells], \
                                   input_grid_lon[:input_grid_ncells],   \
                                   input_grid_lat[:input_grid_ncells],   \
                                   summed_input_area[:input_grid_ncells], \
                                   summed_input_clon[:input_grid_ncells], \
                                   summed_input_clat[:input_grid_ncells], \
-                                  interp_for_itile->input_parent_cell_index[:nxcells]) \
+                                  input_parent_cell_index[:nxcells])    \
                            copyin(readin_input_area[:input_grid_ncells])
     for(int ix=0 ; ix<nxcells ; ix++){
       int ij1 = interp_for_itile->input_parent_cell_index[ix];
