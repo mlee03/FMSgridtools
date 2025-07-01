@@ -74,10 +74,9 @@ def test_solo_mosaic():
     ).to_netcdf('grid.tile2.nc')
                           
     runner = CliRunner()
-    result = runner.invoke(fmsgridtools.make_mosaic, ['solo',
-                                         '--num_tiles', '2',
-                                         '--tile_file', 'grid.tile1.nc',
-                                         '--tile_file', 'grid.tile2.nc'])
+    result = runner.invoke(fmsgridtools.make_mosaic.solo, ['--num_tiles', '2',
+                                                           '--tile_file', 'grid.tile1.nc',
+                                                           '--tile_file', 'grid.tile2.nc'])
     
     assert result.exit_code == 0
     print(result.stdout)

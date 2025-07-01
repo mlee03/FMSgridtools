@@ -4,11 +4,7 @@ import fmsgridtools.make_hgrid.lonlat_grid as lonlat_grid
 import fmsgridtools.make_hgrid.gnomonic_grid as gnomonic_grid
 
 
-@click.group()
-def make_hgrid():
-    """Make H-Grid CLI"""
-
-@make_hgrid.command()
+@click.command()
 @click.option(
     "--nlon", 
     type=str, 
@@ -88,7 +84,7 @@ def lonlat(
         verbose=verbose,
     )
 
-@make_hgrid.command()
+@click.command()
 @click.option(
     "--nlon", 
     type=str, 

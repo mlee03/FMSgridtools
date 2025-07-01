@@ -43,10 +43,5 @@ setup(
     include_package_data=True,
     version="0.0.1",
     zip_safe=False,
-    entry_points={
-        "console_scripts": [
-            "make_hgrid = fmsgridtools.make_hgrid.make_hgrid:make_hgrid", # TODO fmsggridtools entrypoint
-            "make_topog = fmsgridtools.make_topog.make_topog:make_topog", # TODO fmsgridtools entrypoint
-        ]
-    },
+    entry_points={"console_scripts": ["fmsgridtools = fmsgridtools.main:main"]},
 )
