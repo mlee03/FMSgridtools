@@ -88,10 +88,11 @@ def test_solo_mosaic():
 @pytest.mark.skip
 def test_regional_mosaic():
     runner = CliRunner()
-    result = runner.invoke(fmsgridtools.make_mosaic.regional ['--global_mosaic',
-                                                              'C48_mosaic.nc',
-                                                              '--regional_file', 
-                                                              'regional_input_file.tile1.nc'])
+    result = runner.invoke(fmsgridtools.make_mosaic, ['regional',
+                                         '--global_mosaic',
+                                         'C48_mosaic.nc',
+                                         '--regional_file', 
+                                         'regional_input_file.tile1.nc'])
     assert result.exit_code == 0
     assert 'Congratulations: You have successfully run regional mosaic' in result.stdout
     os.remove('regional_mosaic.nc')
