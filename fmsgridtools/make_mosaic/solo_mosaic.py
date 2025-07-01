@@ -5,6 +5,9 @@ from fmsgridtools.shared.gridobj import GridObj
 from fmsgridtools.shared.mosaicobj import MosaicObj
 import pyfrenctools
 
+#authorship got overwritten somehow.
+#original developer - halle.derry 
+
 def make(num_tiles,
          mosaic_name,
          tilefiles: List[str],
