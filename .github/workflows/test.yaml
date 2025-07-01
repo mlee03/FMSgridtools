@@ -26,3 +26,5 @@ jobs:
         run: pip install .[test]
       - name: Run pytest (just link test for now)
         run: pytest tests/shared/test_libs.py
+             pytest tests/test_mosaic.py
+        
