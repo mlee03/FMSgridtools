@@ -1,7 +1,6 @@
 import click
-import solo_mosaic
-import regional_mosaic
-
+import fmsgridtools.make_mosaic.solo_mosaic as solo_mosaic
+import fmsgridtools.make_mosaic.regional_mosaic as regional_mosaic 
 
 ATMOS_MOSAIC_HELP = "specify the atmosphere mosaic information \
     This file contains list of tile files which specify \
@@ -64,9 +63,9 @@ def solo(num_tiles,
          periody):
     
     solo_mosaic.make(num_tiles,
-                     dir_name,
                      mosaic_name,
-                     tile_file,
+                     list(tile_file),
+                     dir_name,
                      periodx,
                      periody)
 

@@ -4,8 +4,8 @@ import numpy as np
 from numpy.typing import NDArray
 import xarray as xr
 
-from FMSgridtools.shared.gridtools_utils import get_provenance_attrs
-from FMSgridtools.shared.gridobj import GridObj
+from fmsgridtools.shared.gridtools_utils import get_provenance_attrs
+from fmsgridtools.shared.gridobj import GridObj
 
 def fill_cubic_grid_halo(
         nx: int, 

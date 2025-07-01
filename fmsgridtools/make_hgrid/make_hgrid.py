@@ -1,7 +1,7 @@
 import click
 
-import FMSgridtools.make_hgrid.lonlat_grid as lonlat_grid
-import FMSgridtools.make_hgrid.gnomonic_grid as gnomonic_grid
+import fmsgridtools.make_hgrid.lonlat_grid as lonlat_grid
+import fmsgridtools.make_hgrid.gnomonic_grid as gnomonic_grid
 
 
 @click.group()

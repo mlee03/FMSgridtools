@@ -1,7 +1,7 @@
 import sys
 import numpy as np
 
-from FMSgridtools.make_hgrid.hgridobj import HGridObj
+from fmsgridtools.make_hgrid.hgridobj import HGridObj
 import pyfrenctools
 
 def make(

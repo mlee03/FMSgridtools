@@ -1,12 +1,22 @@
 import ctypes
 from ctypes import create_string_buffer
-from typing import Optional
 import numpy as np
 import numpy.typing as npt
-from cfrenctools import LIB
-import pathlib
 from numpy.ctypeslib import ndpointer
 
+
+_libpath = None
+_lib = None
+
+
+def init(libpath: str, lib: type[ctypes.CDLL]):
+
+    global _libpath, _lib
+
+    _libpath = libpath
+    _lib = lib
+
+    
 class Contact:
     def __init__(self,
                  tile1: int,
@@ -37,9 +47,8 @@ class Contact:
 
     def align_contact(self) -> int:
 
-        clibrary = pyfrenctools.cfrenctools.LIB().lib
         #acquire function signature
-        find_align = clibrary.get_align_contact
+        find_align = _lib.get_align_contact
 
         #represent parameters needed
         find_align.argtypes = [ctypes.c_int, ctypes.c_int,
