@@ -1,1 +1,1 @@
-global-include *.so
+graft pyfrenctools/c_install   

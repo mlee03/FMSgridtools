@@ -1,7 +1,7 @@
 import sys
 import xarray as xr
 import numpy as np
-from FMSgridtools.shared.mosaicobj import MosaicObj
+from fmsgridtools.shared.mosaicobj import MosaicObj
 
 def make(global_mosaic,
         regional_file):

@@ -1,8 +1,8 @@
 
 from typing import Optional, Dict, List, Any
 import xarray as xr
-from FMSgridtools.shared.gridobj import GridObj
-from FMSgridtools.shared.gridtools_utils import check_file_is_there
+from fmsgridtools.shared.gridobj import GridObj
+from fmsgridtools.shared.gridtools_utils import check_file_is_there
 
 
 class MosaicObj:
@@ -60,10 +60,10 @@ class MosaicObj:
 
         setattr(self, attribute, value)
 
-    def get_grid(self) -> dict:
+    def get_grid(self, toradians: bool = False) -> dict:
 
         for i in range(self.ntiles):
-            self.grid[self.gridtiles[i]] = GridObj(gridfile=self.gridfiles[i]).read()
+            self.grid[self.gridtiles[i]] = GridObj(gridfile=self.gridfiles[i]).read(toradians)
 
         return self.grid
 

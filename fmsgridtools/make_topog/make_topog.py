@@ -5,7 +5,9 @@ from typing import Optional
 
 import click
 
-from FMSgridtools import MosaicObj, TopogObj, check_file_is_there, get_provenance_attrs
+from fmsgridtools.shared.mosaicobj import MosaicObj
+from fmsgridtools.make_topog.topogobj import TopogObj
+from fmsgridtools.shared.gridtools_utils import check_file_is_there, get_provenance_attrs
 
 
 MOSAIC_FILE_OPT_HELP="Specify the mosaic file where topography data will be located."
@@ -167,7 +169,7 @@ Nvidia (nvc) is the only currently supported compiler for offloading and must be
 @click.option("--gpu",
               is_flag = True,
               help = GPU_HELP)
-def make_topog(
+def realistic_or_basin(
     mosaic : str = None,
     topog_type : str = None,
     x_refine : Optional[int] = None,

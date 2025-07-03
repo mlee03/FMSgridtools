@@ -3,7 +3,7 @@ from typing import List, Optional
 import numpy as np
 import numpy.typing as npt
 import xarray as xr
-from FMSgridtools.shared.gridtools_utils import check_file_is_there
+from fmsgridtools.shared.gridtools_utils import check_file_is_there
 
 
 """
@@ -36,11 +36,15 @@ class GridObj:
     read:
     This function reads in the gridfile and initializes the instance variables
     """
-    def read(self):
+    def read(self, toradians: bool = False):
 
         check_file_is_there(self.gridfile)
         self.dataset = xr.open_dataset(self.gridfile)
         self.get_attributes()
+
+        if toradians:
+            self.x = np.radians(self.x)
+            self.y = np.radians(self.y)
 
         return self
 
