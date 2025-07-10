@@ -7,7 +7,8 @@ from fmsgridtools.shared.gridtools_utils import check_file_is_there
 
 class MosaicObj:
 
-    def __init__(self, mosaic_file: str = None,
+    def __init__(self, input_dir: str = "./",
+                 mosaic_file: str = None,
                  ntiles: int = None,
                  mosaic_name: str = None,
                  gridlocation: str = None,
@@ -18,7 +19,7 @@ class MosaicObj:
                  dataset: type[xr.Dataset] = None,
                  grid: dict = None):
 
-
+        self.input_dir = input_dir+"/"
         self.mosaic_file = mosaic_file
         self.ntiles = ntiles
         self.mosaic_name = mosaic_name
@@ -43,12 +44,13 @@ class MosaicObj:
         if self.mosaic_file is None:
             raise IOError("Please specify mosaic_file")
 
-        check_file_is_there(self.mosaic_file)
-        self.dataset = xr.open_dataset(self.mosaic_file)
+        check_file_is_there(self.input_dir+self.mosaic_file)
+        self.dataset = xr.open_dataset(self.input_dir+self.mosaic_file)
 
         self.get_attributes()
         return self
 
+    
     def get_attributes(self) -> None:
         for key in self.dataset.data_vars:
             setattr(self, key, self.dataset[key].astype(str).values)
@@ -56,17 +58,23 @@ class MosaicObj:
         for key in self.dataset.sizes:
             setattr(self, key, self.dataset.sizes[key])
 
+            
     def add_attributes(self, attribute: str, value: Any = None) -> None:
 
         setattr(self, attribute, value)
 
-    def get_grid(self, toradians: bool = False) -> dict:
+        
+    def get_grid(self, toradians: bool = False, agrid: bool = False, free_dataset: bool = False) -> dict:
 
         for i in range(self.ntiles):
-            self.grid[self.gridtiles[i]] = GridObj(gridfile=self.gridfiles[i]).read(toradians)
-
+            gridfile = self.input_dir+self.gridlocation+self.gridfiles[i]
+            self.grid[self.gridtiles[i]] = GridObj(gridfile=gridfile).read(toradians=toradians,
+                                                                           agrid=agrid,
+                                                                           free_dataset=free_dataset)
+            
         return self.grid
 
+    
     def write(self, outfile: str = None) -> None:
 
         dataset = {}

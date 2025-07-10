@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 import xarray as xr
 
-import FMSgridtools
+import fmsgridtools
 
 
 def generate_mosaic(nx: int = 90, ny: int = 45, refine: int = 2):
@@ -37,6 +37,7 @@ def generate_mosaic(nx: int = 90, ny: int = 45, refine: int = 2):
                                   y=(["nyp", "nxp"], y))
         ).to_netcdf(prefix+"_grid.nc")
 
+
 def remove_mosaic():
     os.remove("src_grid.nc")
     os.remove("tgt_grid.nc")
@@ -44,15 +45,17 @@ def remove_mosaic():
     os.remove("tgt_mosaic.nc")
     os.remove("remap.nc")
 
+
 @pytest.mark.parametrize("on_gpu", [False, True])
 def test_create_xgrid(on_gpu) :
 
     nx, ny, refine = 45, 45, 2
     generate_mosaic(nx=nx, ny=ny, refine=refine)
 
-    xgrid = FMSgridtools.XGridObj(src_mosaic="src_mosaic.nc",
+    xgrid = fmsgridtools.XGridObj(src_mosaic="src_mosaic.nc",
                                   tgt_mosaic="tgt_mosaic.nc",
-                                  on_gpu=on_gpu
+                                  on_gpu=on_gpu,
+                                  on_agrid=False
     )
 
     xgrid.create_xgrid()
@@ -60,7 +63,7 @@ def test_create_xgrid(on_gpu) :
 
     del xgrid
 
-    xgrid = FMSgridtools.XGridObj(restart_remap_file="remap.nc")
+    xgrid = fmsgridtools.XGridObj(restart_remap_file="remap.nc")
 
     nxcells = nx * refine * ny * refine
     assert xgrid.nxcells == nxcells
@@ -76,3 +79,5 @@ def test_create_xgrid(on_gpu) :
     assert np.all(xgrid.tgt_ij==np.array(tile2_cells))
 
     remove_mosaic()
+
+test_create_xgrid(False)

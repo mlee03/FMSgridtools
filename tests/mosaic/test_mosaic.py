@@ -61,6 +61,18 @@ def test_gridfiles():
     assert all([mosaic2.gridfiles[i] == gridfiles[i] for i in range(mosaic2.ntiles)])
     os.remove(output)
 
+def test_getgrid():
+    ntiles = 2
+    gridtiles = [f"tile{i}" for i in range(1,ntiles+1)]
+    gridfiles = [f"test.tile{itile}.nc" for itile in gridtiles]
+
+    #for ifile in gridfiles:
+    #    xr.Dataset(data_vars=dict(x=np.array([[1,2],[3,4]]), y=np.array([[1,2
+    
+    mosaic = MosaicObj(ntiles=2, gridtiles=gridtiles, gridfiles = gridfiles)
+    mosaic.get_grid(to_radians=True)
+    
+    
 def test_solo_mosaic():
 
     x1, y1 = np.meshgrid(np.arange(0,46,1, dtype=np.float64), np.arange(0,11,1, dtype=np.float64))

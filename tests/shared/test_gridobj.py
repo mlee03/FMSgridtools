@@ -2,17 +2,20 @@ import os
 
 import numpy as np
 import xarray as xr
-from gridtools import GridObj
+from fmsgridtools import GridObj
 
 
 """
 Creating data to generate xarray dataset from
 """
 
-nx = 3
-ny = 3
+nx = 10
+ny = 10
 nxp = nx + 1
 nyp = ny + 1
+
+x = np.array([[i*10+j for j in range(nyp)] for i in range(nxp)], dtype=np.float64)
+y = np.array([[-i*10-j for j in range(nyp)] for i in range(nxp)], dtype=np.float64)
 
 tile = xr.DataArray(
     [b'tile1'],
@@ -25,7 +28,7 @@ tile = xr.DataArray(
     )
 )
 x = xr.DataArray(
-    data=np.full(shape=(nyp,nxp), fill_value=1.0, dtype=np.float64),
+    data=x,
     dims=["nyp", "nxp"],
     attrs=dict(
         units="degree_east",
@@ -33,7 +36,7 @@ x = xr.DataArray(
     )
 )
 y = xr.DataArray(
-    data=np.full(shape=(nyp,nxp), fill_value=2.0, dtype=np.float64),
+    data=y,
     dims=["nyp", "nxp"],
     attrs=dict(
         units="degree_north",
@@ -103,17 +106,19 @@ out_grid_dataset = xr.Dataset(
     }
 )
 
+
 def test_empty_grid_obj():
 
     empty_grid_obj = GridObj()
     assert isinstance(empty_grid_obj, GridObj)
 
+    
 def test_gridobj_from_dataset():
 
-    from_dataset_grid_obj = GridObj(grid_data=out_grid_dataset)
+    from_dataset_grid_obj = GridObj(dataset=out_grid_dataset)
+    from_dataset_grid_obj.get_attributes()
     assert isinstance(from_dataset_grid_obj, GridObj)
-    assert from_dataset_grid_obj.grid_data is not None
-    assert from_dataset_grid_obj.grid_file is None
+    assert from_dataset_grid_obj.dataset is not None
 
     np.testing.assert_array_equal(from_dataset_grid_obj.x, out_grid_dataset.x.values)
     np.testing.assert_array_equal(from_dataset_grid_obj.y, out_grid_dataset.y.values)
@@ -123,13 +128,14 @@ def test_gridobj_from_dataset():
     np.testing.assert_array_equal(from_dataset_grid_obj.angle_dx, out_grid_dataset.angle_dx.values)
     np.testing.assert_array_equal(from_dataset_grid_obj.angle_dy, out_grid_dataset.angle_dy)
 
-def test_write_out_grid_griddata(tmp_path):
+    
+def test_write_grid(tmp_path):
 
-    from_dataset_grid_obj = GridObj(grid_data=out_grid_dataset)
+    from_dataset_grid_obj = GridObj(dataset=out_grid_dataset)
 
     file_path = tmp_path / "test_grid.nc"
 
-    from_dataset_grid_obj.write_out_grid(filepath=file_path)
+    from_dataset_grid_obj.write(filepath=file_path)
 
     assert file_path.exists()
 
@@ -137,19 +143,16 @@ def test_write_out_grid_griddata(tmp_path):
 
     assert not file_path.exists()
 
-def test_gridobj_from_gridfile_init(tmp_path):
+    
+def test_gridobj_from_file(tmp_path):
 
-    from_dataset_grid_obj = GridObj(grid_data=out_grid_dataset)
+    gridfile = tmp_path / "test_grid.nc"
+    
+    out_grid_dataset.to_netcdf(gridfile)
 
-    file_path = tmp_path / "test_grid.nc"
-
-    from_dataset_grid_obj.write_out_grid(filepath=file_path)
-
-    from_file_init_grid_obj = GridObj(grid_file=file_path)
+    from_file_init_grid_obj = GridObj(gridfile=gridfile).read()
     assert isinstance(from_file_init_grid_obj, GridObj)
-    assert from_file_init_grid_obj.grid_file is not None
-
-    # print(from_file_init_grid_obj.x)
+    assert from_file_init_grid_obj.gridfile is not None
 
     np.testing.assert_array_equal(from_file_init_grid_obj.x, out_grid_dataset.x.values)
     np.testing.assert_array_equal(from_file_init_grid_obj.y, out_grid_dataset.y.values)
@@ -157,32 +160,30 @@ def test_gridobj_from_gridfile_init(tmp_path):
     np.testing.assert_array_equal(from_file_init_grid_obj.dy, out_grid_dataset.dy.values)
     np.testing.assert_array_equal(from_file_init_grid_obj.area, out_grid_dataset.area.values)
     np.testing.assert_array_equal(from_file_init_grid_obj.angle_dx, out_grid_dataset.angle_dx.values)
-    np.testing.assert_array_equal(from_file_init_grid_obj.angle_dy, out_grid_dataset.angle_dy)
+    np.testing.assert_array_equal(from_file_init_grid_obj.angle_dy, out_grid_dataset.angle_dy.values)
 
-    file_path.unlink()
+    os.remove(gridfile)
 
-    assert not file_path.exists()
 
-def test_gridobj_from_file(tmp_path):
+def test_gridobj_read(tmp_path):
+    
+    gridfile = tmp_path / "test_grid.nc"
 
-    from_dataset_grid_obj = GridObj(grid_data=out_grid_dataset)
+    out_grid_dataset.to_netcdf(gridfile)
 
-    file_path = tmp_path / "test_grid.nc"
+    grid = GridObj(gridfile=gridfile).read(toradians=True, agrid=True, free_dataset=True)
 
-    from_dataset_grid_obj.write_out_grid(filepath=file_path)
+    assert grid.dataset == None
+    
+    assert grid.nx == nx//2
+    assert grid.ny == ny//2
+    assert grid.nxp == nx//2 + 1
+    assert grid.nyp == ny//2 + 1
 
-    from_file_grid_obj = GridObj.from_file(filepath=file_path)
+    for i in range(grid.nxp):
+        for j in range(grid.nyp):
+            answer = 2*10*i+2*j
+            assert grid.x[i][j] == np.radians(answer)
+            assert grid.y[i][j] == np.radians(-answer)
 
-    assert isinstance(from_file_grid_obj, GridObj)
-
-    file_path.unlink()
-
-    assert not file_path.exists()
-
-    np.testing.assert_array_equal(from_file_grid_obj.x, out_grid_dataset.x.values)
-    np.testing.assert_array_equal(from_file_grid_obj.y, out_grid_dataset.y.values)
-    np.testing.assert_array_equal(from_file_grid_obj.dx, out_grid_dataset.dx.values)
-    np.testing.assert_array_equal(from_file_grid_obj.dy, out_grid_dataset.dy.values)
-    np.testing.assert_array_equal(from_file_grid_obj.area, out_grid_dataset.area.values)
-    np.testing.assert_array_equal(from_file_grid_obj.angle_dx, out_grid_dataset.angle_dx.values)
-    np.testing.assert_array_equal(from_file_grid_obj.angle_dy, out_grid_dataset.angle_dy)
+    os.remove(gridfile)
