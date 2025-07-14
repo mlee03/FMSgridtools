@@ -18,6 +18,7 @@ def init(libpath: str = None):
 
     create_xgrid.init(_libpath, _lib)
     mosaic_util.init(_libpath, _lib)
+    mosaic_coupled_utils.init(_libpath, _lib)
     make_hgrid_wrappers.init(_libpath, _lib)
 
 def lib() -> type[ctypes.CDLL]:
