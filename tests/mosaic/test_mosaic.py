@@ -79,7 +79,7 @@ def test_getgrid():
 
     for ifile in gridfiles: make_grid(ifile)
     mosaic = fmsgridtools.MosaicObj(ntiles=ntiles, gridtiles=gridtiles, gridfiles=gridfiles)
-    mosaic.get_grid(toradians=True)
+    mosaic.get_grid(toradians=True, agrid=True, free_dataset=True)
     
     
 def test_solo_mosaic():
