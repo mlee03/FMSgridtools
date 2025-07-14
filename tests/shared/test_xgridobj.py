@@ -83,5 +83,3 @@ def test_create_xgrid(on_gpu) :
     assert np.all(xgrid.tgt_ij==np.array(tile2_cells))
 
     remove_mosaic()
-
-test_create_xgrid(True)
