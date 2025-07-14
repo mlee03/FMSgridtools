@@ -1,79 +1,25 @@
 import ctypes
 import numpy as np
-from typing import type, List
+from typing import List
 import xarray as xr
+
+import pyfrenctools
 
 from fmsgridtools.shared.mosaicobj import MosaicObj
 
-class AtmComponent(ctypes.Structure): pass
-class LndComponent(ctypes.Structure): pass
-class OcnComponent(ctypes.Structure): pass
+def make_coupler_mosaic(atm_mosaic_file: str, lnd_mosaic_file: str, ocn_mosaic_file: str, input_dir: str = './', topog_file: str = None):
 
+    #read in mosaic files
+    atm_mosaic = MosaicObj(input_dir=input_dir, mosaic_name=atm_mosaic_file).read()
+    lnd_mosaic = MosaicObj(input_dir=input_dir, mosaic_name=lnd_mosaic_file).read()
+    ocn_mosaic = MosaicObj(input_dir=input_dir, mosaic_name=ocn_mosaic_file).read()
 
-def set_component(mosaic: type[MosaicObj], Component: Union[type[AtmComponent], type[LndComponent], type[OcnComponent]],
-                  mask: List[npt.NDArray[np.float64]] = None, area: List[npt.NDArray[np.float64]] = None):    
-    
-    Component._fields_ = [("itile", ctypes.c_int),
-                          ("nx",  ctypes.c_int),
-                          ("ny", ctypes.c_int),
-                          ("x", ctypes.POINTER(ctypes.c_double)),
-                          ("y", ctypes.POINTER(ctypes.c_double)),
-                          ("mask", ctypes.POINTER(ctypes.c_double)),
-                          ("area", ctypes.POINTER(ctypes.c_double))
-    ]
-    
-    componentsxntiles = Component * mosaic.ntiles
-    components = componentsxntiles()
-
-    for itile in range(mosaic.ntiles):
-        tile = mosaic.gridtiles[itile]
-        igrid = mosaic.grid[tile]
-        components[itile].itile = itile
-        components[itile].nx = igrid.nx
-        components[itile].ny = igrid.ny
-        components[itile].x = igrid.x.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
-        components[itile].y = igrid.y.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
-        components[itile].mask = mask if mask is None else mask[itile].ctypes.data_as(ctypes.POINTER(ctypes.c_double))
-        components[itile].area = area if area is None else area[itile].ctypes.data_as(ctypes.POINTER(ctypes.c_double))
-    return components, componentsxntiles
-
-
-def extend_ocn_grid_south(ocn_mosaic: MosaicObj):
-
-    tiny_value = 1.e-7
-    min_atm_lat = np.radians(-90.0)
-    
-    if ocn_mosaic.grid['tile1'].y[0][0] > min_atm_lat + tiny_value:
-        #extend
-        for itile in ocn_mosaic.gridtiles:
-            x = ocn_mosaic.grid[itile].x
-            ocn_mosaic.grid[itile].x = np.concatenate(([x[0]], x))
-            
-            nxp = ocn_mosaic.grid[itile].nxp
-            y = ocn_mosaic.grid[itile].y
-            ocn_mosaic.grid[itile].y = np.concatenate(([np.full(nxp, min_atm_lat, dtype=np.float64)], y))
-        ocn_mosaic.grid['tile1'].ny = ocn_mosaic.grid['tile1'].ny + 1
-        ocn_mosaic.extended_south = 1
-    else:
-        ocn_mosaic.extended_south = 0
-
-
-def get_ocn_mask(ocn_mosaic: type(MosaicObj), topog_file: str = None, sea_level: np.float64 = 0.0):
-
-    nx = ocn_mosaic.grid['tile1'].nx 
-    ny = ocn_mosaic.grid['tile1'].ny
-    
-    if topog_file is None:
-        return np.ones((ny,nx), dtype=np.float64)
-    else:
-        topog = xr.load_dataset(topog_file)['depth'].values
-        mask = np.where(topog>sea_level, 1.0, 0.0)
-        if ocn_mosaic.extended_south > 0 :
-            return np.concatenate(([np.zeros(nx)], mask))
-        else :
-            return mask
-
-
-
-
-
+    #read in grids
+    atm_mosaic.get_grid(toradians=True, agrid=True, free_dataset=True)
+    lnd_mosaic.get_grid(toradians=True, agrid=True, free_dataset=True)
+    ocn_mosaic.get_grid(toradians=True, agrid=True, free_dataset=True)
+        
+    pyfrenctools.mosaic_coupled_utils.make_coupler_mosaic(atm=atm_mosaic,
+                                                          lnd=lnd_mosaic,
+                                                          ocn=ocn_mosaic,
+                                                          topogfile=input_dir+'/'+topog_file)

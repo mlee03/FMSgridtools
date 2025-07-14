@@ -506,7 +506,7 @@ void create_realistic_topog(int nx_dst, int ny_dst, const double *x_dst, const d
   char xname[128], yname[128];
   int nx_src, ny_src, nxp_src, nyp_src, i, j, count, n;
   double *depth_src, *mask_src, *xt_src, *yt_src, *x_src, *y_src;
-  double *x_out, *y_out, *xc_src, *yc_src;
+  double *x_out, *y_out, *xc_src, *yc_src, *mask_dst;
   double missing, y_min, y_max, yy;
   int    nzv, nk, k;
   double *zeta=NULL, *zw=NULL;
@@ -602,6 +602,7 @@ void create_realistic_topog(int nx_dst, int ny_dst, const double *x_dst, const d
   y_src    = (double *)malloc(nxp_src*(ny_now+1)*sizeof(double));
   depth_src = (double *)malloc(nx_src*ny_now*sizeof(double));
   mask_src = (double *)malloc(nx_src*ny_now*sizeof(double));
+  mask_dst = (double *)malloc(nx_dst*ny_dst*sizeof(double));
 
   for(j=0; j<=ny_now; j++) {
      jj = j+jstart;
@@ -652,6 +653,8 @@ void create_realistic_topog(int nx_dst, int ny_dst, const double *x_dst, const d
     }
   }
 
+  for(int i=0; i<nx_dst*ny_dst; i++) mask_dst[i] = 1.0;
+  
   if(on_grid) {
      if(debug) printf("We do no topography interpolation!\n");
      for(i=0; i<nx_src*ny_now; i++) {
@@ -667,10 +670,10 @@ void create_realistic_topog(int nx_dst, int ny_dst, const double *x_dst, const d
         x_out, y_out, mask_src, depth_src, depth );
     else if(gpu)
       conserve_interp_gpu(nx_src, ny_now, nx_dst, ny_dst, x_src, y_src,
-	      x_out, y_out, mask_src, depth_src, depth );
+                          x_out, y_out, mask_src, mask_dst, depth_src, depth );
     else
       conserve_interp(nx_src, ny_now, nx_dst, ny_dst, x_src, y_src,
-	      x_out, y_out, mask_src, depth_src, depth );
+                      x_out, y_out, mask_src, depth_src, depth );
   }
 
   if(debug) printf("done.\nfiltering topo (if enabled)...");

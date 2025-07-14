@@ -29,5 +29,5 @@
 *********************************************************************/
 void conserve_interp_gpu(int nx_src, int ny_src, int nx_dst, int ny_dst, double *x_src,
                          double *y_src,  double *x_dst,  double *y_dst,
-                         double *mask_src,  double *data_src, double *data_dst );
+                         double *mask_src,  double *mask_dst, double *data_src, double *data_dst );
 #endif

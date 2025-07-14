@@ -2,7 +2,7 @@ import ctypes
 import os
 
 from .shared import create_xgrid
-from .make_mosaic import mosaic_util
+from .make_mosaic import mosaic_util, mosaic_coupled_utils
 from .make_hgrid import make_hgrid_wrappers
 
 _libpath = os.path.dirname(__file__) + "/c_install/clib.so"

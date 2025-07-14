@@ -1,6 +1,7 @@
 import ctypes
 import numpy as np
-from typing import type, List
+from typing import List, Union
+import numpy.typing as npt
 import xarray as xr
 
 from fmsgridtools.shared.mosaicobj import MosaicObj
@@ -8,7 +9,7 @@ from fmsgridtools.shared.mosaicobj import MosaicObj
 _libpath = None
 _lib = None
 
-def init(libpath: str, lib: type[CDLL]):
+def init(libpath: str, lib: type[ctypes.CDLL]):
 
     global _libpath, _lib
 
@@ -113,7 +114,7 @@ def make_coupler_mosaic(atm: type(MosaicObj), lnd: type(MosaicObj), ocn: type(Mo
                              ocn_mosaic.extended_south,
                              ctypes.byref(atm),
                              ctypes.byref(lnd),
-                             ctypes.byref(ocn)
+                             ctypes.byref(ocn))
     
 
     

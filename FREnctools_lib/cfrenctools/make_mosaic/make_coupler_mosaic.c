@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "create_xgrid_utils_gpu.h"
-#include "create_xgrid_gpu_development.h"
+#include "create_xgrid_gpu.h"
 #include "globals.h"
 
 typedef struct component {

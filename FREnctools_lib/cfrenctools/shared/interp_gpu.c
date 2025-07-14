@@ -38,7 +38,7 @@
   ----------------------------------------------------------------------------*/
 void conserve_interp_gpu(int nx_src, int ny_src, int nx_dst, int ny_dst, double *x_src,
                          double *y_src,  double *x_dst,  double *y_dst,
-                         double *mask_src,  double *data_src, double *data_dst )
+                         double *mask_src,  double *mask_dst, double *data_src, double *data_dst )
 {
   Grid_cells_struct_config output_grid_cells;
   Interp_per_input_tile interp_gpu;
@@ -56,18 +56,20 @@ void conserve_interp_gpu(int nx_src, int ny_src, int nx_dst, int ny_dst, double 
 
 #pragma acc enter data copyin(x_src[:ngridpts_src], y_src[:ngridpts_src], \
                               x_dst[:ngridpts_dst], y_dst[:ngridpts_dst],\
-                              mask_src[:ncells_src])
+                              mask_src[:ncells_src], mask_dst[:ncells_dst])
 
   get_grid_cell_struct_gpu(nx_dst, ny_dst, x_dst, y_dst, &output_grid_cells);
 
 #pragma acc enter data create(approx_nxcells[:ncells_src], ij2_start[:ncells_src], ij2_end[:ncells_src])
 
   int upbound_nxcells = get_upbound_nxcells_2dx2d_gpu(nx_src, ny_src, nx_dst, ny_dst, jstart, jend,
-                                                      x_src, y_src, x_dst, y_dst, mask_src, &output_grid_cells,
+                                                      x_src, y_src, x_dst, y_dst, mask_src, mask_dst,
+                                                      &output_grid_cells,
                                                       approx_nxcells, ij2_start, ij2_end);
 
   int nxgrid = create_xgrid_2dx2d_order1_gpu(nx_src, ny_src, nx_dst, ny_dst, jstart, jend, x_src, y_src,
-                                             x_dst, y_dst, upbound_nxcells, mask_src, &output_grid_cells,
+                                             x_dst, y_dst, upbound_nxcells, mask_src, mask_dst,
+                                             &output_grid_cells,
                                              approx_nxcells, ij2_start, ij2_end, &interp_gpu);
 
   int *input_parent_cell_index = interp_gpu.input_parent_cell_index;
