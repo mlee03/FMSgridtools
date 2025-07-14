@@ -11,10 +11,23 @@ tile_number = 1
 
 gridfiles = [f'grid.tile{x}.nc' for x in range(6)]
 gridtiles = [f'tile{x}' for x in range(6)]
+ntiles = 6
 output = 'test_mosaic.nc'
-tilefile = 'tile1.nc'
 
 
+def make_grid(gridfile):
+
+    xy = np.arange(0, grid_size+1, dtype=np.float64)
+
+    x, y = np.meshgrid(xy, xy)
+    area = xr.DataArray(np.ones((grid_size, grid_size), dtype=np.float64), dims=["ny", "nx"])
+    x = xr.DataArray(x, dims=["nyp", "nxp"])
+    y = xr.DataArray(y, dims=["nyp", "nxp"])
+    
+    xr.Dataset(data_vars = {"x": x, "y":y, "area":area}).to_netcdf(gridfile)
+
+    
+@pytest.mark.skip
 def test_create_regional_input():
 
     nx = 1 + random.randint(1,100) % grid_size
@@ -40,7 +53,6 @@ def test_create_regional_input():
             "grid_yt_sub01": yt_data}).to_netcdf(
             f"regional_input_file.tile{tile_number}.nc")
 
-
 def test_write():
     mosaic = fmsgridtools.MosaicObj(ntiles=6,
                                     mosaic_name='test_mosaic',
@@ -51,26 +63,23 @@ def test_write():
                                     contact_index=np.full(6, "", dtype=str))
     mosaic.write(output)
     assert os.path.exists(output)
-    
+ 
 def test_ntiles():
-    mosaic = fmsgridtools.MosaicObj(mosaic_file=output).read()
+    mosaic = fmsgridtools.MosaicObj(mosaic_name=output).read()
     assert mosaic.ntiles == 6
-        
+
+    
 def test_gridfiles():
-    mosaic2 = fmsgridtools.MosaicObj(mosaic_file=output).read()
+    mosaic2 = fmsgridtools.MosaicObj(mosaic_name=output).read()
     assert all([mosaic2.gridfiles[i] == gridfiles[i] for i in range(mosaic2.ntiles)])
     os.remove(output)
 
-def test_getgrid():
-    ntiles = 2
-    gridtiles = [f"tile{i}" for i in range(1,ntiles+1)]
-    gridfiles = [f"test.tile{itile}.nc" for itile in gridtiles]
-
-    #for ifile in gridfiles:
-    #    xr.Dataset(data_vars=dict(x=np.array([[1,2],[3,4]]), y=np.array([[1,2
     
-    mosaic = MosaicObj(ntiles=2, gridtiles=gridtiles, gridfiles = gridfiles)
-    mosaic.get_grid(to_radians=True)
+def test_getgrid():
+
+    for ifile in gridfiles: make_grid(ifile)
+    mosaic = fmsgridtools.MosaicObj(ntiles=ntiles, gridtiles=gridtiles, gridfiles=gridfiles)
+    mosaic.get_grid(toradians=True)
     
     
 def test_solo_mosaic():

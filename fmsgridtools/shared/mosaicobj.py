@@ -8,10 +8,9 @@ from fmsgridtools.shared.gridtools_utils import check_file_is_there
 class MosaicObj:
 
     def __init__(self, input_dir: str = "./",
-                 mosaic_file: str = None,
-                 ntiles: int = None,
                  mosaic_name: str = None,
-                 gridlocation: str = None,
+                 ntiles: int = None,
+                 gridlocation: str = "./",
                  gridfiles: list[str] = None,
                  gridtiles: list[str] = None,
                  contacts: list[str] = None,
@@ -20,8 +19,6 @@ class MosaicObj:
                  grid: dict = None):
 
         self.input_dir = input_dir+"/"
-        self.mosaic_file = mosaic_file
-        self.ntiles = ntiles
         self.mosaic_name = mosaic_name
         self.gridlocation = gridlocation
         self.gridfiles = gridfiles
@@ -30,6 +27,7 @@ class MosaicObj:
         self.contact_index = contact_index
         self.dataset = dataset
         self.grid = grid
+        self.ntiles = ntiles
         for key, value in self.__dict__.items():
             if key == 'gridfiles' or 'gridtiles' or 'contacts' or 'contact_index':
                 if value is None:
@@ -41,11 +39,11 @@ class MosaicObj:
 
     def read(self):
 
-        if self.mosaic_file is None:
-            raise IOError("Please specify mosaic_file")
+        if self.mosaic_name is None:
+            raise IOError("Please specify mosaic_name")
 
-        check_file_is_there(self.input_dir+self.mosaic_file)
-        self.dataset = xr.open_dataset(self.input_dir+self.mosaic_file)
+        check_file_is_there(self.input_dir+self.mosaic_name)
+        self.dataset = xr.open_dataset(self.input_dir+self.mosaic_name)
 
         self.get_attributes()
         return self
@@ -67,7 +65,7 @@ class MosaicObj:
     def get_grid(self, toradians: bool = False, agrid: bool = False, free_dataset: bool = False) -> dict:
 
         for i in range(self.ntiles):
-            gridfile = str(self.input_dir) + str(self.gridlocation+self.gridfiles[i])
+            gridfile = str(self.input_dir) + str(self.gridlocation) + str(self.gridfiles[i])
             self.grid[self.gridtiles[i]] = GridObj(gridfile=gridfile).read(toradians=toradians,
                                                                            agrid=agrid,
                                                                            free_dataset=free_dataset)

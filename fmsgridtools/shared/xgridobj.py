@@ -97,6 +97,10 @@ class XGridObj() :
             xgrid = {tgt_tile: dict()}
 
             for src_tile in self.src_grid.keys():
+
+                print('hereherehere')
+                print(self.src_grid['tile1'].nx)
+                exit()
                 
                 xgrid_out = create_xgrid_2dx2d_order1(
                     nlon_src = self.src_grid[src_tile].nx,
@@ -162,15 +166,16 @@ class XGridObj() :
         else:
             return False
 
+        
     def _check_mosaic(self):
 
         if self.src_mosaic is not None and self.tgt_mosaic is not None:
             self.src_grid = MosaicObj(self.input_dir, self.src_mosaic).read().get_grid(toradians=True,
                                                                                        agrid=self.on_agrid,
-                                                                                       free_dataset=True)
+                                                                                       free_dataset=False)
             self.tgt_grid = MosaicObj(self.input_dir, self.tgt_mosaic).read().get_grid(toradians=True,
                                                                                        agrid=self.on_agrid,
-                                                                                       free_dataset=True)
+                                                                                       free_dataset=False)
             return True
         else:
             return False
