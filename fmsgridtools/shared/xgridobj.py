@@ -81,8 +81,6 @@ class XGridObj() :
         
     def create_xgrid(self, mask: dict[str,npt.NDArray] = None) -> dict():
 
-        DEG_TO_RAD = pyfms.constants.DEG_TO_RAD
-
         if self.order not in (1,2):
             raise RuntimeError("conservative order must be 1 or 2")
 
@@ -98,10 +96,6 @@ class XGridObj() :
 
             for src_tile in self.src_grid.keys():
 
-                print('hereherehere')
-                print(self.src_grid['tile1'].nx)
-                exit()
-                
                 xgrid_out = create_xgrid_2dx2d_order1(
                     nlon_src = self.src_grid[src_tile].nx,
                     nlat_src = self.src_grid[src_tile].ny,
@@ -172,10 +166,11 @@ class XGridObj() :
         if self.src_mosaic is not None and self.tgt_mosaic is not None:
             self.src_grid = MosaicObj(self.input_dir, self.src_mosaic).read().get_grid(toradians=True,
                                                                                        agrid=self.on_agrid,
-                                                                                       free_dataset=False)
+                                                                                       free_dataset=True)
             self.tgt_grid = MosaicObj(self.input_dir, self.tgt_mosaic).read().get_grid(toradians=True,
                                                                                        agrid=self.on_agrid,
-                                                                                       free_dataset=False)
+                                                                                       free_dataset=True)
+
             return True
         else:
             return False

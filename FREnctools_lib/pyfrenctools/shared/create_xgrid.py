@@ -110,10 +110,10 @@ def get_2dx2d_order1_gpu(nlon_src: int,
     arrayptr_double = np.ctypeslib.ndpointer(dtype=np.float64, flags="C_CONTIGUOUS")
 
     create_xgrid_order1_gpu_wrapper.restype = np.int32
-    create_xgrid_order1_gpu_wrapper.argtypes = [POINTER(c_int), #nlon_src
-                                                POINTER(c_int), #nlat_src
-                                                POINTER(c_int), #nlon_tgt
-                                                POINTER(c_int), #nat_tgt
+    create_xgrid_order1_gpu_wrapper.argtypes = [c_int, #nlon_src
+                                                c_int, #nlat_src
+                                                c_int, #nlon_tgt
+                                                c_int, #nat_tgt
                                                 arrayptr_double, #lon_src
                                                 arrayptr_double, #lat_src
                                                 arrayptr_double, #lon_tgt
