@@ -29,5 +29,5 @@ jobs:
           pytest tests/shared/test_libs.py
           pytest tests/mosaic/test_mosaic.py
           pytest tests/shared/test_gridobj.py
-          pytest tests/test_xgridobj.py
+          pytest tests/shared/test_xgridobj.py
         
