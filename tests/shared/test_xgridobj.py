@@ -4,12 +4,12 @@ import numpy as np
 import pytest
 import xarray as xr
 
-import FMSgridtools
+import fmsgridtools
 
 
 def generate_mosaic(nx: int = 90, ny: int = 45, refine: int = 2):
 
-    xstart, xend = 0, 360
+    xstart, xend = 0, 180
     ystart, yend = -45, 45
 
     x_src = np.linspace(xstart, xend, nx+1)
@@ -19,6 +19,9 @@ def generate_mosaic(nx: int = 90, ny: int = 45, refine: int = 2):
     x_tgt = np.linspace(xstart, xend, nx*refine+1)
     y_tgt = np.linspace(ystart, yend, ny*refine+1)
     x_tgt, y_tgt = np.meshgrid(x_tgt, y_tgt)
+    
+    area_src = np.ones((ny, nx), dtype=np.float64)
+    area_tgt = np.ones((ny*refine, nx*refine), dtype=np.float64)
 
     for ifile in ("src", "tgt"):
         mosaicfile = ifile + "_mosaic.nc"
@@ -32,10 +35,12 @@ def generate_mosaic(nx: int = 90, ny: int = 45, refine: int = 2):
         ).to_netcdf(mosaicfile)
 
 
-    for (x, y, prefix) in [(x_src, y_src, "src"), (x_tgt, y_tgt, "tgt")]:
+    for (x, y, area, prefix) in [(x_src, y_src, area_src, "src"), (x_tgt, y_tgt, area_tgt, "tgt")]:
         xr.Dataset(data_vars=dict(x=(["nyp", "nxp"], x),
-                                  y=(["nyp", "nxp"], y))
+                                  y=(["nyp", "nxp"], y),
+                                  area=(["ny", "nx"], area))
         ).to_netcdf(prefix+"_grid.nc")
+
 
 def remove_mosaic():
     os.remove("src_grid.nc")
@@ -44,27 +49,29 @@ def remove_mosaic():
     os.remove("tgt_mosaic.nc")
     os.remove("remap.nc")
 
+
 @pytest.mark.parametrize("on_gpu", [False, True])
 def test_create_xgrid(on_gpu) :
 
     nx, ny, refine = 45, 45, 2
     generate_mosaic(nx=nx, ny=ny, refine=refine)
 
-    xgrid = FMSgridtools.XGridObj(src_mosaic="src_mosaic.nc",
+    xgrid = fmsgridtools.XGridObj(src_mosaic="src_mosaic.nc",
                                   tgt_mosaic="tgt_mosaic.nc",
-                                  on_gpu=on_gpu
+                                  on_gpu=on_gpu,
+                                  on_agrid=False
     )
 
     xgrid.create_xgrid()
     xgrid.write()
 
     del xgrid
-
-    xgrid = FMSgridtools.XGridObj(restart_remap_file="remap.nc")
+    
+    xgrid = fmsgridtools.XGridObj(restart_remap_file="remap.nc")
 
     nxcells = nx * refine * ny * refine
     assert xgrid.nxcells == nxcells
-
+    
     tile1_cells = np.repeat([i for i in range(nx*ny)],4)
     assert np.all(xgrid.src_ij==tile1_cells)
 

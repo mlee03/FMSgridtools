@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 #include <openacc.h>
 #include "create_xgrid.h"
 #include "create_xgrid_gpu.h"
@@ -66,8 +67,8 @@ int create_xgrid_order1_gpu_wrapper(int nx_src, int ny_src, int nx_dst, int ny_d
   int *output_parent_cell_index = interp_gpu.output_parent_cell_index;
   double *xcell_area = interp_gpu.xcell_area;
   
-#pragma acc exit data copyout(input_parent_cell_index[:nxgrid],  \
-                              output_parent_cell_index[:nxgrid], \
+#pragma acc exit data copyout(input_parent_cell_index[:nxgrid],   \
+                              output_parent_cell_index[:nxgrid],  \
                               xcell_area[:nxgrid])
 
   //deallocate output_grid_cells
@@ -78,11 +79,9 @@ int create_xgrid_order1_gpu_wrapper(int nx_src, int ny_src, int nx_dst, int ny_d
 void create_xgrid_transfer_data(int nxgrid, int *xgrid_ij1_in, int *xgrid_ij2_in, double *xgrid_area_in)
 {
 
-  for(int ix=0; ix<nxgrid; ix++){
-    xgrid_ij1_in[ix] = interp_gpu.input_parent_cell_index[ix];
-    xgrid_ij2_in[ix] = interp_gpu.output_parent_cell_index[ix];
-    xgrid_area_in[ix] = interp_gpu.xcell_area[ix];
-  }
+  memcpy(xgrid_ij1_in, interp_gpu.input_parent_cell_index, nxgrid*sizeof(int));
+  memcpy(xgrid_ij2_in, interp_gpu.output_parent_cell_index, nxgrid*sizeof(int));
+  memcpy(xgrid_area_in, interp_gpu.xcell_area, nxgrid*sizeof(double));
 
   free(interp_gpu.input_parent_cell_index);
   free(interp_gpu.output_parent_cell_index);

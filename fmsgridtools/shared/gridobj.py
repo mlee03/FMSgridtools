@@ -36,25 +36,36 @@ class GridObj:
     read:
     This function reads in the gridfile and initializes the instance variables
     """
-    def read(self, toradians: bool = False):
+    def read(self, toradians: bool = False, agrid: bool = False, free_dataset: bool = False):
 
         check_file_is_there(self.gridfile)
         self.dataset = xr.open_dataset(self.gridfile)
         self.get_attributes()
 
+        if free_dataset:
+            del self.dataset
+            self.dataset = None
+        
         if toradians:
             self.x = np.radians(self.x)
             self.y = np.radians(self.y)
 
+        if agrid:
+            self.x, self.y = self.agrid()
+            [self.nyp, self.nxp] = self.x.shape
+            self.nx = self.nxp - 1
+            self.ny = self.nyp - 1
+            
         return self
 
+    
     def get_attributes(self):
 
         for key in self.dataset.data_vars:
             if isinstance(self.dataset.data_vars[key].values, np.ndarray):
-                setattr(self, key, self.dataset.data_vars[key].values)
+                setattr(self, key, self.dataset[key].values)
             else:
-                setattr(self, key, self.dataset.data_vars[key].astype(str).values)
+                setattr(self, key, str(self.dataset[key].astype(str).values))
 
         for key in self.dataset.sizes:
             setattr(self, key, self.dataset.sizes[key])
@@ -76,8 +87,12 @@ class GridObj:
     """
     def get_variable_list(self) -> list:
 
-        return list(self.dataset.data_vars.keys())
+        if self.dataset is not None:
+            return list(self.dataset.data_vars.keys())
+        else:
+            return None
 
+        
     def x_contiguous(self):
 
         if self.x is not None:
@@ -85,6 +100,7 @@ class GridObj:
         else:
             return None
 
+        
     def y_contiguous(self):
 
         if self.y is not None:
@@ -92,6 +108,7 @@ class GridObj:
         else:
             return None
 
+        
     def dx_contiguous(self):
 
         if self.dx is not None:
@@ -99,6 +116,7 @@ class GridObj:
         else:
             return None
 
+        
     def dy_contiguous(self):
 
         if self.dy is not None:
@@ -106,6 +124,7 @@ class GridObj:
         else:
             return None
 
+        
     def area_contiguous(self):
 
         if self.area is not None:
@@ -113,6 +132,7 @@ class GridObj:
         else:
             return None
 
+        
     def angle_dx_contiguous(self):
 
         if self.angle_dx is not None:
@@ -120,6 +140,7 @@ class GridObj:
         else:
             return None
 
+        
     def angle_dy_contiguous(self):
 
         if self.angle_dy is not None:
@@ -134,24 +155,12 @@ class GridObj:
     This method returns the lon and lat for the A-grid as calculated from the
     x and y attributes of the GridObj.
     """
-    def get_agrid_lonlat(self)-> tuple[npt.NDArray, npt.NDArray]:
-        D2R = np.pi/180
-        a_lon = None
-        a_lat = None
-        if self.x is not None and self.y is not None:
-            nx = (self.x.shape[1]-1)//2
-            ny = (self.x.shape[0]-1)//2
-            x_flat = self.x.flatten()
-            y_flat = self.y.flatten()
+    def agrid(self)-> tuple[npt.NDArray, npt.NDArray]:
 
-            a_lon = np.zeros(shape=nx)
-            a_lat = np.zeros(shape=ny)
+        if self.x is not None and self.y is not None:                        
+            a_lon = np.ascontiguousarray(self.x[::2, ::2])
+            a_lat = np.ascontiguousarray(self.y[::2, ::2])
 
-            for i in range(nx):
-                a_lon[i] = x_flat[2*nx+1+2*i+1]*D2R
-            for j in range(ny):
-                a_lat[i] = y_flat[(2*j+1)*(2*nx+1)+1]*D2R
-
-        return np.ascontiguousarray(a_lon), np.ascontiguousarray(a_lat)
+        return a_lon, a_lat
 
 #TODO: I/O method for passing to the host

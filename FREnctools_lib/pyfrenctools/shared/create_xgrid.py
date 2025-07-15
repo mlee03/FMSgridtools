@@ -77,14 +77,14 @@ def transfer_data_gpu(nxcells: int):
     arrayptr_double = np.ctypeslib.ndpointer(dtype=np.float64, flags="C_CONTIGUOUS")
 
     create_xgrid_transfer_data.restype = None
-    create_xgrid_transfer_data.argtypes = [POINTER(c_int),
+    create_xgrid_transfer_data.argtypes = [c_int,
                                            arrayptr_int,
                                            arrayptr_int,
                                            arrayptr_double]
 
-    src_ij = np.zeros((nxcells), dtype=np.int32)
-    tgt_ij = np.zeros((nxcells), dtype=np.int32)
-    xarea = np.zeros((nxcells), dtype=np.float64)
+    src_ij = np.ascontiguousarray(np.zeros((nxcells), dtype=np.int32))
+    tgt_ij = np.ascontiguousarray(np.zeros((nxcells), dtype=np.int32))
+    xarea = np.ascontiguousarray(np.zeros((nxcells), dtype=np.float64))
 
     create_xgrid_transfer_data(c_int(nxcells), src_ij, tgt_ij, xarea)
 
@@ -110,10 +110,10 @@ def get_2dx2d_order1_gpu(nlon_src: int,
     arrayptr_double = np.ctypeslib.ndpointer(dtype=np.float64, flags="C_CONTIGUOUS")
 
     create_xgrid_order1_gpu_wrapper.restype = np.int32
-    create_xgrid_order1_gpu_wrapper.argtypes = [POINTER(c_int), #nlon_src
-                                                POINTER(c_int), #nlat_src
-                                                POINTER(c_int), #nlon_tgt
-                                                POINTER(c_int), #nat_tgt
+    create_xgrid_order1_gpu_wrapper.argtypes = [c_int, #nlon_src
+                                                c_int, #nlat_src
+                                                c_int, #nlon_tgt
+                                                c_int, #nat_tgt
                                                 arrayptr_double, #lon_src
                                                 arrayptr_double, #lat_src
                                                 arrayptr_double, #lon_tgt
@@ -124,5 +124,5 @@ def get_2dx2d_order1_gpu(nlon_src: int,
                                               c_int(nlon_tgt), c_int(nlat_tgt),
                                               lon_src, lat_src, lon_tgt, lat_tgt,
                                               mask_src)
-
+    
     return transfer_data_gpu(nxcells)

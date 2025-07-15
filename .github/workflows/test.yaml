@@ -27,5 +27,7 @@ jobs:
       - name: Run pytest (just link test for now)
         run: |
           pytest tests/shared/test_libs.py
-          pytest tests/test_mosaic.py
+          pytest tests/mosaic/test_mosaic.py
+          pytest tests/shared/test_gridobj.py
+          pytest tests/shared/test_xgridobj.py
         
