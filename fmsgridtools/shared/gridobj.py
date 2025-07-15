@@ -52,7 +52,7 @@ class GridObj:
 
         if agrid:
             self.x, self.y = self.agrid()
-            [self.nxp, self.nyp] = self.x.shape
+            [self.nyp, self.nxp] = self.x.shape
             self.nx = self.nxp - 1
             self.ny = self.nyp - 1
             
