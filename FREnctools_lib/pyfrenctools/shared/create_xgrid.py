@@ -25,11 +25,13 @@ def get_2dx2d_order1(nlon_src: int,
                      lat_src: npt.NDArray[np.float64],
                      lon_tgt: npt.NDArray[np.float64],
                      lat_tgt: npt.NDArray[np.float64],
-                     mask_src: npt.NDArray[np.float64] = None):
+                     mask_src: npt.NDArray[np.float64] = None,
+                     mask_tgt: npt.NDArray[np.float64] = None):
 
     create_xgrid = _lib.create_xgrid_2dx2d_order1
 
     if mask_src is None: mask_src = np.ones((nlon_src*nlat_src), dtype=np.float64)
+    if mask_tgt is None: mask_tgt = np.ones((nlon_src*nlat_src), dtype=np.float64)
 
     i_src = np.zeros(MAXXGRID, dtype=np.int32)
     j_src = np.zeros(MAXXGRID, dtype=np.int32)
@@ -49,7 +51,8 @@ def get_2dx2d_order1(nlon_src: int,
                              arrayptr_double, #lat_in
                              arrayptr_double, #lon_out
                              arrayptr_double, #lat_out
-                             arrayptr_double, #mask
+                             arrayptr_double, #mask_src
+                             arrayptr_double, #mask_tgt
                              arrayptr_int, #i_in
                              arrayptr_int, #j_in
                              arrayptr_int, #i_out
@@ -59,7 +62,7 @@ def get_2dx2d_order1(nlon_src: int,
     nxcells = create_xgrid(c_int(nlon_src), c_int(nlat_src),
                            c_int(nlon_tgt), c_int(nlat_tgt),
                            lon_src, lat_src, lon_tgt, lat_tgt, mask_src,
-                           i_src, j_src, i_tgt, j_tgt, xarea
+                           mask_tgt, i_src, j_src, i_tgt, j_tgt, xarea
     )
 
     return dict(nxcells=nxcells,
@@ -101,11 +104,13 @@ def get_2dx2d_order1_gpu(nlon_src: int,
                          lat_src: npt.NDArray,
                          lon_tgt: npt.NDArray,
                          lat_tgt: npt.NDArray,
-                         mask_src: npt.NDArray[np.float64] = None):
+                         mask_src: npt.NDArray[np.float64] = None,
+                         mask_tgt: npt.NDArray[np.float64] = None):
 
     create_xgrid_order1_gpu_wrapper = _lib.create_xgrid_order1_gpu_wrapper
 
     if mask_src is None: mask_src = np.ones((nlon_src*nlat_src), dtype=np.float64)
+    if mask_tgt is None: mask_tgt = np.ones((nlon_src*nlat_src), dtype=np.float64)
 
     arrayptr_double = np.ctypeslib.ndpointer(dtype=np.float64, flags="C_CONTIGUOUS")
 
@@ -118,11 +123,12 @@ def get_2dx2d_order1_gpu(nlon_src: int,
                                                 arrayptr_double, #lat_src
                                                 arrayptr_double, #lon_tgt
                                                 arrayptr_double, #lat_tgt
-                                                arrayptr_double] #mask_src
+                                                arrayptr_double, #mask_src
+                                                arrayptr_double] #mask_tgt
 
     nxcells = create_xgrid_order1_gpu_wrapper(c_int(nlon_src), c_int(nlat_src),
                                               c_int(nlon_tgt), c_int(nlat_tgt),
                                               lon_src, lat_src, lon_tgt, lat_tgt,
-                                              mask_src)
+                                              mask_src, mask_tgt)
     
     return transfer_data_gpu(nxcells)
