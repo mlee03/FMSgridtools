@@ -10,6 +10,10 @@ from fmsgridtools.shared.gridobj import GridObj
 from fmsgridtools.shared.gridtools_utils import check_file_is_there
 from fmsgridtools.shared.mosaicobj import MosaicObj
 
+from fmsgridtools.shared.gridobj import GridObj
+from fmsgridtools.shared.gridtools_utils import check_file_is_there
+from fmsgridtools.shared.mosaicobj import MosaicObj
+
 class cXgridObj(ctypes.Structure):
     _fields_ = [("nxcells", ctypes.c_int),
                 ("input_parent_cell_index", ctypes.POINTER(ctypes.c_double)),
