@@ -5,6 +5,7 @@ import numpy.typing as npt
 import xarray as xr
 
 from fmsgridtools.shared.mosaicobj import MosaicObj
+from fmsgridtools.shared.xgridobj import cXgridObj  
 
 _libpath = None
 _lib = None
@@ -20,6 +21,7 @@ def init(libpath: str, lib: type[ctypes.CDLL]):
 class AtmComponent(ctypes.Structure): pass
 class LndComponent(ctypes.Structure): pass
 class OcnComponent(ctypes.Structure): pass
+
 
 def set_component(mosaic: type[MosaicObj], Component: Union[type[AtmComponent], type[LndComponent], type[OcnComponent]],
                   mask: List[npt.NDArray[np.float64]] = None, area: List[npt.NDArray[np.float64]] = None):    
@@ -61,41 +63,50 @@ def extend_ocn_grid_south(ocn_mosaic: MosaicObj):
         #extend
         for itile in ocn_mosaic.gridtiles:
             x = ocn_mosaic.grid[itile].x
-            ocn_mosaic.grid[itile].x = np.concatenate(([x[0]], x))
-            
+            ocn_mosaic.grid[itile].x = np.concatenate(([x[0]], x))   
             nxp = ocn_mosaic.grid[itile].nxp
             y = ocn_mosaic.grid[itile].y
-            ocn_mosaic.grid[itile].y = np.concatenate(([np.full(nxp, min_atm_lat, dtype=np.float64)], y))
-        ocn_mosaic.grid['tile1'].ny = ocn_mosaic.grid['tile1'].ny + 1
+            ocn_mosaic.grid[itile].y = np.concatenate((np.full((1,nxp), min_atm_lat, dtype=np.float64), y))
+            ocn_mosaic.grid['tile1'].ny = ocn_mosaic.grid['tile1'].ny + 1
         ocn_mosaic.extended_south = 1
     else:
         ocn_mosaic.extended_south = 0
 
 
-def get_ocn_mask(ocn_mosaic: type(MosaicObj), topog_file: str = None, sea_level: np.float64 = 0.0):
+def get_ocn_mask(ocn_mosaic: type(MosaicObj), topog_file: dict() = None, sea_level: np.float64 = 0.0):
 
     nx = ocn_mosaic.grid['tile1'].nx 
     ny = ocn_mosaic.grid['tile1'].ny
     
+    mask = {}
+
     if topog_file is None:
-        return np.ones((ny,nx), dtype=np.float64)
+        for itile in ocn_mosaic.gridtiles:
+            mask[itile] = np.ones((ny,nx), dtype=np.float64)
+        return mask    
     else:
-        topog = xr.load_dataset(topog_file)['depth'].values
-        mask = np.where(topog>sea_level, 1.0, 0.0)
-        if ocn_mosaic.extended_south > 0 :
-            return np.concatenate(([np.zeros(nx)], mask))
-        else :
-            return mask
+        for itile in ocn_mosaic.gridtiles:
+            topog = xr.load_dataset(topog_file[itile])['depth'].values
+            imask = np.where(topog>sea_level, 1.0, 0.0)
+            if ocn_mosaic.extended_south > 0 :
+                mask[itile] = np.concatenate(([np.zeros(nx)], imask))
+            else:
+                mask[itile] = imask
+        return mask
 
         
-def make_coupler_mosaic(atm: type(MosaicObj), lnd: type(MosaicObj), ocn: type(MosaicObj), topogfile: str = None):
+def make_coupler_mosaic(atm_mosaic: type(MosaicObj), lnd_mosaic: type(MosaicObj),
+                        ocn_mosaic: type(MosaicObj), topogfile: str = None):
 
     atm, atm_argtype = set_component(mosaic=atm_mosaic, Component=AtmComponent)
     lnd, lnd_argtype = set_component(mosaic=lnd_mosaic, Component=LndComponent)
 
-    extend_grid_south(ocn_mosaic)
+    extend_ocn_grid_south(ocn_mosaic)
     ocn_mask = [get_ocn_mask(ocn_mosaic, topogfile)]
     ocn, ocn_argtype = set_component(mosaic=ocn_mosaic, Component=OcnComponent, mask = ocn_mask)
+
+    atmxlnd = cXgridObj()
+    atmxocn = cXgridObj()
 
     _lib.make_coupler_mosaic.restype = ctypes.c_int
     _lib.make_coupler_mosaic.argtypes = [ctypes.c_int, #ntile_atm
@@ -105,8 +116,8 @@ def make_coupler_mosaic(atm: type(MosaicObj), lnd: type(MosaicObj), ocn: type(Mo
                                          ctypes.POINTER(atm_argtype), #lnd
                                          ctypes.POINTER(lnd_argtype), #lnd
                                          ctypes.POINTER(ocn_argtype),  #ocn
-                                         ctypes.POINTER(atmxlnd), #atmxlnd exchange grid
-                                         ctypes.POINTER(atmxocn)]  #atmxocn exchange grid
+                                         ctypes.POINTER(cXgridObj),  #atmxlnd exchange grid
+                                         ctypes.POINTER(cXgridObj)]  #atmxocn exchange grid
 
     _lib.make_coupler_mosaic(atm_mosaic.ntiles,
                              lnd_mosaic.ntiles,
@@ -114,8 +125,10 @@ def make_coupler_mosaic(atm: type(MosaicObj), lnd: type(MosaicObj), ocn: type(Mo
                              ocn_mosaic.extended_south,
                              ctypes.byref(atm),
                              ctypes.byref(lnd),
-                             ctypes.byref(ocn))
-    
+                             ctypes.byref(ocn),
+                             ctypes.byref(atmxlnd),
+                             ctypes.byref(atmxocn))
 
-    
+
+
 

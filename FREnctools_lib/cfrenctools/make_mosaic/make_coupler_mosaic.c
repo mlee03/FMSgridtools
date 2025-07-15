@@ -90,12 +90,14 @@ int make_coupler_mosaic(int ntile_atm, int ntile_lnd, int ntile_ocn, int ocn_ext
                                                           iatm->mask, ilnd->mask,
                                                           &lnd_gridcells, approx_nxcells,
                                                           ij2_start, ij2_end);
-
+                                                   
       int nxcells = create_xgrid_2dx2d_order1_gpu(nxa, nya, nxl, nyl, jstart, jend,
                                                   iatm->x, iatm->y , ilnd->x, ilnd->y,
                                                   upbound_nxcells, iatm->mask, ilnd->mask,
                                                   &lnd_gridcells, approx_nxcells, 
                                                   ij2_start, ij2_end, atmxlnd+itile_lnd);
+
+      printf("nxcells %d\n", nxcells);
 
       //free lnd_gridcells xz    
       free_grid_cell_struct_gpu(nl, &lnd_gridcells);

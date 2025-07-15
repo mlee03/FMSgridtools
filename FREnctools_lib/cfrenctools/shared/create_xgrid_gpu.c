@@ -268,6 +268,7 @@ int create_xgrid_2dx2d_order1_gpu(const int nlon_input_cells,  const int nlat_in
                                     approx_nxcells_per_ij1, parent_input_index, parent_output_index,
                                     store_xcell_area, interp_for_itile);
 
+
 #pragma acc exit data delete( parent_input_index[:upbound_nxcells],  \
                               parent_output_index[:upbound_nxcells], \
                               store_xcell_area[:upbound_nxcells],    \
