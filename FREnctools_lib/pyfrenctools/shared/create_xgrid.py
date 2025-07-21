@@ -2,6 +2,7 @@ from ctypes import CDLL, POINTER, c_double, c_int
 
 import numpy as np
 import numpy.typing as npt
+import xarray as xr
 
 
 _libpath = None
@@ -31,7 +32,11 @@ def get_2dx2d_order1(nlon_src: int,
     create_xgrid = _lib.create_xgrid_2dx2d_order1
 
     if mask_src is None: mask_src = np.ones((nlon_src*nlat_src), dtype=np.float64)
-    if mask_tgt is None: mask_tgt = np.ones((nlon_src*nlat_src), dtype=np.float64)
+    if mask_tgt is None: mask_tgt = np.ones((nlon_tgt*nlat_tgt), dtype=np.float64)
+
+
+    print("here", nlon_tgt, nlat_tgt, np.sum(mask_tgt))
+    
 
     i_src = np.zeros(MAXXGRID, dtype=np.int32)
     j_src = np.zeros(MAXXGRID, dtype=np.int32)
@@ -64,12 +69,18 @@ def get_2dx2d_order1(nlon_src: int,
                            lon_src, lat_src, lon_tgt, lat_tgt, mask_src,
                            mask_tgt, i_src, j_src, i_tgt, j_tgt, xarea
     )
-
-    return dict(nxcells=nxcells,
-                src_ij=j_src[:nxcells]*nlon_src + i_src[:nxcells],
-                tgt_ij=j_tgt[:nxcells]*nlon_tgt + i_tgt[:nxcells],
-                xarea=xarea[:nxcells]
-    )
+    
+    return nxcells, dict(
+                src_ij=xr.DataArray(np.column_stack((i_src[:nxcells]+1, j_src[:nxcells]+1)), 
+                                    dims=["nxcells", "two"],
+                                    attrs=dict(src_ij="parent cell indices in src mosaic")
+                                    ),
+                tgt_ij=xr.DataArray(np.column_stack((i_tgt[:nxcells]+1, j_tgt[:nxcells]+1)),
+                                    dims=["nxcells", "two"],
+                                    attrs=dict(tgt_ij="parent cell indices in tgt mosaic")
+                                    ),
+                xarea=xr.DataArray(xarea[:nxcells], dims=["nxcells"], attrs=dict(xarea="exchange grid area"))
+                )
 
 
 def transfer_data_gpu(nxcells: int):

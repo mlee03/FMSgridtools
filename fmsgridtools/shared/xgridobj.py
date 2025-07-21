@@ -26,21 +26,25 @@ class cXgridObj(ctypes.Structure):
 class XGridObj() :
 
     def __init__(self,
-                 input_dir: str = "./", 
-                 src_mosaic: str = None,
-                 tgt_mosaic: str = None,
+                 input_dir: str = "./",                 
+                 src_mosaic_file: str = None,
+                 tgt_moasic_file: str = None,
                  restart_remap_file: str = None,
                  write_remap_file: str = "remap.nc",
+                 src_mosaic: type[MosaicObj] = None,
+                 tgt_mosaic: type[MosaicObj] = None,
                  src_grid: type[GridObj] = None,
                  tgt_grid: type[GridObj] = None,
                  on_agrid: bool = True,
                  order: int = 1,
                  on_gpu: bool = False):
         self.input_dir = input_dir
-        self.src_mosaic = src_mosaic
-        self.tgt_mosaic = tgt_mosaic
+        self.src_mosaic_file = src_mosaic_file
+        self.tgt_moasic_file = tgt_moasic_file
         self.restart_remap_file = restart_remap_file
         self.write_remap_file = write_remap_file
+        self.src_mosaic = src_mosaic
+        self.tgt_mosaic = tgt_mosaic
         self.src_grid = src_grid
         self.tgt_grid = tgt_grid
         self.order = order
@@ -61,7 +65,7 @@ class XGridObj() :
         (1) a restart remap_file
         (2) input and tgt mosaic files with grid file information
         (3) input and output grids as instances of GridObj
-        Please provide either the src_mosaic with the tgt_mosaic,
+        Please provide either the src_mosaic_file with the tgt_moasic_file,
                                   src_grid with the tgt_grid,
                                   or a restart_remap_file"""
         )
@@ -93,7 +97,7 @@ class XGridObj() :
                 j_tgt = self.dataset['tgt_ij']// self.tgt_grid['tile1'].nx                    
                 ij_src = np.column_stack((i_src, j_src))
                 ij_tgt = np.column_stack((i_tgt, j_tgt))    
-                xr.Dataset(data_vars=dict(src_tile=self.dataset[ikey]['src_tile'],
+                xr.dataset(data_vars=dict(src_tile=self.dataset[ikey]['src_tile'],
                                 src_ij=(["nxcells", "two"], ij_src),
                                 tgt_ij=(["nxcells", "two"], ij_tgt),
                                 xarea=self.dataset[ikey]['xarea'])
@@ -106,7 +110,7 @@ class XGridObj() :
                     j_tgt = self.dataset[ikey]['tgt_ij']// self.tgt_grid['tile1'].nx                    
                     ij_src = np.column_stack((i_src, j_src))
                     ij_tgt = np.column_stack((i_tgt, j_tgt))    
-                    xr.Dataset(data_vars=dict(src_tile=self.dataset[ikey]['src_tile'],
+                    xr.dataset(data_vars=dict(src_tile=self.dataset[ikey]['src_tile'],
                                   src_ij=(["nxcells", "two"], ij_src),
                                   tgt_ij=(["nxcells", "two"], ij_tgt),
                                   xarea=self.dataset[ikey]['xarea'])
@@ -134,6 +138,7 @@ class XGridObj() :
 
             itile = 1
             xgrid = {}
+            self.dataset[tgt_tile] = {}
 
             itgt_mask = None if tgt_mask is None else tgt_mask[tgt_tile]
 
@@ -141,7 +146,7 @@ class XGridObj() :
 
                 isrc_mask = None if src_mask is None else src_mask[src_tile]
 
-                xgrid_out = create_xgrid_2dx2d_order1(
+                nxcells, xgrid_out = create_xgrid_2dx2d_order1(
                     nlon_src = self.src_grid[src_tile].nx,
                     nlat_src = self.src_grid[src_tile].ny,
                     nlon_tgt = self.tgt_grid[tgt_tile].nx,
@@ -153,12 +158,14 @@ class XGridObj() :
                     mask_src=isrc_mask,
                     mask_tgt=itgt_mask
                 )
-                if xgrid_out['nxcells'] > 0 :
-                    xgrid_out["tile"] = np.full(xgrid_out["nxcells"], itile, dtype=np.int32)
-                    xgrid[src_tile] = xgrid_out
+                if nxcells > 0 :
+                    xgrid_out["tile"] = xr.DataArray(np.full(nxcells, itile, dtype=np.int32),
+                                                     dims=["nxcells"],
+                                                     attrs=dict(src_tile="grid tile number in source mosaic"))
+                    self.dataset[tgt_tile][src_tile] = xr.Dataset(xgrid_out)
                 itile = itile + 1
 
-            self.create_dataset(xgrid, tgt_tile)
+            #self.create_dataset(xgrid, tgt_tile)
 
     
     def create_dataset(self, xgrid: dict(), tgt_tile: str = "tile1"):
@@ -187,7 +194,7 @@ class XGridObj() :
                                 attrs=dict(standard_name="exchange grid cell area", units="m2")
         )
         
-        self.dataset[tgt_tile] = xr.Dataset(data_vars=dict(src_tile=src_tile,
+        self.dataset[tgt_tile] = xr.dataset(data_vars=dict(src_tile=src_tile,
                                                             src_ij=src_ij,
                                                             tgt_ij=tgt_ij,
                                                             xarea=xarea)
@@ -206,14 +213,22 @@ class XGridObj() :
         
     def _check_mosaic(self):
 
-        if self.src_mosaic is not None and self.tgt_mosaic is not None:
-            self.src_grid = MosaicObj(self.input_dir, self.src_mosaic).read().get_grid(toradians=True,
-                                                                                       agrid=self.on_agrid,
-                                                                                       free_dataset=True)
-            self.tgt_grid = MosaicObj(self.input_dir, self.tgt_mosaic).read().get_grid(toradians=True,
-                                                                                       agrid=self.on_agrid,
-                                                                                       free_dataset=True)
-
-            return True
+        if self.src_mosaic is None:
+            if self.src_mosaic_file is None: return False
+            self.src_grid = MosaicObj(self.input_dir,
+                                      self.src_mosaic_file).read().get_grid(toradians=True,
+                                                                            agrid=self.on_agrid,
+                                                                            free_dataset=True)
         else:
-            return False
+            self.src_grid = self.src_mosaic.grid
+            
+        if self.tgt_mosaic is None:
+            if self.tgt_mosaic_file is None: return False
+            self.tgt_grid = MosaicObj(self.input_dir,
+                                      self.tgt_moasic_file).read().get_grid(toradians=True,
+                                                                            agrid=self.on_agrid,
+                                                                            free_dataset=True)
+        else:
+            self.tgt_grid = self.tgt_mosaic.grid
+            
+        return True
