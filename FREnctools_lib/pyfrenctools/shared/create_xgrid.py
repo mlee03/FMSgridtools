@@ -34,10 +34,6 @@ def get_2dx2d_order1(nlon_src: int,
     if mask_src is None: mask_src = np.ones((nlon_src*nlat_src), dtype=np.float64)
     if mask_tgt is None: mask_tgt = np.ones((nlon_tgt*nlat_tgt), dtype=np.float64)
 
-
-    print("here", nlon_tgt, nlat_tgt, np.sum(mask_tgt))
-    
-
     i_src = np.zeros(MAXXGRID, dtype=np.int32)
     j_src = np.zeros(MAXXGRID, dtype=np.int32)
     i_tgt = np.zeros(MAXXGRID, dtype=np.int32)

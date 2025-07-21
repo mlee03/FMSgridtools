@@ -71,9 +71,9 @@ def make_coupler_mosaic(atm_mosaic_file: str, lnd_mosaic_file: str, ocn_mosaic_f
     extend_ocn_grid_south(ocn_mosaic)    
     ocn_mask = get_ocn_mask(ocn_mosaic=ocn_mosaic, topog_file=topogfile_dict)
 
-    atmxocn = XGridObj(input_dir=input_dir, src_mosaic=atm_mosaic, tgt_mosaic=ocn_mosaic)
+    #atmxocn
+    atmxocn = XGridObj(src_mosaic=atm_mosaic, tgt_mosaic=ocn_mosaic)
     atmxocn.create_xgrid(tgt_mask=ocn_mask)
-
     for tgt_tile in atmxocn.dataset:
       for src_tile in atmxocn.dataset[tgt_tile]:
         tgt_ij = atmxocn.dataset[tgt_tile][src_tile]['tgt_ij'].values 
@@ -81,23 +81,35 @@ def make_coupler_mosaic(atm_mosaic_file: str, lnd_mosaic_file: str, ocn_mosaic_f
           tgt_ij[i][1] = tgt_ij[i][1]-1     
           atmxocn.dataset[tgt_tile][src_tile]['tgt_ij'].data = tgt_ij
     for ocn_tile in atmxocn.dataset:
-      for atm_tile in atmxocn.dataset[ocn_tile]:
-        atmxocn.dataset[ocn_tile][atm_tile].to_netcdf(f'atm_mosaic_{atm_tile}Xocn_mosaic_{ocn_tile}.nc')
+        for atm_tile in atmxocn.dataset[ocn_tile]:
+            atmxocn.dataset[ocn_tile][atm_tile].to_netcdf(f'atm_mosaic_{atm_tile}Xocn_mosaic_{ocn_tile}.nc')
 
-    #ocn mask for lnd
-    #for itile in ocn_mask:
-    #    print(np.sum(ocn_mask[itile]))
-    #    ocn_mask[itile] = 1.0 - ocn_mask[itile]
-    #    print(np.sum(ocn_mask[itile]))
+    #ocn mask for lnd    
+    for itile in ocn_mask: ocn_mask[itile] = 1.0 - ocn_mask[itile]
         
-    #lndxocn = XGridObj(input_dir=input_dir, src_mosaic=ocn_mosaic_file, tgt_mosaic=lnd_mosaic_file)
-    #lndxocn.create_xgrid(src_mask = ocn_mask)
-    #lndxocn.write('atmxlnd.nc')
-    
-    #atmxlnd = XGridObj(input_dir=input_dir, src_mosaic=atm_mosaic_file, tgt_mosaic=lnd_mosaic_file)
-    #atmxlnd.create_xgrid()
-    #atmxlnd.write('atmxlnd.nc')
+    #atmxlnd
+    atmxlnd = XGridObj(src_mosaic=atm_mosaic, tgt_mosaic=ocn_mosaic)
+    atmxlnd.create_xgrid(tgt_mask=ocn_mask)
+    for otile in atmxlnd.dataset:
+        for atmtile in atmxlnd.dataset[otile]:
 
+            dataset = atmxlnd.dataset[otile][atmtile]
+            
+            atm_ij, area = [], []
+            newcount, ij_before = -1, np.array([-99,-99], dtype=np.int32)
 
-    
+            for this_ij, this_area in zip(dataset.src_ij.values, dataset.xarea.values):
+                if np.all(this_ij == ij_before):
+                    area[newcount] += this_area
+                else:
+                    newcount, ij_before = newcount+1, this_ij
+                    area.append(this_area)
+                    atm_ij.append(this_ij)
+            #print
+            src_ij = xr.DataArray(np.array(atm_ij), dims=["nxcells", "two"], attrs=dataset["src_ij"].attrs)
+            tgt_ij = xr.DataArray(np.array(atm_ij), dims=["nxcells", "two"], attrs=dataset["tgt_ij"].attrs)
+            xarea = xr.DataArray(np.array(area), dims=["nxcells"], attrs=dataset["xarea"].attrs)
+            xr.Dataset(data_vars={"src_ij": src_ij,
+                                  "tgt_ij": tgt_ij,
+                                  "xarea": xarea}).to_netcdf(f"atm_mosaic_{atmtile}Xlnd_mosaic_{atmtile}.nc")
 

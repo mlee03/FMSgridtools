@@ -739,6 +739,7 @@ int create_xgrid_2dx2d_order1(const int *nlon_in, const int *nlat_in, const int 
   }
 
   nxgrid = 0;
+  int thiscount=0;
  
 #if defined(_OPENMP)
 #pragma omp parallel for default(none) shared(nblocks,nx1,ny1,nx1p,mask_in,mask_out,lon_in,lat_in, \
@@ -797,7 +798,7 @@ int create_xgrid_2dx2d_order1(const int *nlon_in, const int *nlat_in, const int 
             lon_out_min -= TPI;
             lon_out_max -= TPI;
             for (l=0; l<n2_in; l++) x2_in[l] -= TPI;
-          }                              
+          } 
 
           /* x2_in should in the same range as x1_in after lon_fix, so no need to
              consider cyclic condition
@@ -808,6 +809,9 @@ int create_xgrid_2dx2d_order1(const int *nlon_in, const int *nlat_in, const int 
             int    nn;
             xarea = poly_area (x_out, y_out, n_out ) * mask_in[j1*nx1+i1];
             min_area = min(area_in[j1*nx1+i1], area_out[j2*nx2+i2]);
+
+            thiscount++;
+            
             if( xarea/min_area > AREA_RATIO_THRESH ) {
               pnxgrid[m]++;
               if(pnxgrid[m]>= MAXXGRID/nthreads)
@@ -871,6 +875,8 @@ int create_xgrid_2dx2d_order1(const int *nlon_in, const int *nlat_in, const int 
   free(lon_out_list);
   free(lat_out_list);
 
+  printf("thiscount %d %d\n", thiscount, nxgrid);
+  
   return nxgrid;
 
 };/* get_xgrid_2Dx2D_order1 */
