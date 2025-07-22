@@ -3,6 +3,7 @@ import numpy as np
 from typing import List
 import xarray as xr
 
+import pyfrenctools
 from fmsgridtools.shared.mosaicobj import MosaicObj
 from fmsgridtools.shared.xgridobj import XGridObj
 
@@ -28,7 +29,7 @@ def extend_ocn_grid_south(ocn_mosaic: MosaicObj):
         ocn_mosaic.extended_south = 0
 
 
-def get_ocn_mask(ocn_mosaic: type(MosaicObj), topog_file: dict() = None, sea_level: np.float64 = 0.0):
+def get_ocn_mask(ocn_mosaic: type(MosaicObj), topog_file: dict() = None, sea_level: np.float64 = np.float64(0.0)):
 
     nx = ocn_mosaic.grid['tile1'].nx 
     ny = ocn_mosaic.grid['tile1'].ny
@@ -38,19 +39,61 @@ def get_ocn_mask(ocn_mosaic: type(MosaicObj), topog_file: dict() = None, sea_lev
         for itile in ocn_mosaic.gridtiles:
             ocn_mask[itile] = np.ones((ny,nx), dtype=np.float64)
         return mask    
-    else:
-        for itile in ocn_mosaic.gridtiles:
-            topog = xr.load_dataset(topog_file[itile])['depth'].values
 
-            one, zero = np.float64(1.0), np.float64(0.0)
-            imask = np.where(topog>sea_level, one, zero)
+    for itile in ocn_mosaic.gridtiles:
+        topog = xr.load_dataset(topog_file[itile])['depth'].values
+
+        one, zero = np.float64(1.0), np.float64(0.0)
+        imask = np.where(topog>sea_level, one, zero)
             
-            if ocn_mosaic.extended_south > 0 :
-                ocn_mask[itile] = np.concatenate(([np.zeros(nx, dtype=np.float64)], imask))
-            else:
-                ocn_mask[itile] = imask
+        if ocn_mosaic.extended_south > 0 :
+            ocn_mask[itile] = np.concatenate(([np.zeros(nx, dtype=np.float64)], imask))
+        else:
+            ocn_mask[itile] = imask
 
-        return ocn_mask
+    return ocn_mask
+
+
+def get_atmxlnd(atmxocn_landpart: type[XGridObj], atm_mosaic: type[MosaicObj] = None, atm_area = None):
+    
+    for otile in atmxocn_landpart.datadict:
+
+        atmxlnd = {}
+
+        for atmtile in atmxocn_landpart.datadict[otile]:
+
+            #get atm area
+            nx = atm_mosaic.grid[atmtile].nx
+            atm_area = pyfrenctools.grid_utils.get_grid_area(atm_mosaic.grid[atmtile].x, atm_mosaic.grid[atmtile].y)
+
+            datadict = atmxocn_landpart.datadict[otile][atmtile]            
+
+            i_before, j_before = -99, -99
+            atm_i, atm_j, xarea = [], [], []
+
+            for ij in range(datadict["nxcells"]):
+            
+                this_i = datadict["i_src"][ij]
+                this_j = datadict["j_src"][ij]
+                this_xarea = datadict["xarea"][ij]
+                this_atm_area = atm_area[(this_j*nx + this_i)]
+
+                if this_xarea/this_atm_area > np.float64(1.e-6):  
+                    if this_i == i_before and this_j == j_before:                    
+                        xarea[-1] += this_xarea
+                    else:
+                        i_before, j_before = this_i, this_j
+                        xarea.append(this_xarea)
+                        atm_i.append(this_i)
+                        atm_j.append(this_j)
+            atmxlnd[atmtile] = dict(nxcells = len(atm_i),
+                                    i_src = np.array(atm_i),
+                                    j_src = np.array(atm_j),
+                                    i_tgt = np.array(atm_i),
+                                    j_tgt = np.array(atm_j),
+                                    xarea = np.array(xarea, dtype=np.float64))
+    return atmxlnd
+    
     
 
 def make_coupler_mosaic(atm_mosaic_file: str, lnd_mosaic_file: str, ocn_mosaic_file: str,
@@ -74,42 +117,23 @@ def make_coupler_mosaic(atm_mosaic_file: str, lnd_mosaic_file: str, ocn_mosaic_f
     #atmxocn
     atmxocn = XGridObj(src_mosaic=atm_mosaic, tgt_mosaic=ocn_mosaic)
     atmxocn.create_xgrid(tgt_mask=ocn_mask)
-    for tgt_tile in atmxocn.dataset:
-      for src_tile in atmxocn.dataset[tgt_tile]:
-        tgt_ij = atmxocn.dataset[tgt_tile][src_tile]['tgt_ij'].values 
-        for i in range(len(tgt_ij)):
-          tgt_ij[i][1] = tgt_ij[i][1]-1     
-          atmxocn.dataset[tgt_tile][src_tile]['tgt_ij'].data = tgt_ij
-    for ocn_tile in atmxocn.dataset:
-        for atm_tile in atmxocn.dataset[ocn_tile]:
-            atmxocn.dataset[ocn_tile][atm_tile].to_netcdf(f'atm_mosaic_{atm_tile}Xocn_mosaic_{ocn_tile}.nc')
+
+    #undo extra ocn dimension and write
+    for ocntile in atmxocn.datadict:
+        for atmtile in atmxocn.datadict[ocntile]:
+            atmxocn.datadict[ocntile][atmtile]['j_tgt'] = atmxocn.datadict[ocntile][atmtile]['j_tgt'] - ocn_mosaic.extended_south
+            atmxocn.write(datadict=atmxocn.datadict[ocntile][atmtile], 
+                          outfile=f"{atm_mosaic.mosaic_name[:-3]}_{atmtile}X{ocn_mosaic.mosaic_name[:-3]}_{ocntile}.nc")
+
 
     #ocn mask for lnd    
     for itile in ocn_mask: ocn_mask[itile] = 1.0 - ocn_mask[itile]
-        
+
     #atmxlnd
-    atmxlnd = XGridObj(src_mosaic=atm_mosaic, tgt_mosaic=ocn_mosaic)
-    atmxlnd.create_xgrid(tgt_mask=ocn_mask)
-    for otile in atmxlnd.dataset:
-        for atmtile in atmxlnd.dataset[otile]:
-
-            dataset = atmxlnd.dataset[otile][atmtile]
-            
-            atm_ij, area = [], []
-            newcount, ij_before = -1, np.array([-99,-99], dtype=np.int32)
-
-            for this_ij, this_area in zip(dataset.src_ij.values, dataset.xarea.values):
-                if np.all(this_ij == ij_before):
-                    area[newcount] += this_area
-                else:
-                    newcount, ij_before = newcount+1, this_ij
-                    area.append(this_area)
-                    atm_ij.append(this_ij)
-            #print
-            src_ij = xr.DataArray(np.array(atm_ij), dims=["nxcells", "two"], attrs=dataset["src_ij"].attrs)
-            tgt_ij = xr.DataArray(np.array(atm_ij), dims=["nxcells", "two"], attrs=dataset["tgt_ij"].attrs)
-            xarea = xr.DataArray(np.array(area), dims=["nxcells"], attrs=dataset["xarea"].attrs)
-            xr.Dataset(data_vars={"src_ij": src_ij,
-                                  "tgt_ij": tgt_ij,
-                                  "xarea": xarea}).to_netcdf(f"atm_mosaic_{atmtile}Xlnd_mosaic_{atmtile}.nc")
+    atmxocn_landpart = XGridObj(src_mosaic=atm_mosaic, tgt_mosaic=ocn_mosaic)
+    atmxocn_landpart.create_xgrid(tgt_mask=ocn_mask)
+    atmxlnd = get_atmxlnd(atmxocn_landpart, atm_mosaic=atm_mosaic)
+    for atmtile in atmxlnd:
+        atmxocn.write(datadict=atmxlnd[atmtile], 
+                      outfile=f"{atm_mosaic.mosaic_name[:-3]}_{atmtile}X{atm_mosaic.mosaic_name[:-3]}_{atmtile}.nc")
 

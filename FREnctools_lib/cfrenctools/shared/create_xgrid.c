@@ -739,7 +739,11 @@ int create_xgrid_2dx2d_order1(const int *nlon_in, const int *nlat_in, const int 
   }
 
   nxgrid = 0;
+  
+  
+  //DELETEMEDELETEMEDELETEMEDELETEME
   int thiscount=0;
+  double area_ratio_thresh = 1.e-6;
  
 #if defined(_OPENMP)
 #pragma omp parallel for default(none) shared(nblocks,nx1,ny1,nx1p,mask_in,mask_out,lon_in,lat_in, \
@@ -812,7 +816,7 @@ int create_xgrid_2dx2d_order1(const int *nlon_in, const int *nlat_in, const int 
 
             thiscount++;
             
-            if( xarea/min_area > AREA_RATIO_THRESH ) {
+            if( xarea/min_area > area_ratio_thresh ) {
               pnxgrid[m]++;
               if(pnxgrid[m]>= MAXXGRID/nthreads)
                 error_handler("The xgrid size is too large for resources.\n"

@@ -51,6 +51,7 @@ class XGridObj() :
         self.on_gpu = on_gpu
         self.on_agrid = on_agrid
         self.dataset = {}
+        self.datadict = {}
         self.src_tile = None
         self.src_ij = None
         self.tgt_ij = None
@@ -83,45 +84,22 @@ class XGridObj() :
         for key in self.dataset.sizes:
             setattr(self, key, self.dataset.sizes[key])
 
-
-    def write(self, outfile: str = None, old: bool = False):
+    def write(cls, datadict = None, outfile: str = None):
 
         if outfile is None:
             outfile = self.write_remap_file
 
-        if old:
-            if len(self.dataset) == 1:
-                i_src = self.dataset['src_ij']% self.src_grid['tile1'].nx
-                j_src = self.dataset['src_ij']// self.src_grid['tile1'].nx
-                i_tgt = self.dataset['tgt_ij']% self.tgt_grid['tile1'].nx
-                j_tgt = self.dataset['tgt_ij']// self.tgt_grid['tile1'].nx                    
-                ij_src = np.column_stack((i_src, j_src))
-                ij_tgt = np.column_stack((i_tgt, j_tgt))    
-                xr.dataset(data_vars=dict(src_tile=self.dataset[ikey]['src_tile'],
-                                src_ij=(["nxcells", "two"], ij_src),
-                                tgt_ij=(["nxcells", "two"], ij_tgt),
-                                xarea=self.dataset[ikey]['xarea'])
-                ).to_netcdf(outfile)
-            else:
-                for ikey in self.dataset: #for each output tile
-                    i_src = self.dataset[ikey]['src_ij']% self.src_grid['tile1'].nx
-                    j_src = self.dataset[ikey]['src_ij']// self.src_grid['tile1'].nx
-                    i_tgt = self.dataset[ikey]['tgt_ij']% self.tgt_grid['tile1'].nx
-                    j_tgt = self.dataset[ikey]['tgt_ij']// self.tgt_grid['tile1'].nx                    
-                    ij_src = np.column_stack((i_src, j_src))
-                    ij_tgt = np.column_stack((i_tgt, j_tgt))    
-                    xr.dataset(data_vars=dict(src_tile=self.dataset[ikey]['src_tile'],
-                                  src_ij=(["nxcells", "two"], ij_src),
-                                  tgt_ij=(["nxcells", "two"], ij_tgt),
-                                  xarea=self.dataset[ikey]['xarea'])
-                    ).to_netcdf(outfile[:-2]+ikey+".nc")
-            return                
+        ij_src = xr.DataArray(np.column_stack((datadict['i_src']+1, datadict['j_src']+1)),
+                              dims=["nxcells", "two"],
+                              attrs={"src_ij": "parent cell indices in src mosaic", "_FillValue": False})
+        ij_tgt = xr.DataArray(np.column_stack((datadict['i_tgt']+1, datadict['j_tgt']+1)),
+                              dims=["nxcells", "two"],
+                              attrs={"tgt_ij": "parent cell indices in tgt mosaic", "_FillValue": False})
+        xarea = xr.DataArray(datadict['xarea'], dims=["nxcells"], attrs={"xarea": "exchange grid area", "_FillValue": False})
 
-        if len(self.dataset) == 1:
-            for ikey in self.dataset: self.dataset[ikey].to_netcdf(outfile)
-        else:
-            for ikey in self.dataset:
-                self.dataset[ikey].to_netcdf(outfile[:-2]+ikey+".nc")
+        xr.Dataset(data_vars={"ij_src": ij_src, "ij_tgt": ij_tgt, "xarea": xarea}).to_netcdf(outfile)
+
+        return
         
         
     def create_xgrid(self, src_mask: dict[str,npt.NDArray] = None, tgt_mask: dict[str, npt.NDArray] = None) -> dict():
@@ -138,10 +116,10 @@ class XGridObj() :
 
             itile = 1
             xgrid = {}
-            self.dataset[tgt_tile] = {}
+            self.datadict[tgt_tile] = {}
 
             itgt_mask = None if tgt_mask is None else tgt_mask[tgt_tile]
-
+            
             for src_tile in self.src_grid.keys():
 
                 isrc_mask = None if src_mask is None else src_mask[src_tile]
@@ -159,46 +137,9 @@ class XGridObj() :
                     mask_tgt=itgt_mask
                 )
                 if nxcells > 0 :
-                    xgrid_out["tile"] = xr.DataArray(np.full(nxcells, itile, dtype=np.int32),
-                                                     dims=["nxcells"],
-                                                     attrs=dict(src_tile="grid tile number in source mosaic"))
-                    self.dataset[tgt_tile][src_tile] = xr.Dataset(xgrid_out)
+                    xgrid_out["tile"] = np.full(nxcells, itile, dtype=np.int32)
+                    self.datadict[tgt_tile][src_tile] = xgrid_out
                 itile = itile + 1
-
-            #self.create_dataset(xgrid, tgt_tile)
-
-    
-    def create_dataset(self, xgrid: dict(), tgt_tile: str = "tile1"):
-
-        src_tile_data = np.concatenate([xgrid[src_tile]["tile"] for src_tile in xgrid.keys()])
-        src_tile = xr.DataArray(data=src_tile_data,
-                                dims=["nxcells"],
-                                attrs=dict(standard_name="tile number in input mosaic)")
-        )
-
-        src_ij_data = np.concatenate([xgrid[src_tile]["src_ij"] for src_tile in xgrid.keys()])
-        src_ij = xr.DataArray(data=src_ij_data,
-                                dims=["nxcells"],
-                                attrs=dict(standard_name="parent cell indices from src mosaic")
-        )            
-            
-        tgt_ij_data = np.concatenate([xgrid[src_tile]["tgt_ij"] for src_tile in xgrid.keys()])
-        tgt_ij = xr.DataArray(data=tgt_ij_data,
-                                dims=["nxcells"],
-                                attrs=dict(standard_name="parent cell indices from tgt mosaic")
-        )
-
-        xarea_data = np.concatenate([xgrid[src_tile]["xarea"] for src_tile in xgrid.keys()])
-        xarea = xr.DataArray(data=xarea_data,
-                                dims=["nxcells"],
-                                attrs=dict(standard_name="exchange grid cell area", units="m2")
-        )
-        
-        self.dataset[tgt_tile] = xr.dataset(data_vars=dict(src_tile=src_tile,
-                                                            src_ij=src_ij,
-                                                            tgt_ij=tgt_ij,
-                                                            xarea=xarea)
-        )
 
 
     def _check_restart_remap_file(self):

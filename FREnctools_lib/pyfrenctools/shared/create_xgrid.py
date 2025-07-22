@@ -66,17 +66,12 @@ def get_2dx2d_order1(nlon_src: int,
                            mask_tgt, i_src, j_src, i_tgt, j_tgt, xarea
     )
     
-    return nxcells, dict(
-                src_ij=xr.DataArray(np.column_stack((i_src[:nxcells]+1, j_src[:nxcells]+1)), 
-                                    dims=["nxcells", "two"],
-                                    attrs=dict(src_ij="parent cell indices in src mosaic")
-                                    ),
-                tgt_ij=xr.DataArray(np.column_stack((i_tgt[:nxcells]+1, j_tgt[:nxcells]+1)),
-                                    dims=["nxcells", "two"],
-                                    attrs=dict(tgt_ij="parent cell indices in tgt mosaic")
-                                    ),
-                xarea=xr.DataArray(xarea[:nxcells], dims=["nxcells"], attrs=dict(xarea="exchange grid area"))
-                )
+    return nxcells, dict(nxcells=nxcells,
+                         i_src=i_src[:nxcells],
+                         j_src=j_src[:nxcells],
+                         i_tgt=i_tgt[:nxcells],
+                         j_tgt=j_tgt[:nxcells],
+                         xarea=xarea[:nxcells])
 
 
 def transfer_data_gpu(nxcells: int):
