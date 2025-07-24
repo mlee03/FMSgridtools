@@ -47,8 +47,8 @@ class GridObj:
             self.dataset = None
         
         if toradians:
-            self.x = np.radians(self.x)
-            self.y = np.radians(self.y)
+            self.x = np.radians(self.x, dtype=np.float64)
+            self.y = np.radians(self.y, dtype=np.float64)
 
         if agrid:
             self.x, self.y = self.agrid()
