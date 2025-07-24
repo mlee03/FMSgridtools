@@ -67,10 +67,10 @@ def get_2dx2d_order1(nlon_src: int,
     )
     
     return nxcells, dict(nxcells=nxcells,
-                         i_src=i_src[:nxcells],
-                         j_src=j_src[:nxcells],
-                         i_tgt=i_tgt[:nxcells],
-                         j_tgt=j_tgt[:nxcells],
+                         src_i=i_src[:nxcells],
+                         src_j=j_src[:nxcells],
+                         tgt_i=i_tgt[:nxcells],
+                         tgt_j=j_tgt[:nxcells],
                          xarea=xarea[:nxcells])
 
 

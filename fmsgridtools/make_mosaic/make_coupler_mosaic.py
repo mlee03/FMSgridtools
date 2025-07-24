@@ -85,7 +85,7 @@ def get_atmxlnd(atmxocn_landpart: type[XGridObj], atm_mosaic: type[MosaicObj] = 
                         i_before, j_before = this_i, this_j
                         xarea.append(this_xarea)
                         atm_i.append(this_i)
-                        atm_j.append(this_j)
+                        atm_j.append(this_j)            
             atmxlnd[atmtile] = dict(nxcells = len(atm_i),
                                     i_src = np.array(atm_i),
                                     j_src = np.array(atm_j),
@@ -129,9 +129,11 @@ def make_coupler_mosaic(atm_mosaic_file: str, lnd_mosaic_file: str, ocn_mosaic_f
     #ocn mask for lnd    
     for itile in ocn_mask: ocn_mask[itile] = 1.0 - ocn_mask[itile]
 
-    #atmxlnd
+    #atmxocn the land part 
     atmxocn_landpart = XGridObj(src_mosaic=atm_mosaic, tgt_mosaic=ocn_mosaic)
     atmxocn_landpart.create_xgrid(tgt_mask=ocn_mask)
+    
+    #atmxlnd
     atmxlnd = get_atmxlnd(atmxocn_landpart, atm_mosaic=atm_mosaic)
     for atmtile in atmxlnd:
         atmxocn.write(datadict=atmxlnd[atmtile], 
