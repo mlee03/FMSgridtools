@@ -77,12 +77,22 @@ int create_xgrid_order1_gpu_wrapper(int nx_src, int ny_src, int nx_dst, int ny_d
 
 }
 
-void create_xgrid_transfer_data(int nxgrid, int *xgrid_ij1_in, int *xgrid_ij2_in, double *xgrid_area_in)
+void create_xgrid_transfer_data(int nxgrid, int src_nlon, int tgt_nlon,
+                                int *src_i, int *src_j, int *tgt_i, int *tgt_j, double *xarea)
 {
 
-  memcpy(xgrid_ij1_in, interp_gpu.input_parent_cell_index, nxgrid*sizeof(int));
-  memcpy(xgrid_ij2_in, interp_gpu.output_parent_cell_index, nxgrid*sizeof(int));
-  memcpy(xgrid_area_in, interp_gpu.xcell_area, nxgrid*sizeof(double));
+  //undo everything this is very annoying and needs to be changed
+  int *input = interp_gpu.input_parent_cell_index;
+  int *output = interp_gpu.output_parent_cell_index;
+  double *pxarea = interp_gpu.xcell_area;
+
+  for(int i=0; i<nxgrid; i++){
+    src_i[i] = input[i]%src_nlon;
+    src_j[i] = input[i]/src_nlon;
+    tgt_i[i] = output[i]%tgt_nlon;
+    tgt_j[i] = output[i]/tgt_nlon;
+    xarea[i] = pxarea[i];
+  }
 
   free(interp_gpu.input_parent_cell_index);
   free(interp_gpu.output_parent_cell_index);

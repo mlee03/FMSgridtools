@@ -89,20 +89,20 @@ class XGridObj() :
 
         if outfile is None:
             outfile = self.write_remap_file
-
+            
         if datadict is None: datadict = self.datadict
         for tgt_tile in datadict:
             for src_tile in datadict:
                 thisdict = datadict[tgt_tile][src_tile]
                 src_ij = xr.DataArray(np.column_stack((thisdict['src_i']+1, thisdict['src_j']+1)),
-                                                      dims=["nxcells", "two"],
-                                                      attrs={"src_ij": "parent cell indices in src mosaic", "_FillValue": False})
+                                      dims=["nxcells", "two"],
+                                      attrs={"src_ij": "parent cell indices in src mosaic", "_FillValue": False})
                 tgt_ij = xr.DataArray(np.column_stack((thisdict['tgt_i']+1, thisdict['tgt_j']+1)),
-                                          dims=["nxcells", "two"],
-                                          attrs={"tgt_ij": "parent cell indices in tgt mosaic", "_FillValue": False})
+                                      dims=["nxcells", "two"],
+                                      attrs={"tgt_ij": "parent cell indices in tgt mosaic", "_FillValue": False})
                 xarea = xr.DataArray(thisdict['xarea'], dims=["nxcells"], 
                                      attrs={"xarea": "exchange grid area", "_FillValue": False})
-
+                
         xr.Dataset(data_vars={"src_ij": src_ij, "tgt_ij": tgt_ij, "xarea": xarea}).to_netcdf(outfile)
 
         return
@@ -128,18 +128,20 @@ class XGridObj() :
 
                 isrc_mask = None if src_mask is None else src_mask[src_tile]
 
-                nxcells, xgrid_out = create_xgrid_2dx2d_order1(
-                    nlon_src = self.src_grid[src_tile].nx,
-                    nlat_src = self.src_grid[src_tile].ny,
-                    nlon_tgt = self.tgt_grid[tgt_tile].nx,
-                    nlat_tgt = self.tgt_grid[tgt_tile].ny,
-                    lon_src=self.src_grid[src_tile].x,
-                    lat_src=self.src_grid[src_tile].y,
-                    lon_tgt=self.tgt_grid[tgt_tile].x,
-                    lat_tgt=self.tgt_grid[tgt_tile].y,
-                    mask_src=isrc_mask,
-                    mask_tgt=itgt_mask
+                xgrid_out = create_xgrid_2dx2d_order1(
+                    src_nlon = self.src_grid[src_tile].nx,
+                    src_nlat = self.src_grid[src_tile].ny,
+                    tgt_nlon = self.tgt_grid[tgt_tile].nx,
+                    tgt_nlat = self.tgt_grid[tgt_tile].ny,
+                    src_lon=self.src_grid[src_tile].x,
+                    src_lat=self.src_grid[src_tile].y,
+                    tgt_lon=self.tgt_grid[tgt_tile].x,
+                    tgt_lat=self.tgt_grid[tgt_tile].y,
+                    src_mask=isrc_mask,
+                    tgt_mask=itgt_mask
                 )
+                
+                nxcells = xgrid_out["nxcells"]
                 if nxcells > 0:
                     xgrid_out["tile"] = np.full(nxcells, itile, dtype=np.int32)
                     self.datadict[tgt_tile][src_tile] = xgrid_out
@@ -189,14 +191,14 @@ class XGridObj() :
         if checkfile is not None:
             if checkgrid == "src":
                 self.src_grid = MosaicObj(self.input_dir,
-                                 self.src_mosaic_file).read().get_grid(toradians=True,
-                                                                       agrid=self.on_agrid,
-                                                                       free_dataset=True)
+                                          self.src_mosaic_file).read().get_grid(toradians=True,
+                                                                                agrid=self.on_agrid,
+                                                                                free_dataset=True)
                 return False if self.src_grid is None else True
             elif checkgrid == "tgt":
                 self.tgt_grid = MosaicObj(self.input_dir,
-                                 self.tgt_mosaic_file).read().get_grid(toradians=True,
-                                                                       agrid=self.on_agrid,
-                                                                       free_dataset=True)
+                                          self.tgt_mosaic_file).read().get_grid(toradians=True,
+                                                                                agrid=self.on_agrid,
+                                                                                free_dataset=True)
                 return False if self.tgt_grid is None else True
             return False

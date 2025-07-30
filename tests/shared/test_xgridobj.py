@@ -51,7 +51,7 @@ def remove_mosaic():
 
 
 @pytest.mark.parametrize("on_gpu", [False, True])
-def test_create_xgrid(on_gpu) :
+def test_create_xgrid(on_gpu):
 
     nx, ny, refine = 45, 45, 2
     generate_mosaic(nx=nx, ny=ny, refine=refine)
@@ -103,4 +103,5 @@ def test_create_xgrid(on_gpu) :
     remove_mosaic()
 
 
-test_create_xgrid(on_gpu=False)
+if __name__ == "__main__":
+    test_create_xgrid(on_gpu=False)
