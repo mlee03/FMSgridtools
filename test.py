@@ -25,26 +25,35 @@ for ikey in thesefiles:
   print("src_ij", np.all(testme["src_ij"].values == answer["tile1_cell"].values))
 
   thismax = np.absolute(testme['xarea'].values - answer['xgrid_area'].values)
-  print(np.max(thismax))
+  print('xarea', np.max(thismax))
 
+print()
 
 #test mask
 testme = xr.load_dataset("ocean_mask.nc")
 answer = xr.load_dataset(f"{adir}ocean_mask.nc")
 
-#mask
-answer_max = np.max(answer["mask"].values)
-diff = np.max(np.absolute(testme["mask"].values - answer["mask"].values))
-print("mask", answer_max, diff, diff/answer_max)
+#ocn mask
+for key in ["mask", "areaO", "areaX"]:
+  answer_max = np.max(answer[key].values)
+  diff = np.max(np.absolute(testme[key].values - answer[key].values))
+  print(key, answer_max, diff, diff/answer_max)
 
-answer_max = np.max(answer["areaO"].values)
-diff = np.max(np.absolute(testme["areaO"].values - answer["areaO"].values))
-print("areaO", answer_max, diff, diff/answer_max)
+  
+print()
 
-answer_max = np.max(answer["areaX"].values)
-diff = np.max(np.absolute(testme["areaX"].values - answer["areaX"].values))
-print("areaX", answer_max, diff, diff/answer_max)
-                         
+  
+#lnd mask
+for itile in range(1,7):
+  name = f"land_mask_tile{itile}.nc"
+  testme = xr.load_dataset(name)
+  answer = xr.load_dataset(f"{adir}{name}")
+
+  for key in ["mask", "area_atm", "area_lnd", "l_area"]:
+    answer_max = np.max(answer[key].values)
+    diff = np.max(np.absolute(testme[key].values - answer[key].values))
+    print(key, answer_max, diff, diff/answer_max)
+
     
   
 

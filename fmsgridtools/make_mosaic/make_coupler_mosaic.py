@@ -70,11 +70,14 @@ def get_atmxlnd(atmxocn_landpart: type[XGridObj], atm_mosaic: type[MosaicObj] = 
         atmxlnd = {}
 
         for atmtile in atmxocn_landpart.datadict[otile]:
-
+            
             #get atm area
-            nx = atm_mosaic.grid[atmtile].nx
-            atm_area = pyfrenctools.grid_utils.get_grid_area(atm_mosaic.grid[atmtile].x, atm_mosaic.grid[atmtile].y)
+            nx, ny = atm_mosaic.grid[atmtile].nx, atm_mosaic.grid[atmtile].ny
+            atm_area = pyfrenctools.grid_utils.get_grid_area(atm_mosaic.grid[atmtile].x,
+                                                             atm_mosaic.grid[atmtile].y).reshape(ny, nx)
 
+            lnd_x_area = np.zeros((ny,nx), dtype=np.float64)
+            
             datadict = atmxocn_landpart.datadict[otile][atmtile]            
 
             i_before, j_before = -99, -99
@@ -85,7 +88,7 @@ def get_atmxlnd(atmxocn_landpart: type[XGridObj], atm_mosaic: type[MosaicObj] = 
                 this_i = datadict["src_i"][ij]
                 this_j = datadict["src_j"][ij]
                 this_xarea = datadict["xarea"][ij]
-                this_atm_area = atm_area[(this_j*nx + this_i)]
+                this_atm_area = atm_area[this_j][this_i]
 
                 if this_xarea/this_atm_area > np.float64(1.e-6):  
                     if this_i == i_before and this_j == j_before:                    
@@ -94,13 +97,44 @@ def get_atmxlnd(atmxocn_landpart: type[XGridObj], atm_mosaic: type[MosaicObj] = 
                         i_before, j_before = this_i, this_j
                         xarea.append(this_xarea)
                         atm_i.append(this_i)
-                        atm_j.append(this_j)            
-            atmxlnd[atmtile] = dict(nxcells = len(atm_i),
+                        atm_j.append(this_j)
+
+            nxcells = len(atm_i)
+            atmxlnd[atmtile] = dict(nxcells = nxcells,
                                     src_i = np.array(atm_i),
                                     src_j = np.array(atm_j),
                                     tgt_i = np.array(atm_i),
                                     tgt_j = np.array(atm_j),
                                     xarea = np.array(xarea, dtype=np.float64))
+
+
+            #get mask
+            i, j = atm_i, atm_j
+            for ix in range(nxcells): lnd_x_area[j[ix]][i[ix]] += xarea[ix]
+
+            mask = lnd_x_area / atm_area
+
+            mask = xr.DataArray(mask,
+                                dims=["ny", "nx"],
+                                attrs={"standard_name": "land fraction at T-cell centers"}
+            )
+            area_atm = xr.DataArray(atm_area,
+                                    dims=["ny", "nx"],
+                                    attrs={"standard_name": "area atm"}
+            )
+            area_lnd = xr.DataArray(atm_area,
+                                    dims=["ny", "nx"],
+                                    attrs={"standard_name": "area atm"}
+            )
+            l_area = xr.DataArray(lnd_x_area,
+                                  dims=["ny", "nx"],
+                                  attrs={"standard_name": "land x area"}
+            )            
+            xr.Dataset(data_vars={"mask":mask,
+                                  "area_atm":area_atm,
+                                  "area_lnd":area_atm,
+                                  "l_area":l_area}).to_netcdf(f"land_mask_{atmtile}.nc")
+
     return atmxlnd
     
 
