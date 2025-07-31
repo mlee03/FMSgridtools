@@ -73,8 +73,8 @@ def get_atmxlnd(atmxocn_landpart: type[XGridObj], atm_mosaic: type[MosaicObj] = 
 
             for ij in range(datadict["nxcells"]):
             
-                this_i = datadict["i_src"][ij]
-                this_j = datadict["j_src"][ij]
+                this_i = datadict["src_i"][ij]
+                this_j = datadict["src_j"][ij]
                 this_xarea = datadict["xarea"][ij]
                 this_atm_area = atm_area[(this_j*nx + this_i)]
 
@@ -87,14 +87,26 @@ def get_atmxlnd(atmxocn_landpart: type[XGridObj], atm_mosaic: type[MosaicObj] = 
                         atm_i.append(this_i)
                         atm_j.append(this_j)            
             atmxlnd[atmtile] = dict(nxcells = len(atm_i),
-                                    i_src = np.array(atm_i),
-                                    j_src = np.array(atm_j),
-                                    i_tgt = np.array(atm_i),
-                                    j_tgt = np.array(atm_j),
+                                    src_i = np.array(atm_i),
+                                    src_j = np.array(atm_j),
+                                    tgt_i = np.array(atm_i),
+                                    tgt_j = np.array(atm_j),
                                     xarea = np.array(xarea, dtype=np.float64))
     return atmxlnd
     
-    
+
+#def get_ocn_mask(ocn_mosaic, atm_mosaic, atmxocn):
+
+#    for ocntile in atmxocn:
+#        ocn_area = pyfrenctools.grid_utils.get_grid_area(ocn_mosaic.grid["tile1"].x, ocn_mosaic.grid["tile1"].y)
+#        for atmtile in atmxocn:
+#            nxcells = atmxocn[ocntile][atmtile]["nxcells"]
+#            ocn_x_area = np.zero(nxcells, dtype=np.float64)
+#            for i in range
+
+
+
+
 
 def make_coupler_mosaic(atm_mosaic_file: str, lnd_mosaic_file: str, ocn_mosaic_file: str,
                         input_dir: str = './', topog_file: dict() = None):
@@ -120,10 +132,13 @@ def make_coupler_mosaic(atm_mosaic_file: str, lnd_mosaic_file: str, ocn_mosaic_f
 
     #undo extra ocn dimension and write
     for ocntile in atmxocn.datadict:
+        tmpdict = {}
         for atmtile in atmxocn.datadict[ocntile]:
-            atmxocn.datadict[ocntile][atmtile]['j_tgt'] = atmxocn.datadict[ocntile][atmtile]['j_tgt'] - ocn_mosaic.extended_south
-            atmxocn.write(datadict=atmxocn.datadict[ocntile][atmtile], 
-                          outfile=f"{atm_mosaic.mosaic_name[:-3]}_{atmtile}X{ocn_mosaic.mosaic_name[:-3]}_{ocntile}.nc")
+            tmpdict[ocntile] = {}
+            tmpdict[ocntile][atmtile] = atmxocn.datadict[ocntile][atmtile]
+            outfile = f"{atm_mosaic.mosaic_name[:-3]}_{atmtile}X{ocn_mosaic.mosaic_name[:-3]}_{ocntile}.nc"
+            tmpdict[ocntile][atmtile]['tgt_j'] = atmxocn.datadict[ocntile][atmtile]['tgt_j'] - ocn_mosaic.extended_south            
+            atmxocn.write(datadict=tmpdict, outfile=outfile)
 
 
     #ocn mask for lnd    
@@ -136,6 +151,7 @@ def make_coupler_mosaic(atm_mosaic_file: str, lnd_mosaic_file: str, ocn_mosaic_f
     #atmxlnd
     atmxlnd = get_atmxlnd(atmxocn_landpart, atm_mosaic=atm_mosaic)
     for atmtile in atmxlnd:
-        atmxocn.write(datadict=atmxlnd[atmtile], 
-                      outfile=f"{atm_mosaic.mosaic_name[:-3]}_{atmtile}X{atm_mosaic.mosaic_name[:-3]}_{atmtile}.nc")
+        tmpdict = {atmtile:{atmtile:atmxlnd[atmtile]}}
+        outfile = f"{atm_mosaic.mosaic_name[:-3]}_{atmtile}X{atm_mosaic.mosaic_name[:-3]}_{atmtile}.nc"
+        atmxocn.write(datadict=tmpdict, outfile=outfile)
 
