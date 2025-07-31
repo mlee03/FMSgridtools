@@ -87,8 +87,6 @@ class XGridObj() :
 
         if outfile is None:
             outfile = self.write_remap_file
-
-        print(datadict)
             
         if datadict is None: datadict = self.datadict
         for tgt_tile in datadict:

@@ -6,30 +6,39 @@ import xarray as xr
 import pyfrenctools
 from fmsgridtools.shared.mosaicobj import MosaicObj
 from fmsgridtools.shared.xgridobj import XGridObj
+from fmsgridtools.shared.gridobj import GridObj
+
 
 def extend_ocn_grid_south(ocn_mosaic: MosaicObj):
 
     tiny_value = np.float64(1.e-7)
     min_atm_lat = np.radians(-90.0, dtype=np.float64)
+
+    extended_grid = {}
     
     if ocn_mosaic.grid['tile1'].y[0][0] > min_atm_lat + tiny_value:
         #extend
         for itile in ocn_mosaic.gridtiles:
+
+            extended_grid[itile] = GridObj()
+            
             nxp = ocn_mosaic.grid[itile].nxp
-
             x = ocn_mosaic.grid[itile].x
-            ocn_mosaic.grid[itile].x = np.concatenate(([x[0]], x))   
+            y = ocn_mosaic.grid[itile].y
+            
+            extended_grid[itile].x = np.concatenate(([x[0]], x))
+            extended_grid[itile].y = np.concatenate((np.full((1,nxp), min_atm_lat, dtype=np.float64), y))
 
-            y = ocn_mosaic.grid[itile].y            
-            ocn_mosaic.grid[itile].y = np.concatenate((np.full((1,nxp), min_atm_lat, dtype=np.float64), y))
-
-            ocn_mosaic.grid[itile].ny = ocn_mosaic.grid[itile].ny + 1
+            extended_grid[itile].nx = ocn_mosaic.grid[itile].nx
+            extended_grid[itile].ny = ocn_mosaic.grid[itile].ny + 1
         ocn_mosaic.extended_south = 1
     else:
         ocn_mosaic.extended_south = 0
 
+    return extended_grid
+        
 
-def get_ocn_mask(ocn_mosaic: type(MosaicObj), topog_file: dict() = None, sea_level: np.float64 = np.float64(0.0)):
+def get_ocn_mask(ocn_mosaic: type(MosaicObj), topog_file: dict() = None, sea_level: type(np.float64) = np.float64(0.0)):
 
     nx = ocn_mosaic.grid['tile1'].nx 
     ny = ocn_mosaic.grid['tile1'].ny
@@ -95,16 +104,44 @@ def get_atmxlnd(atmxocn_landpart: type[XGridObj], atm_mosaic: type[MosaicObj] = 
     return atmxlnd
     
 
-#def get_ocn_mask(ocn_mosaic, atm_mosaic, atmxocn):
+def write_ocn_mask(ocn_mosaic, atmxocn):
 
-#    for ocntile in atmxocn:
-#        ocn_area = pyfrenctools.grid_utils.get_grid_area(ocn_mosaic.grid["tile1"].x, ocn_mosaic.grid["tile1"].y)
-#        for atmtile in atmxocn:
-#            nxcells = atmxocn[ocntile][atmtile]["nxcells"]
-#            ocn_x_area = np.zero(nxcells, dtype=np.float64)
-#            for i in range
+    for ocntile in atmxocn.datadict:
+        
+        ocn_nlon = ocn_mosaic.grid[ocntile].nx
+        ocn_nlat = ocn_mosaic.grid[ocntile].ny
+        
+        ocn_area = pyfrenctools.grid_utils.get_grid_area(ocn_mosaic.grid[ocntile].x,
+                                                         ocn_mosaic.grid[ocntile].y).reshape(ocn_nlat, ocn_nlon)
 
+        ocn_x_area = np.zeros((ocn_nlat,ocn_nlon), dtype=np.float64)
+        
+        for atmtile in atmxocn.datadict[ocntile]:
 
+            xgrid = atmxocn.datadict[ocntile][atmtile]
+            nxcells = xgrid["nxcells"]
+
+            i, j = xgrid["tgt_i"], xgrid["tgt_j"]
+
+            for ix in range(nxcells): ocn_x_area[j[ix]][i[ix]] += xgrid["xarea"][ix]
+            
+        xgrid["ocn_mask"] = ocn_x_area/ocn_area
+            
+        mask = xr.DataArray(xgrid["ocn_mask"],
+                            dims=["ny", "nx"],
+                            attrs={"standard_name": "ocean fraction at T-cell centers"}
+        )
+
+        areaO = xr.DataArray(ocn_area,
+                             dims=["ny", "nx"],
+                             attrs={"standard_name": "ocean grid area"}
+        )
+        
+        areaX = xr.DataArray(ocn_x_area,
+                             dims=["ny", "nx"],
+                             attrs={"standard_name": "ocean exchange grid area"}
+        )
+        xr.Dataset(data_vars={"mask": mask, "areaO": areaO, "areaX": areaX}).to_netcdf("ocean_mask.nc")
 
 
 
@@ -120,32 +157,35 @@ def make_coupler_mosaic(atm_mosaic_file: str, lnd_mosaic_file: str, ocn_mosaic_f
     atm_mosaic.get_grid(toradians=True, agrid=True, free_dataset=True)
     lnd_mosaic.get_grid(toradians=True, agrid=True, free_dataset=True)
     ocn_mosaic.get_grid(toradians=True, agrid=True, free_dataset=True)
-
+    
     #get ocean mask
     topogfile_dict = {'tile1': input_dir + '/' + topog_file}
-    extend_ocn_grid_south(ocn_mosaic)    
+    extended_grid = extend_ocn_grid_south(ocn_mosaic)    
     ocn_mask = get_ocn_mask(ocn_mosaic=ocn_mosaic, topog_file=topogfile_dict)
 
     #atmxocn
-    atmxocn = XGridObj(src_mosaic=atm_mosaic, tgt_mosaic=ocn_mosaic)
+    atmxocn = XGridObj(src_grid=atm_mosaic.grid, tgt_grid=extended_grid)
     atmxocn.create_xgrid(tgt_mask=ocn_mask)
 
-    #undo extra ocn dimension and write
+    #undo extra ocn dimension
+    for ocntile in atmxocn.datadict:
+        for atmtile in atmxocn.datadict[ocntile]:
+            atmxocn.datadict[ocntile][atmtile]['tgt_j'] -= ocn_mosaic.extended_south
+    
+    #write
     for ocntile in atmxocn.datadict:
         tmpdict = {}
         for atmtile in atmxocn.datadict[ocntile]:
             tmpdict[ocntile] = {}
             tmpdict[ocntile][atmtile] = atmxocn.datadict[ocntile][atmtile]
             outfile = f"{atm_mosaic.mosaic_name[:-3]}_{atmtile}X{ocn_mosaic.mosaic_name[:-3]}_{ocntile}.nc"
-            tmpdict[ocntile][atmtile]['tgt_j'] = atmxocn.datadict[ocntile][atmtile]['tgt_j'] - ocn_mosaic.extended_south            
             atmxocn.write(datadict=tmpdict, outfile=outfile)
-
 
     #ocn mask for lnd    
     for itile in ocn_mask: ocn_mask[itile] = 1.0 - ocn_mask[itile]
 
     #atmxocn the land part 
-    atmxocn_landpart = XGridObj(src_mosaic=atm_mosaic, tgt_mosaic=ocn_mosaic)
+    atmxocn_landpart = XGridObj(src_grid=atm_mosaic.grid, tgt_grid=extended_grid)
     atmxocn_landpart.create_xgrid(tgt_mask=ocn_mask)
     
     #atmxlnd
@@ -155,3 +195,5 @@ def make_coupler_mosaic(atm_mosaic_file: str, lnd_mosaic_file: str, ocn_mosaic_f
         outfile = f"{atm_mosaic.mosaic_name[:-3]}_{atmtile}X{atm_mosaic.mosaic_name[:-3]}_{atmtile}.nc"
         atmxocn.write(datadict=tmpdict, outfile=outfile)
 
+
+    write_ocn_mask(ocn_mosaic, atmxocn)
