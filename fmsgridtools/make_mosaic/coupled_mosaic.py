@@ -98,22 +98,21 @@ def write_ocn_mask(ocn_mosaic, atmxocn):
 
             i, j = xgrid["tgt_i"], xgrid["tgt_j"]
             for ix in range(nxcells): ocn_x_area[j[ix]][i[ix]] += xgrid["xarea"][ix]
-            
-        xgrid["ocn_mask"] = ocn_x_area/ocn_area
-            
-        mask = xr.DataArray(xgrid["ocn_mask"],
-                            dims=["ny", "nx"],
-                            attrs={"standard_name": "ocean fraction at T-cell centers"}
+
+        mask = xr.Dataset()
+        mask["mask"] = xr.DataArray(ocn_x_area/ocn_area,
+                                    dims=["ny", "nx"],
+                                    attrs={"standard_name": "ocean fraction at T-cell centers"}
         )
-        areaO = xr.DataArray(ocn_area,
-                             dims=["ny", "nx"],
-                             attrs={"standard_name": "ocean grid area"}
+        mask["areaO"] = xr.DataArray(ocn_area,
+                                     dims=["ny", "nx"],
+                                     attrs={"standard_name": "ocean grid area"}
         )        
-        areaX = xr.DataArray(ocn_x_area,
-                             dims=["ny", "nx"],
-                             attrs={"standard_name": "ocean exchange grid area"}
+        mask["areaX"] = xr.DataArray(ocn_x_area,
+                                     dims=["ny", "nx"],
+                                     attrs={"standard_name": "ocean exchange grid area"}
         )
-        xr.Dataset(data_vars={"mask": mask, "areaO": areaO, "areaX": areaX}).to_netcdf("ocean_mask.nc")
+        mask.to_netcdf("ocean_mask.nc")
 
         
 def write_lnd_mask(atm_area, atmxlnd, itile):
@@ -122,27 +121,26 @@ def write_lnd_mask(atm_area, atmxlnd, itile):
     i, j, xarea = atmxlnd["src_i"], atmxlnd["src_j"], atmxlnd["xarea"]
     lnd_x_area = np.zeros(atm_area.shape, dtype=np.float64)
     for ix in range(atmxlnd["nxcells"]): lnd_x_area[j[ix]][i[ix]] += xarea[ix]
-        
-    mask = xr.DataArray(lnd_x_area/atm_area,
-                        dims=["ny", "nx"],
-                        attrs={"standard_name": "land fraction at T-cell centers"}
+
+    mask = xr.Dataset()
+    
+    mask["mask"] = xr.DataArray(lnd_x_area/atm_area,
+                                dims=["ny", "nx"],
+                                attrs={"standard_name": "land fraction at T-cell centers"}
     )
-    area_atm = xr.DataArray(atm_area,
-                            dims=["ny", "nx"],
-                            attrs={"standard_name": "area atm"}
+    mask["area_atm"] = xr.DataArray(atm_area,
+                                    dims=["ny", "nx"],
+                                    attrs={"standard_name": "area atm"}
     )
-    area_lnd = xr.DataArray(atm_area,
-                            dims=["ny", "nx"],
-                            attrs={"standard_name": "area atm"}
+    mask["area_lnd"] = xr.DataArray(atm_area,
+                                    dims=["ny", "nx"],
+                                    attrs={"standard_name": "area atm"}
     )
-    l_area = xr.DataArray(lnd_x_area,
-                          dims=["ny", "nx"],
-                          attrs={"standard_name": "land x area"}
-    )            
-    xr.Dataset(data_vars={"mask":mask,
-                          "area_atm":area_atm,
-                          "area_lnd":area_atm,
-                          "l_area":l_area}).to_netcdf(f"land_mask_{itile}.nc")
+    mask["l_area"] = xr.DataArray(lnd_x_area,
+                                  dims=["ny", "nx"],
+                                  attrs={"standard_name": "land x area"}
+    )
+    mask.to_netcdf(f"land_mask_{itile}.nc")
         
 
 def get_atmxlnd(atmxocn_landpart: type[XGridObj], atm_mosaic: type[MosaicObj] = None, atm_area = None):
