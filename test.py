@@ -16,18 +16,14 @@ for ikey in thesefiles:
   testme = xr.load_dataset(ikey)
   answer = xr.load_dataset(thesefiles[ikey])
   print(ikey)
-  
-  for i in range(testme.sizes["nxcells"]):
-    if testme["src_ij"][i][0] != answer["tile1_cell"][i][0]: print(i, testme["src_ij"][i], testme["tile1_cell"][i])
-    if testme["tgt_ij"][i][1] != answer["tile2_cell"][i][1]: print(i, testme["src_ij"][i], testme["tile1_cell"][i])    
-  
-  print("tgt_ij", np.all(testme["tgt_ij"].values == answer["tile2_cell"].values))
-  print("src_ij", np.all(testme["src_ij"].values == answer["tile1_cell"].values))
 
+  print("tgt_cell", np.all(testme["tgt_cell"].values == answer["tile2_cell"].values))
+  print("src_cell", np.all(testme["src_cell"].values == answer["tile1_cell"].values))
+  print("contacts", testme["contact"].values == answer["contact"].values)
+  
   thismax = np.absolute(testme['xarea'].values - answer['xgrid_area'].values)
-  print('xarea', np.max(thismax))
-
-print()
+  print('max xarea diff', np.max(thismax), np.max(answer["xgrid_area"].values))
+  print()
 
 #test mask
 testme = xr.load_dataset("ocean_mask.nc")
@@ -53,8 +49,9 @@ for itile in range(1,7):
     answer_max = np.max(answer[key].values)
     diff = np.max(np.absolute(testme[key].values - answer[key].values))
     print(key, answer_max, diff, diff/answer_max)
+  print()
 
     
   
-
+ 
   

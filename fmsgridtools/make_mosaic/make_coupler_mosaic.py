@@ -8,7 +8,6 @@ from fmsgridtools.shared.mosaicobj import MosaicObj
 from fmsgridtools.shared.xgridobj import XGridObj
 from fmsgridtools.shared.gridobj import GridObj
 
-
 def extend_ocn_grid_south(ocn_mosaic: MosaicObj):
 
     tiny_value = np.float64(1.e-7)
@@ -136,8 +135,9 @@ def get_atmxlnd(atmxocn_landpart: type[XGridObj], atm_mosaic: type[MosaicObj] = 
 
         for atmtile in atmxocn_landpart.datadict[otile]:
 
+            atmxlnd[atmtile] = {}
             datadict = atmxocn_landpart.datadict[otile][atmtile]
-            
+
             #get atm area
             nx, ny = atm_mosaic.grid[atmtile].nx, atm_mosaic.grid[atmtile].ny
             atm_area = pyfrenctools.grid_utils.get_grid_area(atm_mosaic.grid[atmtile].x,
@@ -160,24 +160,26 @@ def get_atmxlnd(atmxocn_landpart: type[XGridObj], atm_mosaic: type[MosaicObj] = 
                         atm_j.append(this_j)
 
             nxcells = len(atm_i)
-            atmxlnd[atmtile] = dict(nxcells = len(atm_i),
-                                    src_i = np.array(atm_i),
-                                    src_j = np.array(atm_j),
-                                    tgt_i = np.array(atm_i),
-                                    tgt_j = np.array(atm_j),
-                                    xarea = np.array(xarea, dtype=np.float64))
+            atmxlnd[atmtile] = {atmtile: dict(nxcells = len(atm_i),
+                                              src_i = np.array(atm_i),
+                                              src_j = np.array(atm_j),
+                                              tgt_i = np.array(atm_i),
+                                              tgt_j = np.array(atm_j),
+                                              xarea = np.array(xarea, dtype=np.float64))
+            }
 
-            write_lnd_mask(atm_area, atmxlnd[atmtile], atmtile)
-    return atmxlnd
+            write_lnd_mask(atm_area, atmxlnd[atmtile][atmtile], atmtile)
+
+    return XGridObj(datadict=atmxlnd)
     
 
 def make_coupler_mosaic(atm_mosaic_file: str, lnd_mosaic_file: str, ocn_mosaic_file: str,
                         input_dir: str = './', topog_file: dict() = None):
 
     #read in mosaic files
-    atm_mosaic = MosaicObj(input_dir=input_dir, mosaic_name=atm_mosaic_file).read()
-    lnd_mosaic = MosaicObj(input_dir=input_dir, mosaic_name=lnd_mosaic_file).read()
-    ocn_mosaic = MosaicObj(input_dir=input_dir, mosaic_name=ocn_mosaic_file).read()
+    atm_mosaic = MosaicObj(input_dir=input_dir, mosaic_file=atm_mosaic_file).read()
+    lnd_mosaic = MosaicObj(input_dir=input_dir, mosaic_file=lnd_mosaic_file).read()
+    ocn_mosaic = MosaicObj(input_dir=input_dir, mosaic_file=ocn_mosaic_file).read()
 
     #read in grids
     atm_mosaic.get_grid(toradians=True, agrid=True, free_dataset=True)
@@ -197,28 +199,44 @@ def make_coupler_mosaic(atm_mosaic_file: str, lnd_mosaic_file: str, ocn_mosaic_f
     for ocntile in atmxocn.datadict:
         for atmtile in atmxocn.datadict[ocntile]:
             atmxocn.datadict[ocntile][atmtile]['tgt_j'] -= ocn_mosaic.extended_south
-    
-    #write
-    for ocntile in atmxocn.datadict:
-        tmpdict = {}
-        for atmtile in atmxocn.datadict[ocntile]:
-            tmpdict[ocntile] = {}
-            tmpdict[ocntile][atmtile] = atmxocn.datadict[ocntile][atmtile]
-            outfile = f"{atm_mosaic.mosaic_name[:-3]}_{atmtile}X{ocn_mosaic.mosaic_name[:-3]}_{ocntile}.nc"
-            atmxocn.write(datadict=tmpdict, outfile=outfile)
 
     #ocn mask for lnd    
-    for itile in ocn_mask: ocn_mask[itile] = 1.0 - ocn_mask[itile]
-
+    for itile in ocn_mask: ocn_mask[itile] = np.float64(1.0) - ocn_mask[itile]
+            
     #atmxocn the land part 
     atmxocn_landpart = XGridObj(src_grid=atm_mosaic.grid, tgt_grid=extended_grid)
-    atmxocn_landpart.create_xgrid(tgt_mask=ocn_mask)
-    
-    #atmxlnd
+    atmxocn_landpart.create_xgrid(tgt_mask=ocn_mask)    
     atmxlnd = get_atmxlnd(atmxocn_landpart, atm_mosaic=atm_mosaic)
-    for atmtile in atmxlnd:
-        tmpdict = {atmtile:{atmtile:atmxlnd[atmtile]}}
-        outfile = f"{atm_mosaic.mosaic_name[:-3]}_{atmtile}X{atm_mosaic.mosaic_name[:-3]}_{atmtile}.nc"
-        atmxocn.write(datadict=tmpdict, outfile=outfile)
+            
+    #write
+    contact_attrs = {"standard_name": "grid_contact_spec",
+                     "contact_type": "exchange",
+                     "parent1_cell": "src_ij",
+                     "parent2_cell": "tgt_ij",
+                     "xgrid_area": "xarea",
+                     "distance_to_parent1_centroid": "tile1_distance",
+                     "distance_to_parent2_centroid": "tile2_distance"
+    }
 
+    #write atmxocn
+    atmxocn.to_dataset()
+    for ocntile in atmxocn.dataset:
+        for atmtile in atmxocn.dataset[ocntile]:
+            dataset = atmxocn.dataset[ocntile][atmtile]
+            dataset["contact"] = xr.DataArray(f"{atm_mosaic.name}:{atmtile}::{ocn_mosaic.name}:{ocntile}",
+                                              attrs=contact_attrs
+            )
+            print(f"{atm_mosaic.name}_{atmtile}X{ocn_mosaic.name}_{ocntile}.nc")
+            dataset.to_netcdf(f"{atm_mosaic.name}_{atmtile}X{ocn_mosaic.name}_{ocntile}.nc")
     write_ocn_mask(ocn_mosaic, atmxocn)
+    
+    #write atmxlnd
+    atmxlnd.to_dataset()    
+    for atmtile in atmxlnd.dataset:
+        dataset = atmxlnd.dataset[atmtile][atmtile]
+        dataset["contact"] = xr.DataArray(f"atm_mosaic:{atmtile}::atm_mosaic:{atmtile}",
+                                          attrs=contact_attrs
+        )
+        dataset.to_netcdf(f"{atm_mosaic.name}_{atmtile}X{lnd_mosaic.mosaic}_{atmtile}.nc")
+
+

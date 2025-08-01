@@ -10,18 +10,6 @@ from fmsgridtools.shared.gridobj import GridObj
 from fmsgridtools.shared.gridtools_utils import check_file_is_there
 from fmsgridtools.shared.mosaicobj import MosaicObj
 
-from fmsgridtools.shared.gridobj import GridObj
-from fmsgridtools.shared.gridtools_utils import check_file_is_there
-from fmsgridtools.shared.mosaicobj import MosaicObj
-
-class cXgridObj(ctypes.Structure):
-    _fields_ = [("nxcells", ctypes.c_int),
-                ("input_parent_cell_index", ctypes.POINTER(ctypes.c_double)),
-                ("output_parent_cell_index", ctypes.POINTER(ctypes.c_double)),
-                ("xcell_area", ctypes.POINTER(ctypes.c_double)),
-                ("dcentroid_lon", ctypes.POINTER(ctypes.c_double)),
-                ("dcentroid_lat", ctypes.POINTER(ctypes.c_double))
-    ]
 
 class XGridObj() :
 
@@ -59,6 +47,9 @@ class XGridObj() :
         self._tgtinfoisthere = False
         
         if self._check_restart_remap_file(): return
+        if self.datadict is not None: return
+        if self.dataset is not None: return
+
         self._check_grid()
         self._check_mosaic()
         self._check_mosaic_file()
@@ -83,26 +74,32 @@ class XGridObj() :
             setattr(self, key, self.dataset.sizes[key])
 
             
-    def write(self, datadict = None, outfile: str = None):
-
-        if outfile is None:
-            outfile = self.write_remap_file
+    def to_dataset(self, datadict = None):
             
         if datadict is None: datadict = self.datadict
-        for tgt_tile in datadict:
-            for src_tile in datadict[tgt_tile]:
-                thisdict = datadict[tgt_tile][src_tile]
-                src_ij = xr.DataArray(np.column_stack((thisdict['src_i']+1, thisdict['src_j']+1)),
-                                      dims=["nxcells", "two"],
-                                      attrs={"src_ij": "parent cell indices in src mosaic", "_FillValue": False})
-                tgt_ij = xr.DataArray(np.column_stack((thisdict['tgt_i']+1, thisdict['tgt_j']+1)),
-                                      dims=["nxcells", "two"],
-                                      attrs={"tgt_ij": "parent cell indices in tgt mosaic", "_FillValue": False})
-                xarea = xr.DataArray(thisdict['xarea'], dims=["nxcells"], 
-                                     attrs={"xarea": "exchange grid area", "_FillValue": False})
-                
-        xr.Dataset(data_vars={"src_ij": src_ij, "tgt_ij": tgt_ij, "xarea": xarea}).to_netcdf(outfile)
+        self.dataset = {}
 
+        for tgt_tile in datadict:
+            self.dataset[tgt_tile] = {}
+            for src_tile in datadict[tgt_tile]:
+
+                thisdict = datadict[tgt_tile][src_tile]
+                dataset = self.dataset[tgt_tile][src_tile] = xr.Dataset()
+
+                dataset["src_cell"] = xr.DataArray(np.column_stack((thisdict['src_i']+1, thisdict['src_j']+1)),
+                                                   dims=["nxcells", "two"],
+                                                   attrs={"src_cell": "parent cell indices in src mosaic",
+                                                          "_FillValue": False}
+                )
+                dataset["tgt_cell"] = xr.DataArray(np.column_stack((thisdict['tgt_i']+1, thisdict['tgt_j']+1)),
+                                                   dims=["nxcells", "two"],
+                                                   attrs={"tgt_cell": "parent cell indices in tgt mosaic",
+                                                        "_FillValue": False})
+                dataset["xarea"] = xr.DataArray(thisdict['xarea'],
+                                                dims=["nxcells"], 
+                                                attrs={"xarea": "exchange grid area",
+                                                       "_FillValue": False}
+                )                
         return
         
         
@@ -146,7 +143,7 @@ class XGridObj() :
                 itile = itile + 1
 
 
-    def to_dataset(self):
+    def to_dataset_raw(self):
 
         if self.datadict is None: raise RunTimeError("datadict is None")
 

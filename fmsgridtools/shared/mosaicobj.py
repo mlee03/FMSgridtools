@@ -8,7 +8,8 @@ from fmsgridtools.shared.gridtools_utils import check_file_is_there
 class MosaicObj:
 
     def __init__(self, input_dir: str = "./",
-                 mosaic_name: str = None,
+                 mosaic_file: str = None, 
+                 name: str = None,
                  ntiles: int = None,
                  gridlocation: str = "./",
                  gridfiles: list[str] = None,
@@ -19,7 +20,8 @@ class MosaicObj:
                  grid: dict = None):
 
         self.input_dir = input_dir+"/"
-        self.mosaic_name = mosaic_name
+        self.mosaic_file = mosaic_file
+        self.name = name
         self.gridlocation = gridlocation
         self.gridfiles = gridfiles
         self.gridtiles = gridtiles
@@ -39,13 +41,19 @@ class MosaicObj:
 
     def read(self):
 
-        if self.mosaic_name is None:
-            raise IOError("Please specify mosaic_name")
+        if self.mosaic_file is None:
+            raise IOError("Please specify the mosaic file")
 
-        check_file_is_there(self.input_dir+self.mosaic_name)
-        self.dataset = xr.open_dataset(self.input_dir+self.mosaic_name)
+        check_file_is_there(self.input_dir+self.mosaic_file)
+        self.dataset = xr.open_dataset(self.input_dir+self.mosaic_file)
 
         self.get_attributes()
+
+        if hasattr(self, "mosaic_name"):
+            self.name = self.mosaic_name
+        else:
+            self.name = self.mosaic_file[:-3]            
+        
         return self
 
     
@@ -76,9 +84,9 @@ class MosaicObj:
     def write(self, outfile: str = None) -> None:
 
         dataset = {}
-        if self.mosaic_name is not None:
+        if self.name is not None:
             dataset["mosaic"] = xr.DataArray(
-                data=self.mosaic_name.encode(),
+                data=self.name.encode(),
                 attrs=dict(
                     standard_name="grid_mosaic_spec",
                     contact_regions="contacts",
