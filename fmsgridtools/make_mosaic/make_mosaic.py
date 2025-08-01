@@ -15,7 +15,6 @@ TILE_FILE_HELP = "Grid file name of all tiles in the mosaic. \
     the default for tile_file will be'horizontal_grid.tile#.nc'"
 
 
-
 mosaic_name = click.option('--mosaic_name',
               default='mosaic',
               help="mosaic name; The output file will be mosaic_name.nc.")
@@ -120,16 +119,12 @@ def quick(input_mosaic,
 
 def coupler(atmos_mosaic,
             ocean_mosaic,
-            ocean_topog,
-            mosaic_name,
-            sea_level,
             land_mosaic,
-            wave_mosaic,
+            ocean_topog,
+            sea_level,
             interp_order,
-            area_ratio_thresh,
             check,
             rotate_poly):
-    pass
 
     #coupler.make(atmos_mosaic,
     #        ocean_mosaic,
