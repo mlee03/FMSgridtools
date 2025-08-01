@@ -125,7 +125,7 @@ def coupler(atmos_mosaic,
             interp_order,
             check,
             rotate_poly):
-
+    pass
     #coupler.make(atmos_mosaic,
     #        ocean_mosaic,
     #        ocean_topog,
