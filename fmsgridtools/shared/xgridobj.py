@@ -40,19 +40,19 @@ class XGridObj() :
         self.order = order
         self.on_gpu = on_gpu
         self.on_agrid = on_agrid
-        self.dataset = {} if dataset is None else dataset
-        self.datadict = {} if datadict is None else datadict
+        self.dataset = dataset
+        self.datadict = datadict
         
         self._srcinfoisthere = False
         self._tgtinfoisthere = False
-        
+
         if self._check_restart_remap_file(): return
         if self.datadict is not None: return
         if self.dataset is not None: return
 
         self._check_grid()
         self._check_mosaic()
-        self._check_mosaic_file()
+        self._check_mosaic_file()        
 
         if not self._srcinfoisthere or not self._tgtinfoisthere:
             raise RuntimeError("Please provide grid information")
@@ -74,9 +74,11 @@ class XGridObj() :
             setattr(self, key, self.dataset.sizes[key])
 
             
-    def to_dataset(self, datadict = None):
-            
-        if datadict is None: datadict = self.datadict
+    def to_dataset(self):
+
+        if self.datadict is None:  raise OSError("datadict is None")
+        
+        datadict = self.datadict
         self.dataset = {}
 
         for tgt_tile in datadict:
@@ -113,6 +115,8 @@ class XGridObj() :
         else:
             create_xgrid_2dx2d_order1 = pyfrenctools.create_xgrid.get_2dx2d_order1
 
+        if self.datadict is None: self.datadict = {}
+            
         for tgt_tile in self.tgt_grid:
 
             self.datadict[tgt_tile], itile = {}, 1
@@ -200,15 +204,15 @@ class XGridObj() :
     def _check_mosaic_file(self):
 
         if self.src_mosaic_file is not None:
-            self.src_grid = MosaicObj(self.input_dir,
-                                      self.src_mosaic_file).read().get_grid(toradians=True,
+            self.src_grid = MosaicObj(input_dir=self.input_dir,
+                                      mosaic_file=self.src_mosaic_file).read().get_grid(toradians=True,
                                                                             agrid=self.on_agrid,
                                                                             free_dataset=True)
             self._srcinfoisthere = True
 
         if self.tgt_mosaic_file is not None:
-            self.tgt_grid = MosaicObj(self.input_dir,
-                                      self.tgt_mosaic_file).read().get_grid(toradians=True,
-                                                                            agrid=self.on_agrid,
-                                                                            free_dataset=True)
+            self.tgt_grid = MosaicObj(input_dir=self.input_dir,
+                                      mosaic_file=self.tgt_mosaic_file).read().get_grid(toradians=True,
+                                                                                        agrid=self.on_agrid,
+                                                                                        free_dataset=True)
             self._tgtinfoisthere = True

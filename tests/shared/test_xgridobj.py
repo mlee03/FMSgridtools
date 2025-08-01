@@ -62,8 +62,9 @@ def test_create_xgrid(on_gpu):
                                   on_agrid=False
     )
     xgrid.create_xgrid()
-    xgrid.write()
-
+    xgrid.to_dataset()
+    xgrid.dataset["tile1"]["tile1"].to_netcdf("remap.nc")
+    
     del xgrid
     
     xgrid = fmsgridtools.XGridObj(restart_remap_file="remap.nc")
@@ -76,8 +77,8 @@ def test_create_xgrid(on_gpu):
     answer_i = [i+1 for i in range(nx) for ixcells in range(refine*refine)]*ny
     answer_j = [j+1 for j in range(ny) for i in range(nx*refine) for ixcells in range(refine)]
 
-    src_i = [xgrid.src_ij[i][0] for i in range(nxcells)]
-    src_j = [xgrid.src_ij[i][1] for i in range(nxcells)]
+    src_i = [xgrid.src_cell[i][0] for i in range(nxcells)]
+    src_j = [xgrid.src_cell[i][1] for i in range(nxcells)]
     
     assert src_i == answer_i
     assert src_j == answer_j
@@ -94,8 +95,8 @@ def test_create_xgrid(on_gpu):
             for ixcell in range(refine):
                 answer_j += [j*refine + ixcell + 1]*refine
                 
-    tgt_i = [xgrid.tgt_ij[i][0] for i in range(nxcells)]
-    tgt_j = [xgrid.tgt_ij[i][1] for i in range(nxcells)]
+    tgt_i = [xgrid.tgt_cell[i][0] for i in range(nxcells)]
+    tgt_j = [xgrid.tgt_cell[i][1] for i in range(nxcells)]
 
     assert tgt_i == answer_i
     assert tgt_j == answer_j
