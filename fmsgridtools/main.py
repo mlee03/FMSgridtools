@@ -28,7 +28,7 @@ make_topog.add_command(fmsgridtools.make_topog.realistic_or_basin)
 make_mosaic.add_command(fmsgridtools.make_mosaic.solo)
 make_mosaic.add_command(fmsgridtools.make_mosaic.regional)
 make_mosaic.add_command(fmsgridtools.make_mosaic.quick)
-make_mosaic.add_command(fmsgridtools.make_mosaic.coupler)
+make_mosaic.add_command(fmsgridtools.make_mosaic.coupled)
 
 if __name__ == "__main__":
     main()
