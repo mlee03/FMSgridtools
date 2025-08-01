@@ -55,7 +55,7 @@ def test_create_regional_input():
 
 def test_write():
     mosaic = fmsgridtools.MosaicObj(ntiles=6,
-                                    mosaic_name='test_mosaic',
+                                    name=f"output[:-3]",
                                     gridlocation='./',
                                     gridfiles=np.asarray(gridfiles),
                                     gridtiles=np.asarray(gridtiles),
@@ -65,12 +65,12 @@ def test_write():
     assert os.path.exists(output)
  
 def test_ntiles():
-    mosaic = fmsgridtools.MosaicObj(mosaic_name=output).read()
+    mosaic = fmsgridtools.MosaicObj(mosaic_file=output).read()
     assert mosaic.ntiles == 6
 
     
 def test_gridfiles():
-    mosaic2 = fmsgridtools.MosaicObj(mosaic_name=output).read()
+    mosaic2 = fmsgridtools.MosaicObj(mosaic_file=output).read()
     assert all([mosaic2.gridfiles[i] == gridfiles[i] for i in range(mosaic2.ntiles)])
     os.remove(output)
 

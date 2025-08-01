@@ -30,13 +30,13 @@ class MosaicObj:
         self.dataset = dataset
         self.grid = grid
         self.ntiles = ntiles
-        for key, value in self.__dict__.items():
-            if key == 'gridfiles' or 'gridtiles' or 'contacts' or 'contact_index':
-                if value is None:
-                    self.__dict__[key] = []
-            if key == 'grid':
-                if value is None:
-                    self.__dict__[key] = {}
+        #for key, value in self.__dict__.items():
+        #    if key == 'gridfiles' or 'gridtiles' or 'contacts' or 'contact_index':
+        #        if value is None:
+        #            self.__dict__[key] = []
+        #    if key == 'grid':
+        #        if value is None:
+        #            self.__dict__[key] = {}
 
 
     def read(self):
@@ -72,6 +72,7 @@ class MosaicObj:
         
     def get_grid(self, toradians: bool = False, agrid: bool = False, free_dataset: bool = False) -> dict:
 
+        if self.grid is None: self.grid = {}
         for i in range(self.ntiles):
             gridfile = str(self.input_dir) + str(self.gridlocation) + str(self.gridfiles[i])
             self.grid[self.gridtiles[i]] = GridObj(gridfile=gridfile).read(toradians=toradians,
@@ -83,7 +84,7 @@ class MosaicObj:
     
     def write(self, outfile: str = None) -> None:
 
-        dataset = {}
+        dataset = xr.Dataset()
         if self.name is not None:
             dataset["mosaic"] = xr.DataArray(
                 data=self.name.encode(),
@@ -132,5 +133,5 @@ class MosaicObj:
                 )
             )
 
-        xr.Dataset(data_vars=dataset).to_netcdf(outfile)
+        dataset.to_netcdf(outfile)
 
