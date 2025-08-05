@@ -3,9 +3,9 @@ import xarray as xr
 
 import fmsgridtools
 
-def test_make_coupled_mosaic():
+def test_make_coupler_mosaic():
 
-    fmsgridtools.coupled_mosaic.make(atm_mosaic_file='C48_mosaic.nc',
+    fmsgridtools.coupler_mosaic.make(atm_mosaic_file='C48_mosaic.nc',
                                      lnd_mosaic_file='C48_mosaic.nc',
                                      ocn_mosaic_file='ocean_mosaic.nc',
                                      input_dir='/home/Mikyung.Lee/fmsgridtools/agridfix/tests/mosaic/input',

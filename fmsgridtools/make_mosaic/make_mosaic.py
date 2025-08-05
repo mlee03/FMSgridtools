@@ -3,7 +3,7 @@ import numpy as np
 
 import fmsgridtools.make_mosaic.solo_mosaic as solo_mosaic
 import fmsgridtools.make_mosaic.regional_mosaic as regional_mosaic
-import fmsgridtools.make_mosaic.coupled_mosaic as coupled_mosaic
+import fmsgridtools.make_mosaic.coupler_mosaic as coupler_mosaic
 
 ATMOS_MOSAIC_HELP = "specify the atmosphere mosaic information \
     This file contains list of tile files which specify \
@@ -127,7 +127,7 @@ def quick(input_mosaic,
 
 @click.option('--rotate_poly')
 
-def coupled(input_dir,
+def coupler(input_dir,
             atmos_mosaic,
             ocean_mosaic,
             land_mosaic,
@@ -138,12 +138,12 @@ def coupled(input_dir,
             check,
             rotate_poly):
 
-    coupled_mosaic.set_parameters(sea_level,
+    coupler_mosaic.set_parameters(sea_level,
                                   area_ratio_thresh,
                                   interp_order,
                                   rotate_poly)
     
-    coupled_mosaic.make(atm_mosaic_file=atmos_mosaic,
+    coupler_mosaic.make(atm_mosaic_file=atmos_mosaic,
                         lnd_mosaic_file=land_mosaic,
                         ocn_mosaic_file=ocean_mosaic,
                         topog_file=ocean_topog,
