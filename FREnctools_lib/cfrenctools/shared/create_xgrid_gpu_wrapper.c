@@ -32,7 +32,8 @@
 Interp_per_input_tile interp_gpu;
 
 int create_xgrid_order1_gpu_wrapper(int nx_src, int ny_src, int nx_dst, int ny_dst, double *x_src,
-                                    double *y_src,  double *x_dst,  double *y_dst, double *mask_src)
+                                    double *y_src,  double *x_dst,  double *y_dst, double *mask_src,
+                                    double *mask_dst)
 {
   Grid_cells_struct_config output_grid_cells;
 
@@ -49,19 +50,19 @@ int create_xgrid_order1_gpu_wrapper(int nx_src, int ny_src, int nx_dst, int ny_d
 
 #pragma acc enter data copyin(x_src[:ngridpts_src], y_src[:ngridpts_src], \
                               x_dst[:ngridpts_dst], y_dst[:ngridpts_dst],\
-                              mask_src[:ncells_src])
+                              mask_src[:ncells_src], mask_dst[:ncells_dst])
 
   get_grid_cell_struct_gpu(nx_dst, ny_dst, x_dst, y_dst, &output_grid_cells);
 
 #pragma acc enter data create(approx_nxcells[:ncells_src], ij2_start[:ncells_src], ij2_end[:ncells_src])
 
   int upbound_nxcells = get_upbound_nxcells_2dx2d_gpu(nx_src, ny_src, nx_dst, ny_dst, jstart, jend,
-                                                      x_src, y_src, x_dst, y_dst, mask_src, &output_grid_cells,
-                                                      approx_nxcells, ij2_start, ij2_end);
+                                                      x_src, y_src, x_dst, y_dst, mask_src, mask_dst,
+                                                      &output_grid_cells, approx_nxcells, ij2_start, ij2_end);
 
   int nxgrid = create_xgrid_2dx2d_order1_gpu(nx_src, ny_src, nx_dst, ny_dst, jstart, jend, x_src, y_src,
-                                             x_dst, y_dst, upbound_nxcells, mask_src, &output_grid_cells,
-                                             approx_nxcells, ij2_start, ij2_end, &interp_gpu);
+                                             x_dst, y_dst, upbound_nxcells, mask_src, mask_dst,
+                                             &output_grid_cells, approx_nxcells, ij2_start, ij2_end, &interp_gpu);
 
   int *input_parent_cell_index = interp_gpu.input_parent_cell_index;
   int *output_parent_cell_index = interp_gpu.output_parent_cell_index;
@@ -76,12 +77,22 @@ int create_xgrid_order1_gpu_wrapper(int nx_src, int ny_src, int nx_dst, int ny_d
 
 }
 
-void create_xgrid_transfer_data(int nxgrid, int *xgrid_ij1_in, int *xgrid_ij2_in, double *xgrid_area_in)
+void create_xgrid_transfer_data(int nxgrid, int src_nlon, int tgt_nlon,
+                                int *src_i, int *src_j, int *tgt_i, int *tgt_j, double *xarea)
 {
 
-  memcpy(xgrid_ij1_in, interp_gpu.input_parent_cell_index, nxgrid*sizeof(int));
-  memcpy(xgrid_ij2_in, interp_gpu.output_parent_cell_index, nxgrid*sizeof(int));
-  memcpy(xgrid_area_in, interp_gpu.xcell_area, nxgrid*sizeof(double));
+  //undo everything this is very annoying and needs to be changed
+  int *input = interp_gpu.input_parent_cell_index;
+  int *output = interp_gpu.output_parent_cell_index;
+  double *pxarea = interp_gpu.xcell_area;
+
+  for(int i=0; i<nxgrid; i++){
+    src_i[i] = input[i]%src_nlon;
+    src_j[i] = input[i]/src_nlon;
+    tgt_i[i] = output[i]%tgt_nlon;
+    tgt_j[i] = output[i]/tgt_nlon;
+    xarea[i] = pxarea[i];
+  }
 
   free(interp_gpu.input_parent_cell_index);
   free(interp_gpu.output_parent_cell_index);

@@ -1,7 +1,7 @@
 import ctypes
 import os
 
-from .shared import create_xgrid
+from .shared import create_xgrid, grid_utils
 from .make_mosaic import mosaic_util
 from .make_hgrid import make_hgrid_wrappers
 
@@ -17,6 +17,7 @@ def init(libpath: str = None):
         _lib = ctypes.cdll.LoadLibrary(_libpath)
 
     create_xgrid.init(_libpath, _lib)
+    grid_utils.init(_libpath, _lib)
     mosaic_util.init(_libpath, _lib)
     make_hgrid_wrappers.init(_libpath, _lib)
 

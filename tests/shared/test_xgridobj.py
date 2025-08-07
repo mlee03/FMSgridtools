@@ -51,35 +51,58 @@ def remove_mosaic():
 
 
 @pytest.mark.parametrize("on_gpu", [False, True])
-def test_create_xgrid(on_gpu) :
+def test_create_xgrid(on_gpu):
 
     nx, ny, refine = 45, 45, 2
     generate_mosaic(nx=nx, ny=ny, refine=refine)
 
-    xgrid = fmsgridtools.XGridObj(src_mosaic="src_mosaic.nc",
-                                  tgt_mosaic="tgt_mosaic.nc",
+    xgrid = fmsgridtools.XGridObj(src_mosaic_file="src_mosaic.nc",
+                                  tgt_mosaic_file="tgt_mosaic.nc",
                                   on_gpu=on_gpu,
                                   on_agrid=False
     )
-
     xgrid.create_xgrid()
-    xgrid.write()
-
+    xgrid.to_dataset()
+    xgrid.dataset["tile1"]["tile1"].to_netcdf("remap.nc")
+    
     del xgrid
     
     xgrid = fmsgridtools.XGridObj(restart_remap_file="remap.nc")
 
+    #check nxcells
     nxcells = nx * refine * ny * refine
     assert xgrid.nxcells == nxcells
-    
-    tile1_cells = np.repeat([i for i in range(nx*ny)],4)
-    assert np.all(xgrid.src_ij==tile1_cells)
 
-    tile2_cells = []
+    #check parent input cells
+    answer_i = [i+1 for i in range(nx) for ixcells in range(refine*refine)]*ny
+    answer_j = [j+1 for j in range(ny) for i in range(nx*refine) for ixcells in range(refine)]
+
+    src_i = [xgrid.src_cell[i][0] for i in range(nxcells)]
+    src_j = [xgrid.src_cell[i][1] for i in range(nxcells)]
+    
+    assert src_i == answer_i
+    assert src_j == answer_j
+
+    #check parent output cells
+    answer_i = []
     for j in range(ny):
         for i in range(nx):
-            base = (refine*j)*(refine*nx) + refine*i
-            tile2_cells.extend([base, base+1, base+refine*nx, base+refine*nx+1])
-    assert np.all(xgrid.tgt_ij==np.array(tile2_cells))
+            answer_i += [refine*i + ixcell + 1 for ixcell in range(refine)]*refine
+
+    answer_j = []
+    for j in range(ny):
+        for i in range(nx):
+            for ixcell in range(refine):
+                answer_j += [j*refine + ixcell + 1]*refine
+                
+    tgt_i = [xgrid.tgt_cell[i][0] for i in range(nxcells)]
+    tgt_j = [xgrid.tgt_cell[i][1] for i in range(nxcells)]
+
+    assert tgt_i == answer_i
+    assert tgt_j == answer_j
 
     remove_mosaic()
+
+
+if __name__ == "__main__":
+    test_create_xgrid(on_gpu=False)

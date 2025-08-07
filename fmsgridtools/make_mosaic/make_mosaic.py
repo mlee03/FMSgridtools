@@ -1,6 +1,9 @@
 import click
+import numpy as np
+
 import fmsgridtools.make_mosaic.solo_mosaic as solo_mosaic
-import fmsgridtools.make_mosaic.regional_mosaic as regional_mosaic 
+import fmsgridtools.make_mosaic.regional_mosaic as regional_mosaic
+import fmsgridtools.make_mosaic.coupler_mosaic as coupler_mosaic
 
 ATMOS_MOSAIC_HELP = "specify the atmosphere mosaic information \
     This file contains list of tile files which specify \
@@ -15,15 +18,15 @@ TILE_FILE_HELP = "Grid file name of all tiles in the mosaic. \
     the default for tile_file will be'horizontal_grid.tile#.nc'"
 
 
-
 mosaic_name = click.option('--mosaic_name',
               default='mosaic',
               help="mosaic name; The output file will be mosaic_name.nc.")
 
-sea_level = click.option('--sea_level', type=int, default=0)
+sea_level = click.option('--sea_level', type=np.float64, default=np.float64(0.0))
 
 ocean_topog = click.option('--ocean_topog',
-              type=click.Path(exists=True))
+                           type=click.Path(exists=True),
+                           required=True)
 
 
 @click.command()
@@ -80,6 +83,7 @@ def regional(global_mosaic,
     regional_mosaic.make(global_mosaic, 
                          regional_file)
 
+
 @click.command()
 @mosaic_name
 @sea_level
@@ -95,50 +99,52 @@ def quick(input_mosaic,
           land_frac_field):
     pass
 
+
 @click.command()
-@mosaic_name
 @sea_level
 @ocean_topog
+@click.option('--input_dir',
+              type=click.Path(exists=True),
+              default="./",
+              help = "input directory")
+
 @click.option('--atmos_mosaic',
               type=click.Path(exists=True),
+              required=True,
               help = ATMOS_MOSAIC_HELP)
 
 @click.option('--ocean_mosaic',
+              required=True,
               type=click.Path(exists=True))
 
-@click.option('--land_mosaic', type=click.Path(exists=True))
+@click.option('--land_mosaic', type=click.Path(exists=True), required=True)
 
-@click.option('--wave_mosaic', type=click.Path(exists=True))
+@click.option('--interp_order', type=str, default="conserve_order1")
 
-@click.option('--interp_order', default=2)
-
-@click.option('--area_ratio_thresh', type=float, default=1e-6)
+@click.option('--area_ratio_thresh', type=np.float64, default=np.float64(1e-6))
 
 @click.option('--check')
 
 @click.option('--rotate_poly')
 
-def coupler(atmos_mosaic,
+def coupler(input_dir,
+            atmos_mosaic,
             ocean_mosaic,
-            ocean_topog,
-            mosaic_name,
-            sea_level,
             land_mosaic,
-            wave_mosaic,
+            ocean_topog,
+            sea_level,
             interp_order,
             area_ratio_thresh,
             check,
             rotate_poly):
-    pass
 
-    #coupler.make(atmos_mosaic,
-    #        ocean_mosaic,
-    #        ocean_topog,
-    #        mosaic_name,
-    #        sea_level,
-    #        land_mosaic,
-    #        wave_mosaic,
-    #        interp_order,
-    #        area_ratio_thresh,
-    #        check
-    #        rotate_poly)
+    coupler_mosaic.set_parameters(sea_level,
+                                  area_ratio_thresh,
+                                  interp_order,
+                                  rotate_poly)
+    
+    coupler_mosaic.make(atm_mosaic_file=atmos_mosaic,
+                        lnd_mosaic_file=land_mosaic,
+                        ocn_mosaic_file=ocean_mosaic,
+                        topog_file=ocean_topog,
+                        input_dir=input_dir)
