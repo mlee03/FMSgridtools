@@ -1,17 +1,18 @@
-import sys
 import ctypes
+import sys
+
 import numpy as np
-from numpy.typing import NDArray
 import xarray as xr
+from numpy.typing import NDArray
 
 from fmsgridtools.shared.gridtools_utils import get_provenance_attrs
 from fmsgridtools.shared.gridobj import GridObj
 
 def fill_cubic_grid_halo(
-        nx: int, 
-        ny: int, 
-        halo: int, 
-        data: NDArray[np.float64], 
+        nx: int,
+        ny: int,
+        halo: int,
+        data: NDArray[np.float64],
         data1_all: NDArray[np.float64],
         data2_all: NDArray[np.float64],
         tile: int,
@@ -22,7 +23,7 @@ def fill_cubic_grid_halo(
     nyp = ny + joff
     nxph = nx + ioff + 2*halo
     nyph = ny + joff + 2*halo
-        
+
     for i in range(nxph*nyph):
         data[i] = -9999.
 
@@ -30,9 +31,9 @@ def fill_cubic_grid_halo(
     for j in range (1, nyp+1):
         for i in range(1, nxp+1):
             data[j*nxph+i] = data1_all[tile*nxp*nyp+(j-1)*nxp+(i-1)]
-                
+
     ntiles = 6
-        
+
     if tile%2 == 1:
         lw = (tile+ntiles-1)%ntiles
         le = (tile+ntiles+2)%ntiles
@@ -216,9 +217,10 @@ class HGridObj():
             conformal: bool=True,
             out_halo: int=0,
             output_length_angle: bool=True,
+            transpose: bool=False,
             verbose: bool=False,
     ):
-        
+
         var_dict={}
         pos_c = 0
         pos_e = 0
@@ -267,7 +269,7 @@ class HGridObj():
                 )
 
             var_dict['arcx'] = arcx
-        
+
             """define dimension"""
             nx = self.nxl[n]
             ny = self.nyl[n]
@@ -283,20 +285,20 @@ class HGridObj():
                     if n > 0:
                         print(f"[INFO] XARRAY: n: {n} x[0]: {self.x[pos_c]} x[-1]: {self.x[pos_c-1]} x[-2]: {self.x[pos_c-2]} x[-3]: {self.x[pos_c-3]} x[-4]: {self.x[pos_c-4]} x[-5]: {self.x[pos_c-5]} x[-10]: {self.x[pos_c-10]}", file=sys.stderr)
                 x = xr.DataArray(
-                    data=self.x[pos_c:pos_c+nyp*nxp].reshape((nyp,nxp)),
+                    data=self.x[pos_c:pos_c+nyp*nxp].reshape((nyp,nxp)).T if transpose else self.x[pos_c:pos_c+nyp*nxp].reshape((nyp,nxp)),
                     dims=["nyp", "nxp"],
                     attrs=dict(
-                        units="degree_east", 
+                        units="degree_east",
                         standard_name="geographic_longitude",
                     )
                 )
                 var_dict['x'] = x
 
                 y = xr.DataArray(
-                    data=self.y[pos_c:pos_c+nyp*nxp].reshape((nyp, nxp)),
+                    data=self.y[pos_c:pos_c+nyp*nxp].reshape((nyp, nxp)).T if transpose else self.y[pos_c:pos_c+nyp*nxp].reshape((nyp, nxp)),
                     dims=["nyp", "nxp"],
                     attrs=dict(
-                        units="degree_north", 
+                        units="degree_north",
                         standard_name="geographic_latitude",
                     )
                 )
@@ -317,7 +319,7 @@ class HGridObj():
                         data=self.dx[pos_n:pos_n+nyp*nx].reshape((nyp, nx)),
                         dims=["nyp", "nx"],
                         attrs=dict(
-                            units="meters", 
+                            units="meters",
                             standard_name="grid_edge_x_distance",
                         )
                     )
@@ -327,7 +329,7 @@ class HGridObj():
                         data=self.dy[pos_e:pos_e+ny*nxp].reshape((ny, nxp)),
                         dims=["ny", "nxp"],
                         attrs=dict(
-                            units="meters", 
+                            units="meters",
                             standard_name="grid_edge_y_distance",
                         )
                     )
@@ -354,7 +356,7 @@ class HGridObj():
                         )
                         var_dict['angle_dy'] = angle_dy
             else:
-                if grid_type is not "gnomonic_ed":
+                if grid_type != "gnomonic_ed":
                     raise RuntimeError("make_hgrid: out_halo > 0, only working for grid_type = 'gnomonic_ed'")
 
                 if verbose:
@@ -363,10 +365,10 @@ class HGridObj():
                 tmp_x = np.zeros(shape=(nxp+2*out_halo)*(nyp+2*out_halo), dtype=np.float64)
                 fill_cubic_grid_halo(nx, ny, out_halo, tmp_x, self.x, self.x, n, 1, 1)
                 x = xr.DataArray(
-                    data=tmp_x.reshape((nyp+2*out_halo,nxp+2*out_halo)),
+                    data=tmp_x.reshape((nyp+2*out_halo,nxp+2*out_halo)).T if transpose else tmp_x.reshape((nyp+2*out_halo,nxp+2*out_halo)),
                     dims=["nyp", "nxp"],
                     attrs=dict(
-                        units="degree_east", 
+                        units="degree_east",
                         standard_name="geographic_longitude",
                         _FillValue=-9999.,
                     )
@@ -376,10 +378,10 @@ class HGridObj():
                 tmp_y = np.zeros(shape=(nxp+2*out_halo)*(nyp+2*out_halo), dtype=np.float64)
                 fill_cubic_grid_halo(nx, ny, out_halo, tmp_y, self.y, self.y, n, 1, 1)
                 y = xr.DataArray(
-                    data=tmp_y.reshape((nyp+2*out_halo, nxp+2*out_halo)),
+                    data=tmp_y.reshape((nyp+2*out_halo, nxp+2*out_halo)).T if transpose else tmp_y.reshape((nyp+2*out_halo, nxp+2*out_halo)),
                     dims=["nyp", "nxp"],
                     attrs=dict(
-                        units="degree_north", 
+                        units="degree_north",
                         standard_name="geographic_latitude",
                         _FillValue = -9999.,
                     )
@@ -406,7 +408,7 @@ class HGridObj():
                         data=tmp_dx.reshape((nyp+2*out_halo, nx+2*out_halo)),
                         dims=["nyp", "nx"],
                         attrs=dict(
-                            units="meters", 
+                            units="meters",
                             standard_name="grid_edge_x_distance",
                             _FillValue=-9999.,
                         )
@@ -419,7 +421,7 @@ class HGridObj():
                         data=tmp_dy.reshape((ny+2*out_halo, nxp+2*out_halo)),
                         dims=["ny", "nxp"],
                         attrs=dict(
-                            units="meters", 
+                            units="meters",
                             standard_name="grid_edge_y_distance",
                             _FillValue=-9999.,
                         )
@@ -453,6 +455,17 @@ class HGridObj():
                         )
                         var_dict['angle_dy'] = angle_dy
 
+            if transpose:
+                ordering = xr.DataArray(
+                    ["row_major"],
+                )
+            else:
+                ordering = xr.DataArray(
+                    ["column_major"],
+                )
+
+            var_dict['ordering'] = ordering
+
             nx = self.nxl[n]
             ny = self.nyl[n]
             nxp = nx + 1
@@ -470,7 +483,7 @@ class HGridObj():
             if verbose:
                 print(f"About to close {outfile}")
 
-            prov_attrs = get_provenance_attrs(great_circle_algorithm=True)   
+            prov_attrs = get_provenance_attrs(great_circle_algorithm=True)
 
             dataset = xr.Dataset(
                 data_vars=var_dict
@@ -539,5 +552,3 @@ class HGridObj():
         else:
             dataset=self.dataset
         return GridObj(dataset=dataset)
-
-
