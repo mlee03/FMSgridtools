@@ -1,10 +1,12 @@
 import numpy as np
 
+from fmsgridtools.shared.xgridobj import XGridObj
+
 def remap(src_mosaic: str,
-          input_dir: str = None,
+          input_dir: str = "./",
           output_dir: str = None,
           input_file: str = None,
-          output_file: str = None,          
+          output_file: str = None,
           tgt_mosaic: str = None,
           tgt_nlon: int = None,
           tgt_nlat: int =  None,
@@ -15,4 +17,15 @@ def remap(src_mosaic: str,
           order: int = 1,
           static_file: str = None,
           check_conserve: bool = False):
-    pass
+
+    #create an xgrid object
+    xgrid = XGridObj(input_dir, src_mosaic_file=src_mosaic, tgt_mosaic_file=tgt_mosaic)
+
+    #create xgrid
+    xgrid.create_xgrid()
+
+    #write
+    xgrid.write()
+
+
+

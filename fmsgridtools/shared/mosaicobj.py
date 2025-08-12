@@ -8,7 +8,7 @@ from fmsgridtools.shared.gridtools_utils import check_file_is_there
 class MosaicObj:
 
     def __init__(self, input_dir: str = "./",
-                 mosaic_file: str = None, 
+                 mosaic_file: str = None,
                  name: str = None,
                  ntiles: int = None,
                  gridlocation: str = "./",
@@ -52,11 +52,11 @@ class MosaicObj:
         if hasattr(self, "mosaic_name"):
             self.name = self.mosaic_name
         else:
-            self.name = self.mosaic_file[:-3]            
-        
+            self.name = self.mosaic_file[:-3]
+
         return self
 
-    
+
     def get_attributes(self) -> None:
         for key in self.dataset.data_vars:
             setattr(self, key, self.dataset[key].astype(str).values)
@@ -64,12 +64,12 @@ class MosaicObj:
         for key in self.dataset.sizes:
             setattr(self, key, self.dataset.sizes[key])
 
-            
+
     def add_attributes(self, attribute: str, value: Any = None) -> None:
 
         setattr(self, attribute, value)
 
-        
+
     def get_grid(self, toradians: bool = False, agrid: bool = False, free_dataset: bool = False) -> dict:
 
         if self.grid is None: self.grid = {}
@@ -78,10 +78,10 @@ class MosaicObj:
             self.grid[self.gridtiles[i]] = GridObj(gridfile=gridfile).read(toradians=toradians,
                                                                            agrid=agrid,
                                                                            free_dataset=free_dataset)
-            
+
         return self.grid
 
-    
+
     def write(self, outfile: str = None) -> None:
 
         dataset = xr.Dataset()
