@@ -21,7 +21,7 @@ def make_mosaic():
 def make_hgrid():
     click.echo("Starting make_hgrid")
 
-remap.add_command(fmsgridtools.re_map.conservative_method)
+remap.add_command(fmsgridtools.remap.conservative_method)
 
 make_topog.add_command(fmsgridtools.make_topog.realistic_or_basin)
 
