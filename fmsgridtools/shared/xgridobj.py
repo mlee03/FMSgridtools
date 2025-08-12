@@ -14,7 +14,7 @@ from fmsgridtools.shared.mosaicobj import MosaicObj
 class XGridObj() :
 
     def __init__(self,
-                 input_dir: str = "./",                 
+                 input_dir: str = "./",
                  src_mosaic_file: str = None,
                  tgt_mosaic_file: str = None,
                  restart_remap_file: str = None,
@@ -22,7 +22,7 @@ class XGridObj() :
                  src_mosaic: type[MosaicObj] = None,
                  tgt_mosaic: type[MosaicObj] = None,
                  src_grid: dict[type[GridObj]] = None,
-                 tgt_grid: dict[type[GridObj]] = None,    
+                 tgt_grid: dict[type[GridObj]] = None,
                  dataset: type[xr.Dataset] = None,
                  datadict: dict = None,
                  on_agrid: bool = True,
@@ -42,7 +42,7 @@ class XGridObj() :
         self.on_agrid = on_agrid
         self.dataset = dataset
         self.datadict = datadict
-        
+
         self._srcinfoisthere = False
         self._tgtinfoisthere = False
 
@@ -52,7 +52,7 @@ class XGridObj() :
 
         self._check_grid()
         self._check_mosaic()
-        self._check_mosaic_file()        
+        self._check_mosaic_file()
 
         if not self._srcinfoisthere or not self._tgtinfoisthere:
             raise RuntimeError("Please provide grid information")
@@ -73,11 +73,28 @@ class XGridObj() :
         for key in self.dataset.sizes:
             setattr(self, key, self.dataset.sizes[key])
 
-            
+
+    def write(self, outfile: str = None):
+
+        if outfile is None:
+          outfile = self.write_remap_file
+
+        if self.dataset is None:
+          if self.datadict is not None:
+            self.to_dataset()
+
+        for tgt_tile in self.dataset:
+          concat_dataset = xr.concat([self.dataset[tgt_tile][src_tile] for src_tile in self.dataset[tgt_tile]], dim="nxcells")
+
+        concat_dataset.to_netcdf(outfile)
+
+
+
+
     def to_dataset(self):
 
         if self.datadict is None:  raise OSError("datadict is None")
-        
+
         datadict = self.datadict
         self.dataset = {}
 
@@ -98,13 +115,12 @@ class XGridObj() :
                                                    attrs={"tgt_cell": "parent cell indices in tgt mosaic",
                                                         "_FillValue": False})
                 dataset["xarea"] = xr.DataArray(thisdict['xarea'],
-                                                dims=["nxcells"], 
+                                                dims=["nxcells"],
                                                 attrs={"xarea": "exchange grid area",
                                                        "_FillValue": False}
-                )                
-        return
-        
-        
+                )
+
+
     def create_xgrid(self, src_mask: dict[str,npt.NDArray] = None, tgt_mask: dict[str, npt.NDArray] = None) -> dict:
 
         if self.order not in (1,2):
@@ -116,13 +132,13 @@ class XGridObj() :
             create_xgrid_2dx2d_order1 = pyfrenctools.create_xgrid.get_2dx2d_order1
 
         if self.datadict is None: self.datadict = {}
-            
+
         for tgt_tile in self.tgt_grid:
 
             self.datadict[tgt_tile], itile = {}, 1
 
             itgt_mask = None if tgt_mask is None else tgt_mask[tgt_tile]
-            
+
             for src_tile in self.src_grid:
 
                 isrc_mask = None if src_mask is None else src_mask[src_tile]
@@ -139,7 +155,7 @@ class XGridObj() :
                     src_mask=isrc_mask,
                     tgt_mask=itgt_mask
                 )
-                
+
                 nxcells = xgrid_out["nxcells"]
                 if nxcells > 0:
                     xgrid_out["tile"] = np.full(nxcells, itile, dtype=np.int32)
@@ -154,13 +170,13 @@ class XGridObj() :
         for tgt_tile in self.datadict:
             for src_tile in self.datadict[tgt_tile]:
                 src_i = xr.DataArray(self.datadict[tgt_tile][src_tile]["src_i"], dims=["nxcells"],
-                                     attrs={"src_i": "parent longitudonal (x) cell indices in src_mosaic"})
+                                     attrs={"src_i": "parent longitudinal (x) cell indices in src_mosaic"})
                 src_j = xr.DataArray(self.datadict[tgt_tile][src_tile]["src_j"], dims=["nxcells"],
-                                     attrs={"src_j": "parent latitudonal (y) cell indices in src_mosaic"})
+                                     attrs={"src_j": "parent latitudinal (y) cell indices in src_mosaic"})
                 tgt_i = xr.DataArray(self.datadict[tgt_tile][src_tile]["tgt_i"], dims=["nxcells"],
-                                     attrs={"src_i": "parent longitudonal (x) cell indices in src_mosaic"})
+                                     attrs={"src_i": "parent longitudinal (x) cell indices in src_mosaic"})
                 tgt_j = xr.DataArray(self.datadict[tgt_tile][src_tile]["tgt_j"], dims=["nxcells"],
-                                     attrs={"src_j": "parent latitudonal (y) cell indices in src_mosaic"})
+                                     attrs={"src_j": "parent latitudinal (y) cell indices in src_mosaic"})
                 xarea = xr.DataArray(self.datadict[tgt_i][src_i]["xarea"], dims=["nxcells"],
                                      attrs={"xarea":"exchange grid cell area (m2)"})
 
@@ -179,7 +195,7 @@ class XGridObj() :
 
 
     def _check_grid(self):
-        
+
         if self.src_grid is not None: self._srcinfoisthere = True
         if self.tgt_grid is not None: self._tgtinfoisthere = True
 
@@ -188,7 +204,7 @@ class XGridObj() :
 
         if self.src_mosaic is None: return
         if self.tgt_mosaic is None: return
-        
+
         if self.src_mosaic.grid is None:
             self.src_mosaic.get_grid(toradians=True, agrid=self.on_agrid, free_dataset=True)
         if self.tgt_mosaic.grid is None:
@@ -199,7 +215,7 @@ class XGridObj() :
 
         self._srcinfoisthere = True
         self._tgtinfoisthere = True
-        
+
 
     def _check_mosaic_file(self):
 

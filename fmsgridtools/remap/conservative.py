@@ -6,7 +6,7 @@ def remap(src_mosaic: str,
           input_dir: str = "./",
           output_dir: str = None,
           input_file: str = None,
-          output_file: str = None,          
+          output_file: str = None,
           tgt_mosaic: str = None,
           tgt_nlon: int = None,
           tgt_nlat: int =  None,
@@ -19,10 +19,13 @@ def remap(src_mosaic: str,
           check_conserve: bool = False):
 
     #create an xgrid object
-    xgrid = XGridObj(input_dir, src_mosaic, tgt_mosaic)
+    xgrid = XGridObj(input_dir, src_mosaic_file=src_mosaic, tgt_mosaic_file=tgt_mosaic)
 
     #create xgrid
     xgrid.create_xgrid()
 
-    
-        
+    #write
+    xgrid.write()
+
+
+
