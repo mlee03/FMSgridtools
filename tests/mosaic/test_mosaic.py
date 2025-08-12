@@ -23,10 +23,10 @@ def make_grid(gridfile):
     area = xr.DataArray(np.ones((grid_size, grid_size), dtype=np.float64), dims=["ny", "nx"])
     x = xr.DataArray(x, dims=["nyp", "nxp"])
     y = xr.DataArray(y, dims=["nyp", "nxp"])
-
+    
     xr.Dataset(data_vars = {"x": x, "y":y, "area":area}).to_netcdf(gridfile)
 
-
+    
 @pytest.mark.skip
 def test_create_regional_input():
 
@@ -63,42 +63,42 @@ def test_write():
                                     contact_index=np.full(6, "", dtype=str))
     mosaic.write(output)
     assert os.path.exists(output)
-
+ 
 def test_ntiles():
     mosaic = fmsgridtools.MosaicObj(mosaic_file=output).read()
     assert mosaic.ntiles == 6
 
-
+    
 def test_gridfiles():
     mosaic2 = fmsgridtools.MosaicObj(mosaic_file=output).read()
     assert all([mosaic2.gridfiles[i] == gridfiles[i] for i in range(mosaic2.ntiles)])
     os.remove(output)
 
-
+    
 def test_getgrid():
 
     for ifile in gridfiles: make_grid(ifile)
     mosaic = fmsgridtools.MosaicObj(ntiles=ntiles, gridtiles=gridtiles, gridfiles=gridfiles)
-    mosaic.get_grid(toradians=True, agrid=True)
-
-
+    mosaic.get_grid(toradians=True, agrid=True, free_dataset=True)
+    
+    
 def test_solo_mosaic():
 
     x1, y1 = np.meshgrid(np.arange(0,46,1, dtype=np.float64), np.arange(0,11,1, dtype=np.float64))
     xr.Dataset(data_vars=dict(x=xr.DataArray(x1, dims=["nyp","nxp"]),
                               y=xr.DataArray(y1, dims=["nyp", "nxp"]))
     ).to_netcdf('grid.tile1.nc')
-
+    
     x2, y2 = np.meshgrid(np.arange(45,90,1, dtype=np.float64), np.arange(0,11,1, dtype=np.float64))
     xr.Dataset(data_vars=dict(x=xr.DataArray(x2, dims=["nyp","nxp"]),
                               y=xr.DataArray(y2, dims=["nyp", "nxp"]))
     ).to_netcdf('grid.tile2.nc')
-
+                          
     runner = CliRunner()
     result = runner.invoke(fmsgridtools.make_mosaic.solo, ['--num_tiles', '2',
                                                            '--tile_file', 'grid.tile1.nc',
                                                            '--tile_file', 'grid.tile2.nc'])
-
+    
     assert result.exit_code == 0
     print(result.stdout)
     assert 'NOTE: There are 1 contacts' in result.stdout
@@ -112,7 +112,7 @@ def test_regional_mosaic():
     result = runner.invoke(fmsgridtools.make_mosaic, ['regional',
                                          '--global_mosaic',
                                          'C48_mosaic.nc',
-                                         '--regional_file',
+                                         '--regional_file', 
                                          'regional_input_file.tile1.nc'])
     assert result.exit_code == 0
     assert 'Congratulations: You have successfully run regional mosaic' in result.stdout
