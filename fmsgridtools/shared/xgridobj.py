@@ -89,8 +89,6 @@ class XGridObj() :
         concat_dataset.to_netcdf(outfile)
 
 
-
-
     def to_dataset(self):
 
         if self.datadict is None:  raise OSError("datadict is None")

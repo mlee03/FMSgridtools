@@ -6,7 +6,7 @@ def main():
     click.echo("Starting fmsgridtools")
 
 @main.group()
-def remap():
+def regrid():
     click.echo("Starting remap")
 
 @main.group()

@@ -44,7 +44,7 @@ class MosaicObj:
         if self.mosaic_file is None:
             raise IOError("Please specify the mosaic file")
 
-        check_file_is_there(f"{self.input_dir}{self.mosaic_file}")
+        check_file_is_there(self.input_dir+self.mosaic_file)
         self.dataset = xr.open_dataset(self.input_dir+self.mosaic_file)
 
         self.get_attributes()
