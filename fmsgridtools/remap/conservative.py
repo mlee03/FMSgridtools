@@ -2,6 +2,15 @@ import numpy as np
 
 from fmsgridtools.shared.xgridobj import XGridObj
 
+def remapping(xgrid: XGridObj, variable: str):
+
+  for tgt_tile in xgrid.dataset:
+    for src_tile in xgrid.dataset[tgt_tile]:
+       pass
+
+      
+
+
 def remap(src_mosaic: str,
           input_dir: str = "./",
           output_dir: str = None,
@@ -26,6 +35,8 @@ def remap(src_mosaic: str,
 
     #write
     xgrid.write()
+
+
 
 
 

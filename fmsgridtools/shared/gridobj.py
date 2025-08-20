@@ -3,6 +3,8 @@ from typing import List, Optional
 import numpy as np
 import numpy.typing as npt
 import xarray as xr
+import pyfms
+
 from fmsgridtools.shared.gridtools_utils import check_file_is_there
 
 
@@ -45,7 +47,7 @@ class GridObj:
         if free_dataset:
             del self.dataset
             self.dataset = None
-        
+
         if toradians:
             self.x = np.radians(self.x, dtype=np.float64)
             self.y = np.radians(self.y, dtype=np.float64)
@@ -55,10 +57,10 @@ class GridObj:
             [self.nyp, self.nxp] = self.x.shape
             self.nx = self.nxp - 1
             self.ny = self.nyp - 1
-            
+
         return self
 
-    
+
     def get_attributes(self):
 
         for key in self.dataset.data_vars:
@@ -92,7 +94,7 @@ class GridObj:
         else:
             return None
 
-        
+
     def x_contiguous(self):
 
         if self.x is not None:
@@ -100,7 +102,7 @@ class GridObj:
         else:
             return None
 
-        
+
     def y_contiguous(self):
 
         if self.y is not None:
@@ -108,7 +110,7 @@ class GridObj:
         else:
             return None
 
-        
+
     def dx_contiguous(self):
 
         if self.dx is not None:
@@ -116,7 +118,7 @@ class GridObj:
         else:
             return None
 
-        
+
     def dy_contiguous(self):
 
         if self.dy is not None:
@@ -124,7 +126,7 @@ class GridObj:
         else:
             return None
 
-        
+
     def area_contiguous(self):
 
         if self.area is not None:
@@ -132,7 +134,7 @@ class GridObj:
         else:
             return None
 
-        
+
     def angle_dx_contiguous(self):
 
         if self.angle_dx is not None:
@@ -140,7 +142,7 @@ class GridObj:
         else:
             return None
 
-        
+
     def angle_dy_contiguous(self):
 
         if self.angle_dy is not None:
@@ -149,15 +151,15 @@ class GridObj:
             return None
 
 
-    """
-    get_agrid_lonlat:
-
-    This method returns the lon and lat for the A-grid as calculated from the
-    x and y attributes of the GridObj.
-    """
     def agrid(self)-> tuple[npt.NDArray, npt.NDArray]:
 
-        if self.x is not None and self.y is not None:                        
+        """
+        get_agrid_lonlat:
+
+        This method returns the lon and lat for the A-grid as calculated from the
+        x and y attributes of the GridObj.
+        """
+        if self.x is not None and self.y is not None:
             a_lon = np.ascontiguousarray(self.x[::2, ::2])
             a_lat = np.ascontiguousarray(self.y[::2, ::2])
 
