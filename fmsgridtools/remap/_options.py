@@ -59,6 +59,13 @@ def common_options(func):
                   dimensions of the lat/lon grid via tgt_nlon and tgt_nlat
                   """
     )
+    @click.option("--scalar_variables",
+                  type = list[str],
+                  help = 
+                  """
+                  List of scalar variables to rempap
+                  """
+    )
     @click.option("--tgt_nlon",
                   type = int,
                   help =
