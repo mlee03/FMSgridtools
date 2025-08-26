@@ -3,6 +3,9 @@ from pathlib import Path
 import xarray as xr
 
 import pyfms
+import pyfrenctools
+
+from fmsgridtools.shared.mosaicobj import MosaicObj
 
 class DataObj():
 
@@ -40,7 +43,7 @@ class DataObj():
     self.area_averaged = False
     self.scale_factor: np.float32 | np.float64 | np.int32 | np.int64 = None
     self.offset: np.float32 | np.float64 | np.int32 | np.int64 = None
-    self.missing_value: np.float32 | np.float64 | np.int32 | np.int64 = None
+    self.missing_list: list = None
     self.fill_value: np.float32 | np.float64 | np.int32 | np.int64 = None
     self.static_area: dict = None
     self.data: np.float32 | np.float64 | np.int32 | np.int64 = None
@@ -66,7 +69,6 @@ class DataObj():
       get_value = lambda attr_key: attributes[attr_key] if attr_key in attributes else None
 
       #get missing value
-      self.missing_value = get_value("missing_value")
       self.fill_value = get_value("_FillValue")
       self.offset = get_value("add_offset")
       self.scale_factor = get_value("scale_factor")
@@ -91,8 +93,9 @@ class DataObj():
           splitted_string = attributes["cell_measures"].split()
           if splitted_string[0] == "area:":
             self.cell_measures = splitted_string[1]
-            if self.cell_measures not in self.area: raise RuntimeError("area type not found")
+            if self.cell_measures not in self.static_area: raise RuntimeError("area type not found")
 
+    self.data = dataset[self.variable]  
 
 
   def get_coords(self, dataset):
@@ -122,39 +125,50 @@ class DataObj():
     self.coords = True
 
 
-  def get(self, klevel: int = None, timepoint: int = None)
+  def get_klevel(self, klevel: int):
 
     """
     Get slice of a variable from the dataset.
     """
 
-    with xr.open_dataset(self.input_dir/self.datafile) as dataset:
-      subset = dataset[self.variable]
-      if timepoint is not None:
-        if self.has_time: subset = dataset[self.variable].isel({self.time:timepoint})
-      if klevel is not None:
-        if self.has_z: subset = subset.isel({self.z:klevel})
-
-    #need to get every other point
-    self.data = subset
+    with xr.open_dataset(self.input_dir/self.datafile, decode_cf=False) as dataset:
+      if self.has_z: self.data = self.data.isel({self.z:klevel}).values.flatten()
 
 
-  def pre_scale(self, grid):
+  def get_tlevel(self, timepoint: int):
+
+    """
+    Get slice of a variable from the dataset.
+    """
+
+    with xr.open_dataset(self.input_dir/self.datafile, decode_cf=False) as dataset:
+      if self.has_time: subset = dataset[self.variable].isel({self.time:timepoint}).values.flatten()
+
+
+  def check_missing_value(dataarray):
+
+    if "missing_value" in dataarray.attrs:
+      missing_value = dataarray.attrs["missing_value"]
+
+    if np.any(dataarray.values == missing_value): 
+      raise RuntimeError("missing value found")    
+
+
+  def pre_scale(self, gridobj):
+
+    grid = gridobj[f"tile{self.tile}"]
 
     if self.area_averaged:
-      with xr.open_dataset(self.area[self.cell_measures]) as dataset:
-        area_from_file = dataset[self.cell_measures].values[::2, ::2]
+      with xr.open_dataset(self.input_dir/self.static_area[self.cell_measures], decode_cf=False) as dataset:
+        area_from_file = dataset[self.cell_measures].values.flatten()
 
-      area_from_here = pyfms.get_grid_area(nlon=grid.nx,
-                                           nlat=grid.ny,
-                                           lon=grid.x,
-                                           lat=grid.y)
+      area_from_here = pyfrenctools.grid_utils.get_grid_area(lon=grid.x, lat=grid.y)
 
       self.data *= area_from_file/area_from_here
 
 
-    #return np.multiply(subset.values, area, where=np.invert(subset.isnull().values))
-
+grid = MosaicObj(input_dir="/home/Mikyung.Lee/FRE-NCTools/test-benchmark/tests_fregrid/Testc-conserve1-output",
+                 mosaic_file="C384_mosaic.nc").read().get_grid(toradians=True, agrid=True, free_dataset=True)
 
 data = DataObj(input_dir="/home/Mikyung.Lee/FRE-NCTools/DONOTDELETEME_DATA/TESTS/TESTS_INPUT/Testc-input/",
                datafile="00010101.land_month_cmip",
@@ -162,6 +176,8 @@ data = DataObj(input_dir="/home/Mikyung.Lee/FRE-NCTools/DONOTDELETEME_DATA/TESTS
                variable="nbp")
 
 data.get(timepoint=0)
+data.pre_scale(gridobj=grid)
+
 
 
 

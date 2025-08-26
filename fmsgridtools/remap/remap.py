@@ -17,14 +17,6 @@ logger = logging.getLogger(__name__)
               Only 1 or 2 order is supported for conservative interpolation
               """
 )
-@click.option("--static_file",
-              type = click.Path(exists=True),
-              help =
-              """
-              To remap data where cell_methods = CELL_METHODS_MEAN, the static_file
-              will src grid cell areas should be provided
-              """
-)
 @click.option("--check_conserve",
               type = bool,
               help =
@@ -34,13 +26,16 @@ logger = logging.getLogger(__name__)
 )
 def conservative_method(input_dir, output_dir, input_file, output_file, #common_options
                         src_mosaic, tgt_mosaic, tgt_nlon, tgt_nlat,     #common_options
-                        lon_bounds, lat_bounds, kbounds, tbounds,       #common_options
-                        debug, order, static_file, check_conserve):
+                        scalar_variables, lon_bounds, lat_bounds, 
+                        kbounds, tbounds, debug, order, check_conserve):
     
     setlogger.setconfig("remap.log", debug)
     logger.info("Starting conservative remapping")
     
-    conservative.remap(src_mosaic, input_dir, output_dir, input_file,
-                       output_file, tgt_mosaic, tgt_nlon, tgt_nlat,
-                       lon_bounds, lat_bounds, kbounds, tbounds,
-                       order, static_file, check_conserve)    
+    #create an xgrid object
+    xgrid = XGridObj(input_dir, src_mosaic_file=src_mosaic, tgt_mosaic_file=tgt_mosaic)
+    xgrid.create_xgrid()
+
+    xgrid = conservative.remap(xgrid, input_dir, output_dir, input_file, output_file,
+                               scalar_variables, lon_bounds, lat_bounds, kbounds, tbounds,
+                               order, check_conserve)    
