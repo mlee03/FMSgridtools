@@ -1,9 +1,9 @@
 import click
 import logging
 
-from fmsgridtools.re_map import _options
+from fmsgridtools.remap import _options
 from fmsgridtools.utils import setlogger
-from fmsgridtools.re_map import conservative
+from fmsgridtools.remap import conservative
 
 logger = logging.getLogger(__name__)
 
