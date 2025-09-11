@@ -20,9 +20,16 @@ def get_provenance_attrs(
     grid_version: Optional[str] = "0.2") -> dict:
     # returns a dictionary of provenance information to be added
     # as global attributes for output netcdf files
-    repo = Repo(search_parent_directories=True)
-    git_hash = repo.head.object.hexsha
-    package_version = get_distribution("fmsgridtools").version
+    try:
+        repo = Repo(search_parent_directories=True)
+        git_hash = repo.head.object.hexsha
+    except Exception:
+        git_hash = "unknown"
+
+    try:
+        package_version = get_distribution("fmsgridtools").version
+    except Exception:
+        package_version = "unknown"
     history = " ".join(sys.argv)
     hostname = run(["hostname"],capture_output=True,text=True).stdout
     g_attrs = {

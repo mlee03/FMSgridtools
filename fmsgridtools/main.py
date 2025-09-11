@@ -1,5 +1,7 @@
 import click
 import fmsgridtools
+from fmsgridtools.make_hgrid.make_hgrid import gnomonic
+from fmsgridtools.make_hgrid.make_hgrid import lonlat
 
 @click.group()
 def main():
@@ -21,7 +23,9 @@ def make_mosaic():
 def make_hgrid():
     click.echo("Starting make_hgrid")
 
-remap.add_command(fmsgridtools.remap.conservative_method)
+make_hgrid.add_command(gnomonic)
+make_hgrid.add_command(lonlat)
+regrid.add_command(fmsgridtools.remap.conservative_method)
 
 make_topog.add_command(fmsgridtools.make_topog.realistic_or_basin)
 
