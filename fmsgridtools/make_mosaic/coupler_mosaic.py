@@ -190,7 +190,7 @@ def get_atmxlnd(atmxocn_landpart: type[XGridObj], atm_mosaic: type[MosaicObj] = 
     
 
 def make(atm_mosaic_file: str, lnd_mosaic_file: str, ocn_mosaic_file: str,
-         topog_file: str, input_dir: str = "./"):    
+         topog_file: str, input_dir: str = "./", on_gpu: bool = False):    
     
     #read in mosaic files
     atm_mosaic = MosaicObj(input_dir=input_dir, mosaic_file=atm_mosaic_file).read()
@@ -208,7 +208,7 @@ def make(atm_mosaic_file: str, lnd_mosaic_file: str, ocn_mosaic_file: str,
     ocn_mask = get_ocn_mask(ocn_mosaic=ocn_mosaic, topog_file=topogfile_dict)
 
     #atmxocn
-    atmxocn = XGridObj(src_grid=atm_mosaic.grid, tgt_grid=extended_grid)
+    atmxocn = XGridObj(src_grid=atm_mosaic.grid, tgt_grid=extended_grid, on_gpu=on_gpu)
     atmxocn.create_xgrid(tgt_mask=ocn_mask)
 
     #undo extra ocn dimension
@@ -220,8 +220,8 @@ def make(atm_mosaic_file: str, lnd_mosaic_file: str, ocn_mosaic_file: str,
     for itile in ocn_mask: ocn_mask[itile] = np.float64(1.0) - ocn_mask[itile]
             
     #atmxocn the land part 
-    atmxocn_landpart = XGridObj(src_grid=atm_mosaic.grid, tgt_grid=extended_grid)
-    atmxocn_landpart.create_xgrid(tgt_mask=ocn_mask)    
+    atmxocn_landpart = XGridObj(src_grid=atm_mosaic.grid, tgt_grid=extended_grid, on_gpu=on_gpu)
+    atmxocn_landpart.create_xgrid(tgt_mask=ocn_mask)
     atmxlnd = get_atmxlnd(atmxocn_landpart, atm_mosaic=atm_mosaic)
             
     #write
