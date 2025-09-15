@@ -19,8 +19,8 @@ def test_make_hgrid_lonlat_grid():
         if result.exit_code != 0:
             print(result.output)
         assert result.exit_code == 0
-    assert Path('horizontal_grid.nc').exists(), "File 'horizontal_grid.nc' does not exist."
-    Path('horizontal_grid.nc').unlink()
+        assert Path('horizontal_grid.nc').exists(), "File 'horizontal_grid.nc' does not exist."
+        Path('horizontal_grid.nc').unlink()
 
 
 def test_make_hgrid_gnomonic_ed():
@@ -119,7 +119,7 @@ def test_make_grid_info_gnomonic_ed():
 
     ntiles = 6
     grid_size = 96
-    nlon = np.fromstring(str(grid_size), dtype=np.int32, sep=',')
+    nlon = np.array([grid_size], dtype=np.int32)
     grid.make_grid_info(nlon=nlon, ntiles=ntiles, ntiles_global=6,
                         grid_type="GNOMONIC_ED", conformal=False)
 
@@ -135,14 +135,14 @@ def test_make_grid_info_gnomonic_ed_nest():
     ntiles_global = 6
     nest_grids = 3
     grid_size = 96
-    nlon = np.fromstring(str(grid_size), dtype=np.int32, sep=',')
+    nlon = np.array([grid_size], dtype=np.int32)
     ntiles = ntiles_global + nest_grids
-    parent_tile = np.fromstring("2,5,6", dtype=np.int32, sep=',')
-    refine_ratio = np.fromstring("2,2,2", dtype=np.int32, sep=',')
-    istart_nest = np.fromstring("7,13,7", dtype=np.int32, sep=',')
-    iend_nest = np.fromstring("58,68,40", dtype=np.int32, sep=',')
-    jstart_nest = np.fromstring("7,7,23", dtype=np.int32, sep=',')
-    jend_nest = np.fromstring("58,68,48", dtype=np.int32, sep=',')
+    parent_tile = np.array([2, 5, 6], dtype=np.int32)
+    refine_ratio = np.array([2, 2, 2], dtype=np.int32)
+    istart_nest = np.array([7, 13, 7], dtype=np.int32)
+    iend_nest = np.array([58, 68, 40], dtype=np.int32)
+    jstart_nest = np.array([7, 7, 23], dtype=np.int32)
+    jend_nest = np.array([58, 68, 48], dtype=np.int32)
     grid_type = "GNOMONIC_ED"
     conformal = False
     output_length_angle = True
@@ -170,17 +170,17 @@ def test_make_grid_info_gnomonic_ed_telescope_nest():
     ntiles_global = 6
     nest_grids = 3
     grid_size = 96
-    nlon = np.fromstring(str(grid_size), dtype=np.int32, sep=',')
+    nlon = np.array([grid_size], dtype=np.int32)
     ntiles = ntiles_global + nest_grids
 
     # This is the same as the previous test but with a telescope nest,
     # So the parent (tile7) is a nest
-    parent_tile = np.fromstring("2,5,7", dtype=np.int32, sep=',')
-    refine_ratio = np.fromstring("2,2,2", dtype=np.int32, sep=',')
-    istart_nest = np.fromstring("7,13,7", dtype=np.int32, sep=',')
-    iend_nest = np.fromstring("58,68,40", dtype=np.int32, sep=',')
-    jstart_nest = np.fromstring("7,7,23", dtype=np.int32, sep=',')
-    jend_nest = np.fromstring("58,68,48", dtype=np.int32, sep=',')
+    parent_tile = np.array([2, 5, 7], dtype=np.int32)
+    refine_ratio = np.array([2, 2, 2], dtype=np.int32)
+    istart_nest = np.array([7, 13, 7], dtype=np.int32)
+    iend_nest = np.array([58, 68, 40], dtype=np.int32)
+    jstart_nest = np.array([7, 7, 23], dtype=np.int32)
+    jend_nest = np.array([58, 68, 48], dtype=np.int32)
     grid_type = "GNOMONIC_ED"
     conformal = False
     output_length_angle = True
@@ -207,10 +207,10 @@ def test_make_grid_info_lat_lon():
 
     grid_size = 60
     conformal = False
-    nlon = np.fromstring(str(grid_size), dtype=np.int32, sep=',')
-    nlat = np.fromstring(str(grid_size), dtype=np.int32, sep=',')
-    nxbnds = np.fromstring('0,30', dtype=np.int32, sep=',')
-    nybnds = np.fromstring('50,50', dtype=np.int32, sep=',')
+    nlon = np.array([grid_size], dtype=np.int32)
+    nlat = np.array([grid_size], dtype=np.int32)
+    nxbnds = np.array([0, 30], dtype=np.int32)
+    nybnds = np.array([50, 50], dtype=np.int32)
     grid.make_grid_info(nlon=nlon, nlat=nlat, nxbnds=nxbnds.size, nybnds=nybnds.size,
                         conformal=conformal)
 
