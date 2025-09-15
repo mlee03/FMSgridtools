@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 from click.testing import CliRunner
 from fmsgridtools.main import main
 from fmsgridtools.make_hgrid.hgridobj import HGridObj
@@ -19,8 +19,8 @@ def test_make_hgrid_lonlat_grid():
         if result.exit_code != 0:
             print(result.output)
         assert result.exit_code == 0
-        assert os.path.exists('horizontal_grid.nc'), "File 'horizontal_grid.nc' does not exist."
-        os.remove('horizontal_grid.nc')
+    assert Path('horizontal_grid.nc').exists(), "File 'horizontal_grid.nc' does not exist."
+    Path('horizontal_grid.nc').unlink()
 
 
 def test_make_hgrid_gnomonic_ed():
@@ -35,10 +35,10 @@ def test_make_hgrid_gnomonic_ed():
         assert result.exit_code == 0
 
         tiles = [f"C48_grid.tile{i}.nc" for i in range(1, 7)]
-        missing = [f for f in tiles if not os.path.exists(f)]
+        missing = [f for f in tiles if not Path(f).exists()]
         assert not missing, f"Missing grid tile files: {', '.join(missing)}"
         for f in tiles:
-            os.remove(f)
+            Path(f).unlink()
 
 
 def test_make_hgrid_gnomonic_ed_nest():
@@ -71,10 +71,10 @@ def test_make_hgrid_gnomonic_ed_nest():
         assert result.exit_code == 0
 
         tiles = [f"C48_grid.tile{i}.nc" for i in range(1, 10)]
-        missing = [f for f in tiles if not os.path.exists(f)]
+        missing = [f for f in tiles if not Path(f).exists()]
         assert not missing, f"Missing grid tile files: {', '.join(missing)}"
         for f in tiles:
-            os.remove(f)
+            Path(f).unlink()
 
 
 def test_make_hgrid_gnomonic_ed_telescope_nest():
@@ -107,10 +107,10 @@ def test_make_hgrid_gnomonic_ed_telescope_nest():
         assert result.exit_code == 0
 
         tiles = [f"C48_grid.tile{i}.nc" for i in range(1, 10)]
-        missing = [f for f in tiles if not os.path.exists(f)]
+        missing = [f for f in tiles if not Path(f).exists()]
         assert not missing, f"Missing grid tile files: {', '.join(missing)}"
         for f in tiles:
-            os.remove(f)
+            Path(f).unlink()
 
 
 ## Test `make_grid_info`
