@@ -30,7 +30,7 @@ def make(
     if do_cube_transform and do_schmidt:
         raise RuntimeError("make_hgrid: both --do_cube_transform and --do_schmidt are set")
     
-    grid_obj = HGridObj()
+    grid_obj = HGridObj(verbose=verbose)
 
     if nlon is not None:
         nlon = np.fromstring(nlon, dtype=np.int32, sep=',')

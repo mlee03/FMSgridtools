@@ -3,6 +3,7 @@ import ctypes
 import numpy as np
 from numpy.typing import NDArray
 import xarray as xr
+import logging
 
 from fmsgridtools.shared.gridtools_utils import get_provenance_attrs
 from fmsgridtools.shared.gridobj import GridObj
@@ -57,7 +58,46 @@ def fill_cubic_grid_halo(
             data[(nyp+1)*nxph+i] = data2_all[ln*nxp*nyp+(nxp-i)*nyp+joff] # north halo
 
 class HGridObj():
-    def __init__(self):
+    """
+    Holds metadata for a computational grid tile.
+
+    Attributes:
+        tile (str):
+        x (np.ndarray): 1D array of float64 values specifying longitudes of grid cell corners.
+        y (np.ndarray): 1D array of float64 values specifying latitudes of grid cell corners.
+        dx (np.ndarray): 1D array of float64 values specifying distances between grid points in the x-direction.
+        dy (np.ndarray): 1D array of float64 values specifying distances between grid points in the y-direction.
+        area (np.ndarray): 1D array of float64 values specifying area of each grid cell.
+        angle_dx (np.ndarray): 1D array of float64 values specifying angles between the local x-direction and geographic east.
+        angle_dy (np.ndarray): 1D array of float64 values specifying angles between the local y-direction and geographic north.
+        arcx (str): Describes the arc (edge) types in the x-direction for each element along the given dimension.
+        nx (int): Number of grid points at cell centers in the x-direction.
+        ny (int): Number of grid points at cell centers in the y-direction.
+        nxp (int): Number of grid points at cell edges in the x-direction.
+        nyp (int): Number of grid points at cell edges in the y-direction.
+        nxl (np.ndarray): 1D array of int32 values specifying the number of x-direction grid points per tile.
+        nyl (np.ndarray): 1D array of int32 values specifying the number of y-direction grid points per tile.
+        isc (int): Starting index of the x-axis for the compute domain (excluding halos).
+        iec (int): Ending index of the x-axis for the compute domain (excluding halos).
+        jsc (int): Starting index of the y-axis for the compute domain (excluding halos).
+        jec (int): Ending index of the y-axis for the compute domain (excluding halos).
+    """
+
+    def __init__(self, verbose:bool):
+
+        self.logger = logging.getLogger("HGridObj")
+        self.logger.setLevel(logging.DEBUG)
+        if not self.logger.handlers:
+            handler = logging.StreamHandler()
+            formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
+
+        if verbose:
+            self.logger.setLevel(logging.DEBUG)
+        else:
+            self.logger.setLevel(logging.WARNING)
+
         self.tile = ""
         self.x = None
         self.y = None
@@ -77,6 +117,48 @@ class HGridObj():
         self.iec = None
         self.jsc = None
         self.jec = None
+
+    def __init_numpy_arrays__(self, nsuper, narea, ndx, ndy):
+
+        self.logger.debug(f"make_grid_info: allocating x and y to {nsuper}")
+        self.logger.debug(f"make_grid_info: allocating angle_dx and angle_dy {nsuper}")
+        self.logger.debug(f"make_grid_info: allocating dx to {ndx} and dy to {ndy}")
+
+        self.x = np.empty(shape=nsuper, dtype=np.float64)
+        self.y = np.empty(shape=nsuper, dtype=np.float64)
+        self.area = np.empty(shape=narea, dtype=np.float64)
+        self.dx = np.empty(shape=ndx, dtype=np.float64)
+        self.dy = np.empty(shape=ndy, dtype=np.float64)
+        self.angle_dx = np.empty(shape=nsuper, dtype=np.float64)
+        self.angle_dy = np.empty(shape=nsuper, dtype=np.float64)
+
+    def make_grid_info_lat_lon(self, nlon: int=None, nlat: int=None):
+
+        self.logger.debug(f"make_grid_info: Creating a lat-lon with nlon={nlon} and nlat={nlat}")
+
+        self.nxl = np.array(nlon, dtype=np.int32)
+        self.nyl = np.array(nlat, dtype=np.int32)
+        self.arcx = "small_circle"
+
+        self.nx = self.nxl[0]
+        self.ny = self.nyl[0]
+        self.nxp = self.nx + 1
+        self.nyp = self.ny + 1
+
+        # Number of grid points including the edges and centers (super!)
+        nsuper_grid = self.nxp * self.nyp
+        narea = self.nx * self.ny
+        ndx = self.nx * self.nyp
+        ndy = self.nxp * self.ny
+
+        self.__init_numpy_arrays__(nsuper_grid, narea, ndx, ndy)
+
+        self.isc = 0
+        self.iec = self.nx - 1
+        self.jsc = 0
+        self.jec = self.ny - 1
+
+        self.logger.debug(f"make_grid_info: Finished allocating the hgrid_object")
 
     def make_grid_info(
             self,
@@ -99,11 +181,9 @@ class HGridObj():
             output_length_angle: bool=True,
             verbose: bool=False,
     ):
-        """Get super grid size"""
 
-        if verbose:
-            print(f"[INFO] make_hgrid: Number of tiles (ntiles): {ntiles}", file=sys.stderr)
-            print(f"[INFO] make_hgrid: Number of global tiles (ntiles_global): {ntiles_global}", file=sys.stderr)
+        self.logger.debug(f"make_grid_info: Number of total tiles - including nests (ntiles): {ntiles}")
+        self.logger.debug(f"make_grid_info: Number of total parent tiles (ntiles_global): {ntiles_global}")
 
         self.nxl = np.empty(shape=ntiles, dtype=np.int32)
         self.nyl = np.empty(shape=ntiles, dtype=np.int32)
@@ -133,18 +213,6 @@ class HGridObj():
                 self.nxl[n] = (iend_nest[nn] - istart_nest[nn] + 1) * refine_ratio[nn]
                 self.nyl[n] = (jend_nest[nn] - jstart_nest[nn] + 1) * refine_ratio[nn]
 
-        elif grid_type == "FROM_FILE":
-            for n in range(ntiles_global):
-                self.nxl[n] = nlon[n]
-                self.nyl[n] = nlat[n]
-        else:
-            self.nxl[0] = 0
-            self.nyl[0] = 0
-            for n in range(nxbnds - 1):
-                self.nxl[0] += nlon[n]
-            for n in range(nybnds - 1):
-                self.nyl[0] += nlat[n]
-
         self.nx = self.nxl[0]
         self.ny = self.nyl[0]
         self.nxp = self.nx + 1
@@ -160,21 +228,10 @@ class HGridObj():
         for n_nest in range(ntiles):
             print(f"[INFO] tile: {n_nest}, nxl[{self.nxl[n_nest]}], nyl[{self.nyl[n_nest]}], ntiles: {ntiles}\n")
 
-        if grid_type == "FROM_FILE":
-            size1 = 0
-            size2 = 0
-            size3 = 0
-            size4 = 0
-            for n in range(ntiles_global):
-                size1.value += (nlon[n] + 1) * (nlat[n] + 1)
-                size2.value += (nlon[n] + 1) * (nlat[n] + 1 + 1)
-                size3.value += (nlon[n] + 1 + 1) * (nlat[n] + 1)
-                size4.value += (nlon[n] + 1) * (nlat[n] + 1)
-        else:
-            size1 = ctypes.c_ulong(self.nxp * self.nyp * ntiles_global)
-            size2 = ctypes.c_ulong(self.nx * self.nyp * ntiles_global)
-            size3 = ctypes.c_ulong(self.nxp * self.ny * ntiles_global)
-            size4 = ctypes.c_ulong(self.nx * self.ny * ntiles_global)
+        size1 = ctypes.c_ulong(self.nxp * self.nyp * ntiles_global)
+        size2 = ctypes.c_ulong(self.nx * self.nyp * ntiles_global)
+        size3 = ctypes.c_ulong(self.nxp * self.ny * ntiles_global)
+        size4 = ctypes.c_ulong(self.nx * self.ny * ntiles_global)
 
         if not (nest_grids == 1 and parent_tile[0] == 0):
             for n_nest  in range(ntiles_global, ntiles_global+nest_grids):
