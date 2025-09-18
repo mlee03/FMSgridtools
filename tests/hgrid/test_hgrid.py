@@ -115,7 +115,7 @@ def test_make_hgrid_gnomonic_ed_telescope_nest():
 
 ## Test `make_grid_info`
 def test_make_grid_info_gnomonic_ed():
-    grid = HGridObj()
+    grid = HGridObj(verbose=True)
 
     ntiles = 6
     grid_size = 96
@@ -129,8 +129,31 @@ def test_make_grid_info_gnomonic_ed():
     assert_grid_shape_and_size(grid, ntiles, grid_size, nsuper, narea, dx_size, dx_size)
 
 
+def test_make_grid_info_gnomonic_ed_refine_ratio():
+    grid = HGridObj(verbose=True)
+
+    ntiles = 6
+    ratio = 2
+    grid_size = 96
+    nlon = np.array([grid_size], dtype=np.int32)
+    parent_tile = np.array([0], dtype=np.int32)
+
+    # This refine ratio is going to be applied to all of the tiles
+    refine_ratio = np.array([ratio], dtype=np.int32)
+    grid.make_grid_info(nlon=nlon, ntiles=ntiles, ntiles_global=6,
+                        grid_type="GNOMONIC_ED", conformal=False,
+                        nest_grids=1, parent_tile=parent_tile, refine_ratio=refine_ratio)
+
+    # Redefine grid_size to the expected size
+    grid_size = grid_size * ratio
+    nsuper = (grid_size + 1) * (grid_size + 1) * ntiles
+    narea = (grid_size) * (grid_size) * ntiles
+    dx_size = (grid_size) * (grid_size + 1) * ntiles # Same as dy
+    assert_grid_shape_and_size(grid, ntiles, grid_size, nsuper, narea, dx_size, dx_size)
+
+
 def test_make_grid_info_gnomonic_ed_nest():
-    grid = HGridObj()
+    grid = HGridObj(verbose=True)
 
     ntiles_global = 6
     nest_grids = 3
@@ -165,7 +188,7 @@ def test_make_grid_info_gnomonic_ed_nest():
 
 
 def test_make_grid_info_gnomonic_ed_telescope_nest():
-    grid = HGridObj()
+    grid = HGridObj(verbose=True)
 
     ntiles_global = 6
     nest_grids = 3
@@ -203,16 +226,12 @@ def test_make_grid_info_gnomonic_ed_telescope_nest():
 
 
 def test_make_grid_info_lat_lon():
-    grid = HGridObj()
+    grid = HGridObj(verbose=True)
 
     grid_size = 60
-    conformal = False
     nlon = np.array([grid_size], dtype=np.int32)
     nlat = np.array([grid_size], dtype=np.int32)
-    nxbnds = np.array([0, 30], dtype=np.int32)
-    nybnds = np.array([50, 50], dtype=np.int32)
-    grid.make_grid_info(nlon=nlon, nlat=nlat, nxbnds=nxbnds.size, nybnds=nybnds.size,
-                        conformal=conformal)
+    grid.make_grid_info_lat_lon(nlon=nlon, nlat=nlat)
 
     nsuper = (grid_size + 1) * (grid_size + 1)
     narea = grid_size * grid_size

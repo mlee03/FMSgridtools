@@ -15,7 +15,7 @@ def make(
     verbose: bool = False,
 ):
     center = "none"
-    grid_obj = HGridObj()
+    grid_obj = HGridObj(verbose=verbose)
     
     if nlon is not None:
         nlon = np.fromstring(nlon, dtype=np.int32, sep=',')
@@ -49,14 +49,8 @@ def make(
     else:
         dy_bnds = np.zeros(shape=100, dtype=np.float64)
 
-    grid_obj.make_grid_info(
-        nxbnds=nxbnds,
-        nybnds=nybnds,
-        nlon=nlon,
-        nlat=nlat,
-        verbose=verbose,
-    )
-    
+    grid_obj.make_grid_info_lat_lon(nlon=nlon, nlat=nlat)
+
     pyfrenctools.make_hgrid_wrappers.create_regular_lonlat_grid(
         nxbnds=nxbnds, 
         nybnds=nybnds, 
@@ -85,7 +79,3 @@ def make(
         grid_name=grid_name,
         verbose=verbose
     )
-
-
-    
-
