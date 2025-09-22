@@ -70,14 +70,14 @@ class MosaicObj:
         setattr(self, attribute, value)
 
 
-    def get_grid(self, toradians: bool = False, agrid: bool = False, free_dataset: bool = False) -> dict:
+    def get_grid(self, toradians: bool = False, agrid: bool = False) -> dict:
 
         if self.grid is None: self.grid = {}
         for i in range(self.ntiles):
             gridfile = str(self.input_dir) + str(self.gridlocation) + str(self.gridfiles[i])
-            self.grid[self.gridtiles[i]] = GridObj(gridfile=gridfile).read(toradians=toradians,
-                                                                           agrid=agrid,
-                                                                           free_dataset=free_dataset)
+            self.grid[self.gridtiles[i]] = GridObj(gridfile=gridfile)
+            self.grid[self.gridtiles[i]].read_xy(toradians=toradians,
+                                                 agrid=agrid)
 
         return self.grid
 

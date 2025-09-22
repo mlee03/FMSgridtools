@@ -4,7 +4,6 @@ import numpy.typing as npt
 import xarray as xr
 
 import pyfrenctools
-import pyfms
 
 from fmsgridtools.shared.gridobj import GridObj
 from fmsgridtools.shared.gridtools_utils import check_file_is_there

@@ -3,8 +3,8 @@ from typing import List, Optional
 import numpy as np
 import numpy.typing as npt
 import xarray as xr
-import pyfms
 
+import pyfms
 from fmsgridtools.shared.gridtools_utils import check_file_is_there
 
 
@@ -34,11 +34,34 @@ class GridObj:
         self.dataset = dataset
 
 
-    """
-    read:
-    This function reads in the gridfile and initializes the instance variables
-    """
-    def read(self, toradians: bool = False, agrid: bool = False, free_dataset: bool = False):
+    def read_xy(self, toradians: bool = False, agrid: bool = False):
+
+        with xr.open_dataset(self.gridfile) as dataset:
+
+            for key in dataset.sizes:
+                setattr(self, key, dataset.sizes[key])
+                
+            if agrid: 
+                self.x = np.ascontiguousarray(dataset["x"].values[::2, ::2])
+                self.y = np.ascontiguousarray(dataset["y"].values[::2, ::2])
+                self.nx, self.ny = self.nx//2, self.ny//2
+                self.nxp, self.nyp = self.nx+1, self.ny+1
+            if toradians:
+                self.x = np.radians(self.x, dtype=np.float64)
+                self.y = np.radians(self.y, dtype=np.float64)
+
+    def get_fms_area(self):
+
+        self.area = pyfms.grid_utils.get_grid_area(lon=self.x, lat=self.y)
+        return self.area
+
+    
+    def read_all(self, toradians: bool = False, agrid: bool = False, free_dataset: bool = False):
+
+        """
+        read:
+        This function reads in the gridfile and initializes the instance variables
+        """
 
         check_file_is_there(self.gridfile)
         self.dataset = xr.open_dataset(self.gridfile)
@@ -54,9 +77,10 @@ class GridObj:
 
         if agrid:
             self.x, self.y = self.agrid()
-            [self.nyp, self.nxp] = self.x.shape
-            self.nx = self.nxp - 1
-            self.ny = self.nyp - 1
+            self.nx = self.nx // 2
+            self.ny = self.ny // 2
+            self.nxp = self.nx + 1
+            self.nyp = self.ny + 1
 
         return self
 
