@@ -1,10 +1,22 @@
 import numpy as np
+import xarray as xr
 
 from fmsgridtools.remap.dataobj import DataObj
 from fmsgridtools.shared.xgridobj import XGridObj
 from fmsgridtools.shared.mosaicobj import MosaicObj
 
 import pyfms
+
+def construct_dataset(field, finish = False):
+  
+  if dataset is None:    
+    dataset = xr.Dataset({fieldname: dataarray})
+  else:
+    dataset = xr.merge([dataset, datarray])
+  
+  if finish:
+    for dim, size in dataset.sizes.items():
+      dataset.coords[dim] = np.arange(size)      
 
 
 def remap(xgrid: type[XGridObj] = None,
@@ -41,11 +53,13 @@ def remap(xgrid: type[XGridObj] = None,
   tgt_grid_dict = tgt_mosaic.get_grid(toradians=True, agrid=True)
 
   for tgt_tile, tgt_grid in tgt_grid_dict.items():
+    field_out = None
+    interp_ids = {}
     for src_tile, src_grid in src_grid_dict.items():
 
       area = src_grid.get_fms_area()
       
-      interp_id = pyfms.horiz_interp.get_weights(lon_in=src_grid.x,
+      interp_ids[src_tile] = pyfms.horiz_interp.get_weights(lon_in=src_grid.x,
                                                  lat_in=src_grid.y,
                                                  lon_out=tgt_grid.x,
                                                  lat_out=tgt_grid.y,
@@ -56,28 +70,30 @@ def remap(xgrid: type[XGridObj] = None,
                                                  convert_cf_order=False
       )
 
-      #data
-      data = DataObj(input_dir=data_dir,
-                     tile=src_tile,
-                     datafile=src_data,
-                     variable="temp"
-      )
-      
-      for itime in range(data.ntime):
-        for k in range(data.nz):          
-          if data.area_averaged: 
-            data_in = data.get_slice(klevel=k, timepoint=itime) * data.static_area / area
+    tiles = list(src_grid_dict.keys())
+    field = DataObj(input_dir=data_dir, tiles=tiles, datafile=src_data, variable="temp")
+
+    tgt_data = np.zeros((tgt_grid.ny, tgt_grid.nx))
+
+    for itime in range(field.dims.ntime):
+      for k in range(field.dims.nz):
+        for tile in field.tiles:
+          if field.area_averaged: 
+            field_in = field.get_slice(tile=tile, klevel=k, timepoint=itime) * field.static_area / area
           else:
-            data_in = data.get_slice(klevel=k, timepoint=itime)
+            field_in = field.get_slice(tile=tile, klevel=k, timepoint=itime)
+          
+          tgt_data += pyfms.horiz_interp.interp(interp_id=interp_ids[src_tile],
+                                                data_in=field_in,
+                                                convert_cf_order=False)
+            
+        field.add_data(data=field_out, klevel=k, timepoint=itime)
 
-          data_out = pyfms.horiz_interp.interp(interp_id=interp_id,
-                                               data_in=data_in,
-                                               convert_cf_order=False
-          )
-
-          data.set_out_data(data=data_out, klevel=k, timepoint=itime)
-
-
+    # print(field.data_out)
+    #field.complete_data_out()
+    #construct_dataset("temp", field.data_out, finish=True)    
+    #dataset.to_netcdf("test.nc")
+    
 
 if __name__ == "__main__":
   remap()
