@@ -53,7 +53,10 @@ class DataObj():
         self.fill_value: np.float32 | np.float64 | np.int32 | np.int64 = None
         self.static_files = {}
         self.static_area = {}
+
         self.tgt_field: npt.NDArray = None
+        self.tgt_ntimes: int = None
+        self.tgt_nz: int = None
         
         #set datafile
         if tiles is None:
@@ -146,72 +149,43 @@ class DataObj():
 
 
     def set_da(self, data: npt.NDArray):
-        
-        if self.has_t and self.has_z:
-            this = np.expand_dims(np.expand_dims(data, axis=0), axis=0)
+
+        if self.dims.has_t and self.dims.has_z:
             return xr.DataArray(np.expand_dims(np.expand_dims(data, axis=0), axis=0),
-                                dims=[self.time, self.z, self.y, self.x])
-        elif self.has_z:
-            return xr.DataArray(np.expand_dims(data, axis=0), dims=[self.z, self.y, self.x])
-        elif self.has_t:
-            return xr.DataArray(np.expand_dims(data, axis=0), dims=[self.t, self.y, self.x])
+                                dims=[self.dims.time, self.dims.z, self.dims.y, self.dims.x])
+        elif self.dims.has_z:
+            return xr.DataArray(np.expand_dims(data, axis=0), dims=[self.dims.z, self.dims.y, self.dims.x])
+        elif self.dims.has_t:
+            return xr.DataArray(np.expand_dims(data, axis=0), dims=[self.dims.time, self.dims.y, self.dims.x])
         else:
-            return xr.DataArray(data, dims=[self.y, self.x])
+            return xr.DataArray(data, dims=[self.dims.y, self.dims.x])
 
 
-    def add_data(self, data: npt.NDArray, klevel: int = None, timepoint: int = None):
-    
-        if self.data_out is None:
-            self.data_out = self.set_da(data)
+    def save(self, data: npt.NDArray, klevel: int = None, timepoint: int = None):
+
+        if self.tgt_field is None:
+            self.tgt_field = self.set_da(data)
+            if self.dims.has_z: self.tgt_nz = 1
+            if self.dims.has_t: self.tgt_ntimes = 1
         else:
-            if self.has_t and self.has_z:
-                print(klevel, timepoint)
-                if self.data_out.get_axis_num(self.time) < timepoint:
-                    self.data_out = xr.concat([self.data_out, self.set_da(data)], self.t)
+            if self.dims.has_t and self.dims.has_z:
+                if timepoint > self.tgt_ntimes+1:
+                    self.tgt_field = xr.concat([self.tgt_field, self.set_da(data)], self.dims.time)
+                    self.tgt_ntimes += 1
                 else:
-                    self.data_out = xr.concat([self.data_out, self.set_da(data)], self.z)
-            elif self.has_t:
-                self.data_out = xr.concat([self.data_out, self.set_da(data)], self.t)
-            elif self.has_z:
-                self.data_out = xr.concat([self.data_out, self.set_da(data)], self.z)
+                    self.tgt_field = xr.concat([self.tgt_field, self.set_da(data)], self.dims.z)
+                    self.tgt_nz += 1 
+            elif self.dims.has_t:
+                self.tgt_field = xr.concat([self.tgt_field, self.set_da(data)], self.dims.time)
+                self.tgt_ntimes += 1
+            elif self.dims.has_z:
+                self.tgt_field = xr.concat([self.tgt_field, self.set_da(data)], self.dims.z)
+                self.tgt_nz += 1
       
 
-    def complete_data_out(self):
-        self.data_out.attrs = self.attributes
+    def complete_tgt_field(self):
+        self.tgt_field.attrs = self.attributes
+        return self.tgt_field
+        
     
 
-class TgtField():
-    
-    def __init__(self, variable: str):
-        self.variable = variable
-        self.data = None
-        
-    def convert_data(self, data: npt.NDArray):
-        
-        if self.has_t and self.has_z:
-            this = np.expand_dims(np.expand_dims(data, axis=0), axis=0)
-            return xr.DataArray(np.expand_dims(np.expand_dims(data, axis=0), axis=0),
-                                dims=[self.time, self.z, self.y, self.x])
-        elif self.has_z:
-            return xr.DataArray(np.expand_dims(data, axis=0), dims=[self.z, self.y, self.x])
-        elif self.has_t:
-            return xr.DataArray(np.expand_dims(data, axis=0), dims=[self.t, self.y, self.x])
-        else:
-            return xr.DataArray(data, dims=[self.y, self.x])
-
-        
-    def save(self, data: npt.NDArray, klevel: int = None, timepoint: int = None):    
-        if self.data is None:
-            self.data_out = self.set_da(data)
-        else:
-            if self.has_t and self.has_z:
-                print(klevel, timepoint)
-                if self.data_out.get_axis_num(self.time) < timepoint:
-                    self.data_out = xr.concat([self.data_out, self.set_da(data)], self.t)
-                else:
-                    self.data_out = xr.concat([self.data_out, self.set_da(data)], self.z)
-            elif self.has_t:
-                self.data_out = xr.concat([self.data_out, self.set_da(data)], self.t)
-            elif self.has_z:
-                self.data_out = xr.concat([self.data_out, self.set_da(data)], self.z)
-        
