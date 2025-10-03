@@ -43,5 +43,5 @@ setup(
     include_package_data=True,
     version="0.0.1",
     zip_safe=False,
-    entry_points={"console_scripts": ["fmsgridtools = fmsgridtools.fmsgridtools:fmsgridtools"]},
+    entry_points={"console_scripts": ["fmsgridtools = fmsgridtools.main:main"]},
 )

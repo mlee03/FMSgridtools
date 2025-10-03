@@ -37,7 +37,7 @@ def common_options(func):
                   """
     )
     @click.option("--input_file",
-                  type = click.File(),
+                  #type = click.File(),
                   help =
                   """
                   Input file with field data that will be remapped.
@@ -59,14 +59,14 @@ def common_options(func):
                   """
     )
     @click.option("--src_mosaic",
-                  type = click.File(),
+                  #type = click.File(),
                   help =
                   """
                   Mosaic file for the source grid
                   """
     )
     @click.option("--tgt_mosaic",
-                  type = click.File(),
+                  #type = click.File(),
                   help =
                   """
                   Mosaic file for the target grid.
