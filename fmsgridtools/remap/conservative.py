@@ -1,5 +1,6 @@
 from mpi4py import MPI
 import numpy as np
+from pathlib import Path
 import xarray as xr
 
 from fmsgridtools.remap.dataobj import DataObj
@@ -9,40 +10,41 @@ from fmsgridtools.shared.mosaicobj import MosaicObj
 import pyfms
 
 
-def remap(xgrid: type[XGridObj] = None,
+def remap(input_dir: str = "./",
+          output_dir: str = "./",
+          input_mosaic_dir: str = "./",
+          output_mosaic_dir: str = "./",
           input_file: str = None,
           src_mosaic: str = None,
           tgt_mosaic: str = None,
-          scalar_variables: list[str] = None,
-          input_dir: str = "./",
-          output_dir: str = "./",
           output_file: str = None,
+          scalar_variables: list[str] = None,
           lon_bounds: list = None,
           lat_bounds: list = None,
           kbounds: list = None,
           tbounds: list = None,
           order: int = 1,
-          static_file: str = None,
           check_conserve: bool = False) -> XGridObj:
 
-  mydir = "/home/Mikyung.Lee/FRE-NCTools/test-benchmark/tests_fregrid/Testa-conserve1-output/"
-  data_dir = "/home/Mikyung.Lee/FRE-NCTools/DONOTDELETEME_DATA/TESTS/TESTS_INPUT/Testa-input/"
-  src_mosaic = "C96_mosaic.nc"
-  tgt_mosaic = "lonlat_288x180_mosaic.nc"
-  src_data = "00010101.atmos_month_aer"
+  # input_mosaic_dir = "/home/Mikyung.Lee/FRE-NCTools/test-benchmark/tests_fregrid/Testa-conserve1-output/"
+  # output_mosaic_dir = input_mosaic_dir
+  # input_dir = "/home/Mikyung.Lee/FRE-NCTools/DONOTDELETEME_DATA/TESTS/TESTS_INPUT/Testa-input/"
+  # src_mosaic = "C96_mosaic.nc"
+  # tgt_mosaic = "lonlat_288x180_mosaic.nc"
+  # input_file = "00010101.atmos_month_aer"
 
   #get input grid
-  src_mosaic = MosaicObj(input_dir=mydir, mosaic_file=src_mosaic).read()
+  src_mosaic = MosaicObj(input_dir=input_mosaic_dir, mosaic_file=src_mosaic).read()
   src_grid_dict = src_mosaic.get_grid(toradians=True, agrid=True)
 
   #get target grid
-  tgt_mosaic = MosaicObj(input_dir=mydir, mosaic_file=tgt_mosaic).read()
+  tgt_mosaic = MosaicObj(input_dir=output_mosaic_dir, mosaic_file=tgt_mosaic).read()
   tgt_grid_dict = tgt_mosaic.get_grid(toradians=True, agrid=True)
 
   #initialize fms
   comm = MPI.COMM_WORLD
   pyfms.fms.init(ndomain=len(tgt_grid_dict), localcomm=comm.py2f())
-  pyfms.horiz_interp.init(ninterp=6)
+  pyfms.horiz_interp.init(ninterp=len(src_grid_dict))
 
   #domain
   nx, ny = tgt_grid_dict['tile1'].nx, tgt_grid_dict['tile1'].ny
@@ -59,11 +61,10 @@ def remap(xgrid: type[XGridObj] = None,
     tgt_x = np.ascontiguousarray(tgt_grid_dict[tgt_tile].x[jsc:jec+1, isc:iec+1], dtype=np.float64)
     tgt_y = np.ascontiguousarray(tgt_grid_dict[tgt_tile].y[jsc:jec+1, isc:iec+1], dtype=np.float64)
 
-    interp_ids, src_tiles = {}, []
-    for src_tile, src_grid in src_grid_dict.items():
+    interp_ids, src_tiles = {}, list(src_grid_dict.keys())
+    for src_tile in src_tiles:
 
-      src_tiles.append(src_tile)
-
+      src_grid = src_grid_dict[src_tile]
       area = src_grid.get_fms_area()
 
       interp_ids[src_tile] = pyfms.horiz_interp.get_weights(lon_in=src_grid.x,
@@ -79,15 +80,15 @@ def remap(xgrid: type[XGridObj] = None,
 
     # get list of all variables to regrid
     no_regrid = ["land_mask", "average_T1", "average_T2", "average_DT", "time_bnds", "bk", "pk", "land_mask"]
-    if len(src_tiles) > 0: datafile_tile1 = src_data + ".tile1"
+    if len(src_tiles) > 0: input_file_tile1 = input_file + ".tile1"
     if scalar_variables is None:
-      with xr.open_dataset(data_dir+"/"+datafile_tile1+".nc", decode_cf=False) as dataset:
+      with xr.open_dataset(input_dir+"/"+input_file_tile1+".nc", decode_cf=False) as dataset:
         scalar_variables = [key for key in dataset.data_vars if key not in no_regrid]
 
     fields = {}
     for variable in scalar_variables:
 
-      field = DataObj(input_dir=data_dir, tiles=src_tiles, datafile=src_data, variable=variable)
+      field = DataObj(input_dir=input_dir, tiles=src_tiles, datafile=input_file, variable=variable)
 
       times = list(range(field.dims.ntime)) if field.dims.has_t else [None]
       klevels = list(range(field.dims.nz)) if field.dims.has_z  else [None]
@@ -144,7 +145,8 @@ def remap(xgrid: type[XGridObj] = None,
         fields[variable] = field.complete_tgt_field()
         print(variable)
     if pyfms.mpp.pe() == 0:
-      xr.Dataset(data_vars=fields).to_netcdf("test.nc")
+      if output_file is None: output_file = input_file + ".nc"
+      xr.Dataset(data_vars=fields).to_netcdf(Path(output_dir)/output_file)
 
 
 if __name__ == "__main__":

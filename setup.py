@@ -27,7 +27,7 @@ requirements: List[str] = [
     "numpy",
     "xarray",
     "netCDF4",
-#    local_pkg("pyFMS", "pyFMS"),
+    local_pkg("pyFMS", "pyFMS"),
     local_pkg("pyfrenctools", "FREnctools_lib")
 ]
 
@@ -43,5 +43,5 @@ setup(
     include_package_data=True,
     version="0.0.1",
     zip_safe=False,
-    entry_points={"console_scripts": ["fmsgridtools = fmsgridtools.main:main"]},
+    entry_points={"console_scripts": ["fmsgridtools = fmsgridtools.fmsgridtools:fmsgridtools"]},
 )

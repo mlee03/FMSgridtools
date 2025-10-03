@@ -7,7 +7,7 @@ def common_options(func):
                   type = click.Path(exists=True),
                   help =
                   """
-                  Directory containing the input files such as 
+                  Directory containing the input files such as
                   the mosaic and input field files.
                   """
     )
@@ -20,6 +20,22 @@ def common_options(func):
                   the output field files and the remap file.
                   """
     )
+    @click.option("--input_mosaic_dir",
+                  default = "./",
+                  type = click.Path(exists=True),
+                  help =
+                  """
+                  Directory containing the input mosaic file.
+                  """
+    )
+    @click.option("--output_mosaic_dir",
+                  default = "./",
+                  type = click.Path(exists=True),
+                  help =
+                  """
+                  Directory containing the output mosaic file.
+                  """
+    )
     @click.option("--input_file",
                   type = click.File(),
                   help =
@@ -28,7 +44,7 @@ def common_options(func):
                   For a multi-tile source grid, the suffix 'tile#.nc'
                   should be ommitted.  The directory path to the
                   input files should be specified with input_dir.
-                  Else, the current directory will be set as input_dir    
+                  Else, the current directory will be set as input_dir
                   """
     )
     @click.option("--output_file",
@@ -38,10 +54,10 @@ def common_options(func):
                   Name of the output files that will be outputted with
                   remapped data.  If output_file is not specified, the output
                   file will take the prefix of the input_file.  For a
-                  multi-tile target grid, the suffix 'tile#.nc' should 
+                  multi-tile target grid, the suffix 'tile#.nc' should
                   be ommitted
                   """
-    ) 
+    )
     @click.option("--src_mosaic",
                   type = click.File(),
                   help =
@@ -55,13 +71,13 @@ def common_options(func):
                   """
                   Mosaic file for the target grid.
                   If target mosaic is not provided, remap will generate a lat-lon
-                  target grid on-the-fly.  For this case, users must provide the 
+                  target grid on-the-fly.  For this case, users must provide the
                   dimensions of the lat/lon grid via tgt_nlon and tgt_nlat
                   """
     )
     @click.option("--scalar_variables",
                   type = list[str],
-                  help = 
+                  help =
                   """
                   List of scalar variables to rempap
                   """
@@ -71,7 +87,7 @@ def common_options(func):
                   help =
                   """
                   Number of grid cells in x-direction for a lat-lon grid.
-                  This value must be provided if target mosaic is not 
+                  This value must be provided if target mosaic is not
                   provided.
                   """
     )
@@ -80,7 +96,7 @@ def common_options(func):
                   help =
                   """
                   Number of grid cells in y-direction for a lat-lon grid.
-                  This value must be provided if target mosaic is not 
+                  This value must be provided if target mosaic is not
                   provided.
                   """
     )
