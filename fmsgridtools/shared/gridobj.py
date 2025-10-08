@@ -13,10 +13,19 @@ GridObj:
 
 Class for containing basic grid data to be used by other grid objects
 """
+
+
 class GridObj:
 
-    def __init__(self, dataset: type[xr.Dataset] = None, gridfile: str = None):
+    def __init__(self,
+                 dataset: type[xr.Dataset] = None,
+                 gridfile: str = None,
+                 domain: pyfms.mpp.Domain = None):
+
         self.gridfile = gridfile
+        self.dataset = dataset
+        self.domain = domain
+
         self.tile = None
         self.nx = None
         self.ny = None
@@ -31,8 +40,6 @@ class GridObj:
         self.angle_dx = None
         self.angle_dy = None
         self.arcx = None
-        self.dataset = dataset
-
 
     def read_xy(self, toradians: bool = False, agrid: bool = False):
 
@@ -40,8 +47,8 @@ class GridObj:
 
             for key in dataset.sizes:
                 setattr(self, key, dataset.sizes[key])
-                
-            if agrid: 
+
+            if agrid:
                 self.x = np.ascontiguousarray(dataset["x"].values[::2, ::2])
                 self.y = np.ascontiguousarray(dataset["y"].values[::2, ::2])
                 self.nx, self.ny = self.nx//2, self.ny//2
@@ -50,14 +57,22 @@ class GridObj:
                 self.x = np.radians(self.x, dtype=np.float64)
                 self.y = np.radians(self.y, dtype=np.float64)
 
+    def to_domain(self, domain: pyfms.Domain):
+        if self.domain is not None:
+            isc, iec, jsc, jec = domain.isc, domain.iec, domain.jsc, domain.jec
+            self.x = np.ascontiguousarray(self.x[jsc:jec+1, isc:iec+1])
+            self.y = np.ascontiguousarray(self.y[jsc:jec+1, isc:iec+1])
+            self.nx = domain.xsize
+            self.ny = domain.nysize
+            self.nxp = domain.xsize + 1
+            self.nyp = domain.ysize + 1
+
     def get_fms_area(self):
 
         self.area = pyfms.grid_utils.get_grid_area(lon=self.x, lat=self.y)
         return self.area
 
-    
     def read_all(self, toradians: bool = False, agrid: bool = False, free_dataset: bool = False):
-
         """
         read:
         This function reads in the gridfile and initializes the instance variables
@@ -84,7 +99,6 @@ class GridObj:
 
         return self
 
-
     def get_attributes(self):
 
         for key in self.dataset.data_vars:
@@ -101,16 +115,17 @@ class GridObj:
     This method will generate a netcdf file containing the contents of the
     dataset attribute.
     """
+
     def write(self, filepath: str):
 
         if self.dataset is not None:
             self.dataset.to_netcdf(filepath)
 
-
     """
     get_variable_list:
     This method returns a list of variables contained within the dataset.
     """
+
     def get_variable_list(self) -> list:
 
         if self.dataset is not None:
@@ -118,65 +133,7 @@ class GridObj:
         else:
             return None
 
-
-    def x_contiguous(self):
-
-        if self.x is not None:
-            return np.ascontiguousarray(self.x)
-        else:
-            return None
-
-
-    def y_contiguous(self):
-
-        if self.y is not None:
-            return np.ascontiguousarray(self.y)
-        else:
-            return None
-
-
-    def dx_contiguous(self):
-
-        if self.dx is not None:
-            return np.ascontiguousarray(self.dx)
-        else:
-            return None
-
-
-    def dy_contiguous(self):
-
-        if self.dy is not None:
-            return np.ascontiguousarray(self.dataset.dy)
-        else:
-            return None
-
-
-    def area_contiguous(self):
-
-        if self.area is not None:
-            return np.ascontiguousarray(self.dataset.area)
-        else:
-            return None
-
-
-    def angle_dx_contiguous(self):
-
-        if self.angle_dx is not None:
-            return np.ascontiguousarray(self.dataset.angle_dx)
-        else:
-            return None
-
-
-    def angle_dy_contiguous(self):
-
-        if self.angle_dy is not None:
-            return np.ascontiguousarray(self.dataset.angle_dy)
-        else:
-            return None
-
-
-    def agrid(self)-> tuple[npt.NDArray, npt.NDArray]:
-
+    def agrid(self) -> tuple[npt.NDArray, npt.NDArray]:
         """
         get_agrid_lonlat:
 
@@ -189,4 +146,4 @@ class GridObj:
 
         return a_lon, a_lat
 
-#TODO: I/O method for passing to the host
+# TODO: I/O method for passing to the host
