@@ -1,4 +1,4 @@
-import ast
+import copy
 import numpy as np
 import numpy.typing as npt
 from pathlib import Path
@@ -13,18 +13,20 @@ class Dims():
     def __init__(self):
         self.x: str = None
         self.y: str = None
-        self.z_full: str = None
-        self.z_half: str = None
+        self.z: str = None
         self.time: str = None
         self.nx: int = None
         self.ny: int = None
         self.nz: int = None
         self.ntime: int = None
+        self.has_x = False
+        self.has_y = False
         self.has_t = False
         self.has_z = False
         self.has_t_and_z = False
+        self.has_x_and_y = False
         self.dims_list: list = None
-        
+
     def get(self, dataarray):
 
         # get dimensions
@@ -32,8 +34,12 @@ class Dims():
             match coord.attrs["axis"]:
                 case "X":
                     self.x = name
+                    self.nx = coord.size
+                    self.has_x = True
                 case "Y":
                     self.y = name
+                    self.ny = coord.size
+                    self.has_y = True
                 case "T":
                     self.time = name
                     self.ntime = coord.size
@@ -42,9 +48,11 @@ class Dims():
                     self.z = name
                     self.nz = coord.size
                     self.has_z = True
+        self.has_x_and_y = self.has_x and self.has_y
         self.has_t_and_z = self.has_z and self.has_t
-        self.dims_list = list(datarray.dims)
-               
+        self.dims_list = list(dataarray.dims)
+
+
 class Tgt():
 
     def __init__(self, data: xr.DataArray = None, dims: Dims = None, attributes: dict = None):
@@ -53,18 +61,22 @@ class Tgt():
         self.dims: Dims = None
         self.attributes: None
 
-        
+
     def set_data(self, data: npt.NDArray, nexpand: int):
 
-        if nexpand == 2:    
+        if nexpand == 2:
             return xr.DataArray(np.expand_dims(np.expand_dims(data, axis=0), axis=0), dims=self.dims.dims_list)
         elif nexpand == 1:
             return xr.DataArray(np.expand_dims(data, axis=0), dims=self.dims.dims_list)
         else:
             return xr.DataArray(data, dims=self.dims.dims_list)
 
-        
+
     def save(self, data: npt.NDArray, new_z: bool = False, new_t: bool = False):
+
+        if not self.dims.has_x_and_y:
+            self.data = xr.DataArray(data, dims=self.dims.dim_list)
+            return
 
         if self.data is None:
             if self.dims.has_t_and_z:
@@ -86,7 +98,7 @@ class Tgt():
                     self.dims.ntimes += 1
                 elif new_z:
                     self.data = xr.concat([self.data, self.set_data(data, nexpand=2)], self.dims.z)
-                    self.dims.nz += 1 
+                    self.dims.nz += 1
             elif self.dims_has_t:
                 self.data = xr.concat([self.data, self.set_data(data, nexpand=1)], self.dims.time)
                 self.dims.ntimes += 1
@@ -94,14 +106,21 @@ class Tgt():
                 self.data = xr.concat([self.data, self.set_data(data, nexpand=1)], self.dims.z)
                 self.nz += 1
 
-                
-    def complete(self):
+
+    def complete(self, set_coords: bool = True):
         self.data.attrs = self.attributes
+
+        if set_coords:
+            if self.dims.has_x: self.data.coords[self.dims.x]: list(range(1, self.dims.nx+1))
+            if self.dims.has_y: self.data.coords[self.dims.y]: list(range(1, self.dims.ny+1))
+            if self.dims.has_z: self.data.coords[self.dims.z]: list(range(1, self.dims.nz+1))
+            if self.dims.has_t: self.data.coords[self.dims.time]: list(range(1, self.dims.ntime+1))
+
         return self.data
-                
-                    
+
+
 class DataObj():
-    
+
     time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)
 
     def __init__(self,
@@ -109,19 +128,19 @@ class DataObj():
                  variable: str,
                  tiles: list = None,
                  input_dir: str = "./"):
-        
+
         """
         DataObj class to handle data files and variables.
         """
-        
+
         self.input_dir = Path(input_dir)
         self.tiles = tiles
         self.datafiles = {}
         self.variable = variable
         self.attributes: dict = None
-        self.is_tiled = False    
+        self.is_tiled = False
 
-        self.dims = Dims()    
+        self.dims = Dims()
 
         self.scale_factor: np.float32 | np.float64 | np.int32 | np.int64 = None
         self.offset: np.float32 | np.float64 | np.int32 | np.int64 = None
@@ -134,7 +153,7 @@ class DataObj():
         self.static_area = {}
 
         self.tgt = Tgt()
-        
+
         #set datafile
         if tiles is None:
             self.tiles = ['tile1']
@@ -143,19 +162,19 @@ class DataObj():
             self.is_tiled = True
             for tile in self.tiles:
                 self.datafiles[tile] = Path(datafile + "." + tile + ".nc")
-            
+
         #get coordinates
         with xr.open_dataset(self.input_dir/self.datafiles.get(self.tiles[0]), decode_cf=False) as dataset:
 
             if self.variable not in dataset:
                 raise RuntimeError("variable not found")
 
-            v_dataset = dataset[self.variable]
+            v_dataarray = dataset[self.variable]
 
-            self.dims.get(dataset[v_dataset])
+            self.dims.get(v_dataarray)
 
-            self.attributes = v_dataset.attrs
-            
+            self.attributes = v_dataarray.attrs
+
             #get missing value, offset, scale_factor
             self.fill_value = self.attributes.get("_FillValue")
             self.offset = self.attributes.get("add_offset")
@@ -165,11 +184,13 @@ class DataObj():
                 self.get_static_area(dataset)
 
         self.tgt.attributes = self.attributes
-        self.tgt.dims = self.dims
-        self.tgt.dims.ntimes = 0
+        self.tgt.dims = copy.deepcopy(self.dims)
+        self.tgt.nx = 0
+        self.tgt.ny = 0
         self.tgt.dims.nz = 0
-                
-                
+        self.tgt.dims.ntimes = 0
+
+
     def get_static_area(self, dataset):
         self.area_averaged = True
 
@@ -201,8 +222,8 @@ class DataObj():
                 self.static_area[tile] = dataset[self.cell_measures].values.astype(np.float64)
 
 
-    def get_slice(self, tile: str = 'tile1', klevel: int = None, timepoint: int = None):
-        
+    def get_data(self, tile: str = 'tile1', klevel: int = None, timepoint: int = None):
+
         """
         Get slice of a variable from the dataset.
         """
@@ -213,14 +234,14 @@ class DataObj():
                 if self.dims.has_z: data = data.isel({self.dims.z:klevel})
             if timepoint is not None:
                 if self.dims.has_t: data = data.isel({self.dims.time:timepoint})
-            
+
         data = data.values.astype(np.float64)
-            
+
         if self.scale_factor is not None:
             data *= self.scale_factor
-            
+
         if self.offset is not None:
             data += self.offset
 
-        return data    
+        return data
 

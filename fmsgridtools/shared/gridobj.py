@@ -20,7 +20,7 @@ class GridObj:
     def __init__(self,
                  dataset: type[xr.Dataset] = None,
                  gridfile: str = None,
-                 domain: pyfms.mpp.Domain = None):
+                 domain: pyfms.Domain = None):
 
         self.gridfile = gridfile
         self.dataset = dataset
@@ -69,7 +69,7 @@ class GridObj:
 
     def get_fms_area(self):
 
-        self.area = pyfms.grid_utils.get_grid_area(lon=self.x, lat=self.y)
+        self.area = pyfms.grid_utils.get_grid_area(lon=self.x, lat=self.y, nlon=self.nx, nlat=self.ny)
         return self.area
 
     def read_all(self, toradians: bool = False, agrid: bool = False, free_dataset: bool = False):
