@@ -87,7 +87,7 @@ def remap(input_dir: str = "./",
     is_root_pe = pyfms.mpp.pe() == pyfms.mpp.root_pe()
 
     # domain
-    global_indices = [0, tgt_grid_dict['tile1'].nx, 0, tgt_grid_dict['tile1'].ny]
+    global_indices = [0, tgt_grid_dict['tile1'].nx-1, 0, tgt_grid_dict['tile1'].ny-1]
     layout = pyfms.mpp_domains.define_layout(global_indices, ndivs=pyfms.mpp.npes())
     domain = pyfms.mpp_domains.define_domains(global_indices=global_indices, layout=layout)
 
@@ -97,8 +97,10 @@ def remap(input_dir: str = "./",
 
     # get weights
     for tgt_tile in tgt_grid_dict:
+
         interp_ids, fms_areas = {}, {}
         tgt_grid = tgt_grid_dict[tgt_tile]
+
         for src_tile in src_tiles:
 
             src_grid = src_grid_dict[src_tile]
@@ -128,8 +130,8 @@ def remap(input_dir: str = "./",
                             datafile=input_file, variable=variable)
 
             #THISISWRONG
-            field.tgt.dims.nx = (domain.ieg - domain.isg + 1)
-            field.tgt.dims.ny = (domain.jeg - domain.isg + 1)
+            field.tgt.dims.nx = domain.ieg - domain.isg + 1
+            field.tgt.dims.ny = domain.jeg - domain.isg + 1
 
             scale_area = {}
             if field.area_averaged:
@@ -145,14 +147,14 @@ def remap(input_dir: str = "./",
                 new_t, new_z = new_t_start, new_z_start  # only matters if t and z exists
                 for k in klevels:
                     remapped_data = call_horiz_interp(interp_ids, field, scale_area, k=k, itime=itime)
-                    gathered = pyfms.mpp.gather(domain, remapped_data)
+                    gathered = pyfms.mpp.gather(domain, remapped_data, convert_cf_order=False)
                     if is_root_pe:
                         field.tgt.save(gathered, new_t=new_t, new_z=new_z)
                     new_t, new_z = False, True  # only matters if t and z exists
 
             if is_root_pe:
                 fields[variable] = field.tgt.complete()
-                print(field.tgt.data)
+                #(field.tgt.data)
 
         if is_root_pe:
             if output_file is None:

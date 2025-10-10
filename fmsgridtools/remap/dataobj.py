@@ -111,11 +111,10 @@ class Tgt():
         self.data.attrs = self.attributes
 
         if set_coords:
-            if self.dims.has_x: self.data.coords[self.dims.x]: list(range(1, self.dims.nx+1))
-            if self.dims.has_y: self.data.coords[self.dims.y]: list(range(1, self.dims.ny+1))
-            if self.dims.has_z: self.data.coords[self.dims.z]: list(range(1, self.dims.nz+1))
-            if self.dims.has_t: self.data.coords[self.dims.time]: list(range(1, self.dims.ntime+1))
-
+            if self.dims.has_x: self.data.coords[self.dims.x] = list(range(1, self.dims.nx+1))
+            if self.dims.has_y: self.data.coords[self.dims.y] = list(range(1, self.dims.ny+1))
+            if self.dims.has_z: self.data.coords[self.dims.z] = list(range(1, self.dims.nz+1))
+            if self.dims.has_t: self.data.coords[self.dims.time] = list(range(1, self.dims.ntime+1))
         return self.data
 
 
