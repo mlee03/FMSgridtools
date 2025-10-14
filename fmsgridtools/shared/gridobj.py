@@ -34,6 +34,8 @@ class GridObj:
         self.tile = None
         self.x = None
         self.y = None
+        self.xt = None
+        self.yt = None
         self.dx = None
         self.dy = None
         self.area = None
@@ -41,7 +43,7 @@ class GridObj:
         self.angle_dy = None
         self.arcx = None
 
-    def read_xy(self, toradians: bool = False, agrid: bool = False):
+    def read_xy(self, toradians: bool = False, agrid: bool = False, tgrid: bool = True):
 
         with xr.open_dataset(self.gridfile) as dataset:
 
@@ -53,9 +55,15 @@ class GridObj:
                 self.y = np.ascontiguousarray(dataset["y"].values[::2, ::2])
                 self.nx, self.ny = self.nx//2, self.ny//2
                 self.nxp, self.nyp = self.nx+1, self.ny+1
+
             if toradians:
                 self.x = np.radians(self.x, dtype=np.float64)
                 self.y = np.radians(self.y, dtype=np.float64)
+
+            if tgrid:
+                self.xt = np.ascontiguousarray(dataset["x"].values[0,1::2])
+                self.yt = np.ascontiguousarray(dataset["y"].values[1::2,0])
+
 
     def to_domain(self, domain: pyfms.Domain):
         if self.domain is not None:
@@ -66,6 +74,7 @@ class GridObj:
             self.ny = domain.nysize
             self.nxp = domain.xsize + 1
             self.nyp = domain.ysize + 1
+
 
     def get_fms_area(self):
 

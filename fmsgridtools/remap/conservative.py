@@ -9,15 +9,6 @@ from fmsgridtools.shared.mosaicobj import MosaicObj
 import pyfms
 
 
-def get_variables(input_dir: str|Path, input_file: str, tile: str = None):
-    if tile is None:
-        input_file += ".nc"
-    else:
-        input_file += "." + tile + ".nc"
-    with xr.open_dataset(Path(input_dir)/input_file, decode_cf=False) as dataset:
-        return [key for key in dataset.data_vars]
-
-
 def call_horiz_interp(interp_ids: dict, field: DataObj, scale_area: dict = None,
                       k: int = None, itime: int = None):
 
@@ -58,13 +49,13 @@ def remap(input_dir: str = "./",
           order: int = 1,
           check_conserve: bool = False) -> XGridObj:
 
-    input_mosaic_dir = "/home/Mikyung.Lee/FRE-NCTools/test-benchmark/tests_fregrid/Testa-conserve1-output/"
-    output_mosaic_dir = input_mosaic_dir
-    input_dir = "/home/Mikyung.Lee/FRE-NCTools/DONOTDELETEME_DATA/TESTS/TESTS_INPUT/Testa-input/"
-    src_mosaic = "C96_mosaic.nc"
-    tgt_mosaic = "lonlat_288x180_mosaic.nc"
-    input_file = "00010101.atmos_month_aer"
-    scalar_variables = ["zsurf", "ps", "temp", "sphum", "sulfate", "sulfate_col", "sm_dust", "sm_dust_col"]#,
+#    input_mosaic_dir = "/home/Mikyung.Lee/FRE-NCTools/test-benchmark/tests_fregrid/Testa-conserve1-output/"
+#    output_mosaic_dir = input_mosaic_dir
+#    input_dir = "/home/Mikyung.Lee/FRE-NCTools/DONOTDELETEME_DATA/TESTS/TESTS_INPUT/Testa-input/"
+#    src_mosaic = "C96_mosaic.nc"
+#    tgt_mosaic = "lonlat_288x180_mosaic.nc"
+#    input_file = "00010101.atmos_month_aer"
+#    scalar_variables = ["zsurf", "ps", "temp", "sphum", "sulfate", "sulfate_col", "sm_dust", "sm_dust_col"]#,
                         #"lg_dust", "lg_dust_col", "salt", "salt_col", "blk_crb", "blk_crb_col", "org_crb",
                         #"org_crb_col", "sulfate_ex_c_vs", "sm_dst_ex_c_vs", "lg_dst_ex_c_vs",
                         #"blk_crb_ex_c_vs", "org_crb_ex_c_vs", "salt_ex_c_vs", "aer_ex_c_vs",
@@ -124,14 +115,14 @@ def remap(input_dir: str = "./",
         fields = {}
         for variable in scalar_variables:
 
-            print(f"**{variable}**", flush=True)
-
             field = DataObj(input_dir=input_dir, tiles=src_mosaic.gridtiles,
                             datafile=input_file, variable=variable)
 
-            #THISISWRONG
-            field.tgt.dims.nx = domain.ieg - domain.isg + 1
-            field.tgt.dims.ny = domain.jeg - domain.isg + 1
+            #set tgt information
+            field.tgt.dims.nx = domain.xsize_g
+            field.tgt.dims.ny = domain.ysize_g
+            field.tgt.attributes["interp_method"] = f"conserve_order{order}"
+            field.tgt.set_xy_coords(tgt_grid.xt, tgt_grid.yt)
 
             scale_area = {}
             if field.area_averaged:
@@ -141,26 +132,28 @@ def remap(input_dir: str = "./",
             times = list(range(field.dims.ntime)) if field.dims.has_t else [None]
             klevels = list(range(field.dims.nz)) if field.dims.has_z else [None]
 
+            # only if t and z exists
             new_t_start, new_z_start = field.dims.has_t_and_z, False
 
             for itime in times:
-                new_t, new_z = new_t_start, new_z_start  # only matters if t and z exists
+                new_t, new_z = new_t_start, new_z_start  # add to t axis
                 for k in klevels:
                     remapped_data = call_horiz_interp(interp_ids, field, scale_area, k=k, itime=itime)
                     gathered = pyfms.mpp.gather(domain, remapped_data, convert_cf_order=False)
                     if is_root_pe:
                         field.tgt.save(gathered, new_t=new_t, new_z=new_z)
-                    new_t, new_z = False, True  # only matters if t and z exists
+                    new_t, new_z = False, True  # add to z axis
 
             if is_root_pe:
+                print(f"remapped {variable}", flush=True)
                 fields[variable] = field.tgt.complete()
-                #(field.tgt.data)
 
         if is_root_pe:
             if output_file is None:
                 output_file = input_file + ".nc"
-            xr.Dataset(data_vars=fields).to_netcdf(Path(output_dir)/output_file)
+            xr.Dataset(data_vars=fields).to_netcdf(Path(output_dir)/output_file, unlimited_dims=["time"])
 
+    pyfms.fms.end()
 
 if __name__ == "__main__":
     remap()
