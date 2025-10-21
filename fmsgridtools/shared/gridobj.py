@@ -66,14 +66,13 @@ class GridObj:
 
 
     def to_domain(self, domain: pyfms.Domain):
-        if self.domain is not None:
-            isc, iec, jsc, jec = domain.isc, domain.iec, domain.jsc, domain.jec
-            self.x = np.ascontiguousarray(self.x[jsc:jec+1, isc:iec+1])
-            self.y = np.ascontiguousarray(self.y[jsc:jec+1, isc:iec+1])
-            self.nx = domain.xsize
-            self.ny = domain.nysize
-            self.nxp = domain.xsize + 1
-            self.nyp = domain.ysize + 1
+        isc, iec, jsc, jec = domain.isc, domain.iec, domain.jsc, domain.jec
+        self.x = np.ascontiguousarray(self.x[jsc:jec+2, isc:iec+2])
+        self.y = np.ascontiguousarray(self.y[jsc:jec+2, isc:iec+2])
+        self.nx = domain.xsize_c
+        self.ny = domain.ysize_c
+        self.nxp = domain.xsize_c + 1
+        self.nyp = domain.ysize_c + 1
 
 
     def get_fms_area(self):

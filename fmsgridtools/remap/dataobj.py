@@ -152,7 +152,7 @@ class DataObj():
         self.scale_factor: np.float32 | np.float64 | np.int32 | np.int64 = None
         self.offset: np.float32 | np.float64 | np.int32 | np.int64 = None
         self.fill_value: np.float32 | np.float64 | np.int32 | np.int64 = None
-        self.missing_list: list = None
+        self.missing_value:  np.float32 | np.float64 | np.int32 | np.int64 = None
 
         self.area_averaged = False
         self.cell_measures: str = None
@@ -184,6 +184,7 @@ class DataObj():
             self.attributes = v_dataarray.attrs
 
             #get missing value, offset, scale_factor
+            self.missing = self.attributes.get("missing_value")
             self.fill_value = self.attributes.get("_FillValue")
             self.offset = self.attributes.get("add_offset")
             self.scale_factor = self.attributes.get("scale_factor")
@@ -262,5 +263,8 @@ class DataObj():
         if self.offset is not None:
             data += self.offset
 
+        if self.missing_value is not None:
+            data = data.where(data==self.missing_value, 0.0, data)
+            
         return data.astype(np.float64)
 

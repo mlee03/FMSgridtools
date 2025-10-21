@@ -38,16 +38,36 @@ def get_interps_cpu(tgt_grid, src_grid_dict):
     interp_ids = {}        
     for src_tile in src_grid_dict:
         src_grid = src_grid_dict[src_tile]
-        interp_ids[src_tile] = pyfms.horiz_interp.get_weights(lon_in=src_grid.x,
-                                                              lat_in=src_grid.y,
-                                                              lon_out=tgt_grid.x,
-                                                              lat_out=tgt_grid.y,
-                                                              nlon_in=src_grid.nx,
-                                                              nlat_in=src_grid.ny,
-                                                              nlon_out=tgt_grid.nx,
-                                                              nlat_out=tgt_grid.ny,
-                                                              convert_cf_order=False
+        interp_ids[src_tile] = pyfms.horiz_interp.get_weights(
+            lon_in=src_grid.x,
+            lat_in=src_grid.y,
+            lon_out=tgt_grid.x,
+            lat_out=tgt_grid.y,
+            nlon_in=src_grid.nx,
+            nlat_in=src_grid.ny,
+            nlon_out=tgt_grid.nx,
+            nlat_out=tgt_grid.ny,
+            save_weights_as_fregrid=True,
+            convert_cf_order=False
         )
+
+    #write remap file
+    data_dict = {"tile1":{}}
+    itile = 1
+    for src_tile in interp_ids:
+        this_dict = data_dict["tile1"][src_tile] = {}
+        interpobj = pyfms.ConserveInterp(interp_ids[src_tile], weights_as_fregrid=True)
+        this_dict["src_i"] = interpobj.i_src
+        this_dict["src_j"] = interpobj.j_src
+        this_dict["tgt_i"] = interpobj.i_dst
+        this_dict["tgt_j"] = interpobj.j_dst
+        this_dict["xarea"] = interpobj.xgrid_area
+        this_dict["tile"] = [itile]*interpobj.nxgrid
+        itile += 1
+
+    xgrid = XGridObj(datadict=data_dict)
+    xgrid.write(outfile="remap.nc")
+        
     return interp_ids
 
 
@@ -55,9 +75,7 @@ def get_interps_gpu(tgt_grid_dict, src_grid_dict, domain, is_root_pe):
 
     #root to gpu
     if is_root_pe:
-        xgrid = XGridObj(src_grid=src_grid_dict,
-                         tgt_grid=tgt_grid_dict,
-                         on_gpu=True)
+        xgrid = XGridObj(src_grid=src_grid_dict, tgt_grid=tgt_grid_dict, on_gpu=True)
         xgrid.create_xgrid()
         xgrid.write(outfile="remap.nc")        
     pyfms.mpp.sync()
@@ -66,12 +84,13 @@ def get_interps_gpu(tgt_grid_dict, src_grid_dict, domain, is_root_pe):
     interp_ids = {}
     for src_tile in src_grid_dict:
         src_grid = src_grid_dict[src_tile]
-        interp_ids[src_tile] = pyfms.horiz_interp.read_weights_conserve("remap.nc",
-                                                                        "fregrid",
-                                                                        src_grid.nx,
-                                                                        src_grid.ny,
-                                                                        domain,
-                                                                        src_tile = i
+        interp_ids[src_tile] = pyfms.horiz_interp.read_weights_conserve(
+            "remap.nc",
+            "fregrid",
+            src_grid.nx,
+            src_grid.ny,
+            domain,
+            src_tile = i
         )
         i += 1
     return interp_ids
@@ -112,21 +131,19 @@ def remap(input_dir: str = "./",
 
     # domain
     global_indices = [0, tgt_grid_dict['tile1'].nx-1, 0, tgt_grid_dict['tile1'].ny-1]
-    layout = pyfms.mpp_domains.define_layout(global_indices, ndivs=pyfms.mpp.npes())
-    domain = pyfms.mpp_domains.define_domains(global_indices=global_indices, layout=layout)
+    domain = pyfms.mpp_domains.define_domains(global_indices=global_indices)
 
     # get weights
     for tgt_tile in tgt_grid_dict:
 
-        on_gpu = True        
-        if on_gpu:
+        if gpu:
             tgt_grid = tgt_grid_dict[tgt_tile]
             interp_ids = get_interps_gpu({tgt_tile:tgt_grid}, src_grid_dict, domain, is_root_pe)
         else:
             # get tgt grid on domain
             tgt_grid_dict[tgt_tile].to_domain(domain)
             tgt_grid = tgt_grid_dict[tgt_tile]
-            interp_ids = get_interps_cpu(tgt_grid, src_grid_dict)            
+            interp_ids = get_interps_cpu(tgt_grid, src_grid_dict)
 
         fms_areas = {}
         for src_tile in src_tiles:
