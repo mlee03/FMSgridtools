@@ -33,6 +33,50 @@ def call_horiz_interp(interp_ids: dict, field: DataObj, scale_area: dict = None,
     return remapped_data
 
 
+def get_interps_cpu(tgt_grid, src_grid_dict):
+    
+    interp_ids = {}        
+    for src_tile in src_grid_dict:
+        src_grid = src_grid_dict[src_tile]
+        interp_ids[src_tile] = pyfms.horiz_interp.get_weights(lon_in=src_grid.x,
+                                                              lat_in=src_grid.y,
+                                                              lon_out=tgt_grid.x,
+                                                              lat_out=tgt_grid.y,
+                                                              nlon_in=src_grid.nx,
+                                                              nlat_in=src_grid.ny,
+                                                              nlon_out=tgt_grid.nx,
+                                                              nlat_out=tgt_grid.ny,
+                                                              convert_cf_order=False
+        )
+    return interp_ids
+
+
+def get_interps_gpu(tgt_grid_dict, src_grid_dict, domain, is_root_pe):
+
+    #root to gpu
+    if is_root_pe:
+        xgrid = XGridObj(src_grid=src_grid_dict,
+                         tgt_grid=tgt_grid_dict,
+                         on_gpu=True)
+        xgrid.create_xgrid()
+        xgrid.write(outfile="remap.nc")        
+    pyfms.mpp.sync()
+        
+    i = 1
+    interp_ids = {}
+    for src_tile in src_grid_dict:
+        src_grid = src_grid_dict[src_tile]
+        interp_ids[src_tile] = pyfms.horiz_interp.read_weights_conserve("remap.nc",
+                                                                        "fregrid",
+                                                                        src_grid.nx,
+                                                                        src_grid.ny,
+                                                                        domain,
+                                                                        src_tile = i
+        )
+        i += 1
+    return interp_ids
+
+
 def remap(input_dir: str = "./",
           output_dir: str = "./",
           input_mosaic_dir: str = "./",
@@ -47,19 +91,8 @@ def remap(input_dir: str = "./",
           kbounds: list = None,
           tbounds: list = None,
           order: int = 1,
-          check_conserve: bool = False) -> XGridObj:
-
-#    input_mosaic_dir = "/home/Mikyung.Lee/FRE-NCTools/test-benchmark/tests_fregrid/Testa-conserve1-output/"
-#    output_mosaic_dir = input_mosaic_dir
-#    input_dir = "/home/Mikyung.Lee/FRE-NCTools/DONOTDELETEME_DATA/TESTS/TESTS_INPUT/Testa-input/"
-#    src_mosaic = "C96_mosaic.nc"
-#    tgt_mosaic = "lonlat_288x180_mosaic.nc"
-#    input_file = "00010101.atmos_month_aer"
-#    scalar_variables = ["zsurf", "ps", "temp", "sphum", "sulfate", "sulfate_col", "sm_dust", "sm_dust_col"]#,
-                        #"lg_dust", "lg_dust_col", "salt", "salt_col", "blk_crb", "blk_crb_col", "org_crb",
-                        #"org_crb_col", "sulfate_ex_c_vs", "sm_dst_ex_c_vs", "lg_dst_ex_c_vs",
-                        #"blk_crb_ex_c_vs", "org_crb_ex_c_vs", "salt_ex_c_vs", "aer_ex_c_vs",
-                        #"aer_ab_c_vs", "aer_c", "aer_ex_vs", "aer_ab_vs"]
+          check_conserve: bool = False,
+          gpu: bool = False):
 
     # get input grid
     src_mosaic = MosaicObj(input_dir=input_mosaic_dir, mosaic_file=src_mosaic).read()
@@ -82,36 +115,26 @@ def remap(input_dir: str = "./",
     layout = pyfms.mpp_domains.define_layout(global_indices, ndivs=pyfms.mpp.npes())
     domain = pyfms.mpp_domains.define_domains(global_indices=global_indices, layout=layout)
 
-    # get tgt grid on domain
-    for tile in tgt_grid_dict:
-        tgt_grid_dict[tile].to_domain(domain)
-
     # get weights
     for tgt_tile in tgt_grid_dict:
 
-        interp_ids, fms_areas = {}, {}
-        tgt_grid = tgt_grid_dict[tgt_tile]
+        on_gpu = True        
+        if on_gpu:
+            tgt_grid = tgt_grid_dict[tgt_tile]
+            interp_ids = get_interps_gpu({tgt_tile:tgt_grid}, src_grid_dict, domain, is_root_pe)
+        else:
+            # get tgt grid on domain
+            tgt_grid_dict[tgt_tile].to_domain(domain)
+            tgt_grid = tgt_grid_dict[tgt_tile]
+            interp_ids = get_interps_cpu(tgt_grid, src_grid_dict)            
 
+        fms_areas = {}
         for src_tile in src_tiles:
-
-            src_grid = src_grid_dict[src_tile]
-
-            interp_ids[src_tile] = pyfms.horiz_interp.get_weights(lon_in=src_grid.x,
-                                                                  lat_in=src_grid.y,
-                                                                  lon_out=tgt_grid.x,
-                                                                  lat_out=tgt_grid.y,
-                                                                  nlon_in=src_grid.nx,
-                                                                  nlat_in=src_grid.ny,
-                                                                  nlon_out=tgt_grid.nx,
-                                                                  nlat_out=tgt_grid.ny,
-                                                                  convert_cf_order=False
-                                                                  )
-
-            fms_areas[src_tile] =  src_grid.get_fms_area()
+            fms_areas[src_tile] =  src_grid_dict[src_tile].get_fms_area()
 
         # delete huge grids
         del src_grid_dict
-
+        
         fields = {}
         for variable in scalar_variables:
 
@@ -154,6 +177,7 @@ def remap(input_dir: str = "./",
             xr.Dataset(data_vars=fields).to_netcdf(Path(output_dir)/output_file, unlimited_dims=["time"])
 
     pyfms.fms.end()
-
+    
+    
 if __name__ == "__main__":
     remap()

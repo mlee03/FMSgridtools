@@ -24,11 +24,18 @@ logger = logging.getLogger(__name__)
               If true, output grid area conservative will be checked
               """
 )
+@click.option("--gpu",
+              type = bool,
+              help =
+              """
+              If true, the exchange grid will be created on the GPU
+              """
+)
 def conservative_method(input_dir, output_dir, input_mosaic_dir, output_mosaic_dir,
                         input_file, output_file, #common_options
                         src_mosaic, tgt_mosaic, tgt_nlon, tgt_nlat, #common_options
                         scalar_variables, lon_bounds, lat_bounds,
-                        kbounds, tbounds, debug, order, check_conserve):
+                        kbounds, tbounds, debug, order, check_conserve, gpu):
 
     setlogger.setconfig("remap.log", debug)
     logger.info("Starting conservative remapping")
@@ -47,4 +54,5 @@ def conservative_method(input_dir, output_dir, input_mosaic_dir, output_mosaic_d
                                kbounds=kbounds,
                                tbounds=tbounds,
                                order=order,
-                               check_conserve=check_conserve)
+                               check_conserve=check_conserve,
+                               gpu=gpu)

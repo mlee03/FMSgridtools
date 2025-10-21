@@ -83,7 +83,7 @@ class XGridObj() :
             self.to_dataset()
 
         for tgt_tile in self.dataset:
-          concat_dataset = xr.concat([self.dataset[tgt_tile][src_tile] for src_tile in self.dataset[tgt_tile]], dim="nxcells")
+          concat_dataset = xr.concat([self.dataset[tgt_tile][src_tile] for src_tile in self.dataset[tgt_tile]], dim="ncells")
 
         concat_dataset.to_netcdf(outfile)
 
@@ -97,22 +97,25 @@ class XGridObj() :
 
         for tgt_tile in datadict:
             self.dataset[tgt_tile] = {}
+            i_src_tile = 1
             for src_tile in datadict[tgt_tile]:
 
                 thisdict = datadict[tgt_tile][src_tile]
                 dataset = self.dataset[tgt_tile][src_tile] = xr.Dataset()
 
-                dataset["src_cell"] = xr.DataArray(np.column_stack((thisdict['src_i']+1, thisdict['src_j']+1)),
-                                                   dims=["nxcells", "two"],
+                dataset["tile1"] = xr.DataArray(thisdict["tile"], dims=["ncells"])
+                
+                dataset["tile1_cell"] = xr.DataArray(np.column_stack((thisdict['src_i']+1, thisdict['src_j']+1)),
+                                                   dims=["ncells", "two"],
                                                    attrs={"src_cell": "parent cell indices in src mosaic",
                                                           "_FillValue": False}
                 )
-                dataset["tgt_cell"] = xr.DataArray(np.column_stack((thisdict['tgt_i']+1, thisdict['tgt_j']+1)),
-                                                   dims=["nxcells", "two"],
+                dataset["tile2_cell"] = xr.DataArray(np.column_stack((thisdict['tgt_i']+1, thisdict['tgt_j']+1)),
+                                                   dims=["ncells", "two"],
                                                    attrs={"tgt_cell": "parent cell indices in tgt mosaic",
                                                         "_FillValue": False})
-                dataset["xarea"] = xr.DataArray(thisdict['xarea'],
-                                                dims=["nxcells"],
+                dataset["xgrid_area"] = xr.DataArray(thisdict['xarea'],
+                                                dims=["ncells"],
                                                 attrs={"xarea": "exchange grid area",
                                                        "_FillValue": False}
                 )
@@ -217,15 +220,11 @@ class XGridObj() :
     def _check_mosaic_file(self):
 
         if self.src_mosaic_file is not None:
-            self.src_grid = MosaicObj(input_dir=self.input_dir,
-                                      mosaic_file=self.src_mosaic_file).read().get_grid(toradians=True,
-                                                                            agrid=self.on_agrid,
-                                                                            free_dataset=True)
+            mosaic = MosaicObj(input_dir=self.input_dir, mosaic_file=self.src_mosaic_file).read()
+            self.src_grid = mosaic.get_grid(toradians=True, agrid=self.on_agrid)                                            
             self._srcinfoisthere = True
 
         if self.tgt_mosaic_file is not None:
-            self.tgt_grid = MosaicObj(input_dir=self.input_dir,
-                                      mosaic_file=self.tgt_mosaic_file).read().get_grid(toradians=True,
-                                                                                        agrid=self.on_agrid,
-                                                                                        free_dataset=True)
+            mosaic = MosaicObj(input_dir=self.input_dir, mosaic_file=self.tgt_mosaic_file).read()
+            self.tgt_grid = mosaic.get_grid(toradians=True, agrid=self.on_agrid)
             self._tgtinfoisthere = True
