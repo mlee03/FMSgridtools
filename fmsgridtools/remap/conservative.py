@@ -21,13 +21,15 @@ def call_horiz_interp(interp_ids: dict, field: DataObj, scale_area: dict = None,
             field_in *= scale_area[src_tile]
 
         if itile == 0:
-            remapped_data = pyfms.horiz_interp.interp(interp_id=interp_ids[src_tile],
-                                                      data_in=field_in,
-                                                      convert_cf_order=False)
+            remapped_data = pyfms.horiz_interp.interp(
+                interp_id=interp_ids[src_tile],
+                data_in=field_in,
+                convert_cf_order=False)
         else:
-            remapped_data += pyfms.horiz_interp.interp(interp_id=interp_ids[src_tile],
-                                                       data_in=field_in,
-                                                       convert_cf_order=False)
+            remapped_data += pyfms.horiz_interp.interp(
+                interp_id=interp_ids[src_tile],
+                data_in=field_in,
+                convert_cf_order=False)
         itile += 1
 
     return remapped_data
@@ -48,6 +50,8 @@ def get_interps_cpu(tgt_grid, src_grid_dict):
             nlon_out=tgt_grid.nx,
             nlat_out=tgt_grid.ny,
             save_weights_as_fregrid=True,
+            is_latlon_in=False,
+            is_latlon_out=False,
             convert_cf_order=False
         )
 
@@ -162,7 +166,10 @@ def remap(input_dir: str = "./",
             field.tgt.dims.nx = domain.xsize_g
             field.tgt.dims.ny = domain.ysize_g
             field.tgt.attributes["interp_method"] = f"conserve_order{order}"
-            field.tgt.set_xy_coords(tgt_grid.xt, tgt_grid.yt)
+            #FIXMEFIXMEFIXMEFIXME
+            coords_x = np.arange(1, domain.xsize_g+1)
+            coords_y = np.arange(1, domain.ysize_g+1)
+            field.tgt.set_xy_coords(coords_x, coords_y)
 
             scale_area = {}
             if field.area_averaged:
@@ -188,10 +195,15 @@ def remap(input_dir: str = "./",
                 print(f"remapped {variable}", flush=True)
                 fields[variable] = field.tgt.complete()
 
+        #FIXMEFIXMEFIXMEFIXME
+        has_t = False
         if is_root_pe:
             if output_file is None:
                 output_file = input_file + ".nc"
-            xr.Dataset(data_vars=fields).to_netcdf(Path(output_dir)/output_file, unlimited_dims=["time"])
+            if has_t:
+                xr.Dataset(data_vars=fields).to_netcdf(Path(output_dir)/output_file, unlimited_dims=["time"])
+            else:
+                xr.Dataset(data_vars=fields).to_netcdf(Path(output_dir)/output_file)
 
     pyfms.fms.end()
     
