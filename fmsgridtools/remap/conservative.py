@@ -128,9 +128,7 @@ def remap(input_dir: str = "./",
 
     # initialize fms
     pyfms.fms.init(ndomain=len(tgt_grid_dict))
-    #FIXMEFIXMEFIXMEFIXME
-    #remove +1, this was for testing
-    pyfms.horiz_interp.init(ninterp=len(src_grid_dict)+5)
+    pyfms.horiz_interp.init(ninterp=len(src_grid_dict))
 
     # identify root pe
     is_root_pe = pyfms.mpp.pe() == pyfms.mpp.root_pe()
