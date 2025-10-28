@@ -98,19 +98,9 @@ def test_read_write(tmp_path):
 
     gridfile = Path("test.nc")
 
-    testgrid = GridObj(gridtype="cubic")
-    answers = [(ds.x, testgrid.x_obj),
-               (ds.y, testgrid.y_obj),
-               (ds.dx, testgrid.dx_obj),
-               (ds.dy, testgrid.dy_obj),
-               (ds.area, testgrid.area_obj),
-               (ds.angle_dx, testgrid.angle_dx_obj),
-               (ds.angle_dy, testgrid.angle_dy_obj),
-               (ds.arcx, testgrid.arcx_obj),
-               (ds.tile, testgrid.tile_obj)
-    ]
-
     pyfms.fms.init()
+    
+    testgrid = GridObj(gridtype="cubic")
 
     testgrid.x = ds.x.data
     testgrid.y = ds.y.data
@@ -137,8 +127,15 @@ def test_read_write(tmp_path):
     assert testgrid.nyp == nyp
     
     #test values
-    for ds_coord, testgrid_coord in answers:
-        assert_array_equal(ds_coord, testgrid_coord.data)
+    assert_array_equal(testgrid.x = ds.x.data)
+    assert_array_equal(testgrid.y = ds.y.data)
+    assert_array_equal(testgrid.dx = ds.dx.data)
+    assert_array_equal(testgrid.dy = ds.dy.data)
+    assert_array_equal(testgrid.area = ds.area.data)
+    assert_array_equal(testgrid.angle_dx = ds.angle_dx.data)
+    assert_array_equal(testgrid.angle_dy = ds.angle_dy.data)
+    assert_array_equal(testgrid.arcx = ds.arcx.data)
+    assert_array_equal(testgrid.tile = ds.tile.data)
 
     gridfile.unlink()
 

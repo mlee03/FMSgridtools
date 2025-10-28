@@ -26,8 +26,10 @@ jobs:
         run: pip install .[test]
       - name: Run pytest (just link test for now)
         run: |
-          pytest tests/shared/test_libs.py
-          pytest tests/mosaic/test_mosaic.py
-          pytest tests/shared/test_gridobj.py
-          pytest tests/shared/test_xgridobj.py
-          pytest tests/hgrid/test_hgrid.py
+          pytest -s tests/shared/test_libs.py
+          pytest -s tests/mosaic/test_mosaic.py
+          pytest -s tests/shared/test_gridobj.py::test_read_write
+          pytest -s tests/shared/test_gridobj.py::test_center_option
+          mpirun -n 4 --oversubscribe pytest -s tests/shared/test_gridobj.py::test_do_domain
+          pytest -s tests/shared/test_xgridobj.py
+          pytest -s tests/hgrid/test_hgrid.py
