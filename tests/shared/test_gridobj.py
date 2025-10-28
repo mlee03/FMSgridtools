@@ -187,3 +187,5 @@ def test_gridobj_read(tmp_path):
             assert grid.y[i][j] == np.radians(-answer)
 
     os.remove(gridfile)
+
+    
