@@ -1,7 +1,10 @@
-import os
-
 import numpy as np
+from numpy.testing import assert_array_equal
+from pathlib import Path
+from types import SimpleNamespace
 import xarray as xr
+
+import pyfms
 from fmsgridtools import GridObj
 
 
@@ -14,11 +17,9 @@ ny = 10
 nxp = nx + 1
 nyp = ny + 1
 
-x = np.array([[i*10+j for j in range(nyp)] for i in range(nxp)], dtype=np.float64)
-y = np.array([[-i*10-j for j in range(nyp)] for i in range(nxp)], dtype=np.float64)
-
-tile = xr.DataArray(
-    [b'tile1'],
+ds = SimpleNamespace()
+ds.tile = xr.DataArray(
+    data='tile1',
     attrs=dict(
         standard_name="grid_tile_spec",
         geometry="spherical",
@@ -27,39 +28,39 @@ tile = xr.DataArray(
         discretization="logically_rectangular",
     )
 )
-x = xr.DataArray(
-    data=x,
+ds.x = xr.DataArray(
+    data=np.full(shape=(nyp,nxp), fill_value=0.5, dtype=np.float64),
     dims=["nyp", "nxp"],
     attrs=dict(
         units="degree_east",
         standard_name="geographic_longitude",
     )
 )
-y = xr.DataArray(
-    data=y,
+ds.y = xr.DataArray(
+    data=np.full(shape=(nyp,nxp), fill_value=1.0, dtype=np.float64),
     dims=["nyp", "nxp"],
     attrs=dict(
         units="degree_north",
         standard_name="geographic_latitude",
     )
 )
-dx = xr.DataArray(
-    data=np.full(shape=(nyp,nx), fill_value=1.5, dtype=np.float64),
+ds.dx = xr.DataArray(
+    data=np.full(shape=(nyp,nxp), fill_value=1.5, dtype=np.float64),
     dims=["nyp", "nx"],
     attrs=dict(
         units="meters",
         standard_name="grid_edge_x_distance",
     )
 )
-dy = xr.DataArray(
-    data=np.full(shape=(ny,nxp), fill_value=2.5, dtype=np.float64),
+ds.dy = xr.DataArray(
+    data=np.full(shape=(nyp,nxp), fill_value=2.5, dtype=np.float64),
     dims=["ny", "nxp"],
     attrs=dict(
         units="meters",
         standard_name="grid_edge_y_distance",
     )
 )
-area = xr.DataArray(
+ds.area = xr.DataArray(
     data=np.full(shape=(ny,nx), fill_value=4.0, dtype=np.float64),
     dims=["ny", "nx"],
     attrs=dict(
@@ -67,7 +68,7 @@ area = xr.DataArray(
         standard_name="grid_cell_area",
     )
 )
-angle_dx = xr.DataArray(
+ds.angle_dx = xr.DataArray(
     data=np.full(shape=(nyp,nxp), fill_value=3.0, dtype=np.float64),
     dims=["nyp", "nxp"],
     attrs=dict(
@@ -75,7 +76,7 @@ angle_dx = xr.DataArray(
         standard_name="grid_vertex_x_angle_WRT_geographic_east",
     )
 )
-angle_dy = xr.DataArray(
+ds.angle_dy = xr.DataArray(
     data=np.full(shape=(nyp,nxp), fill_value=5.0, dtype=np.float64),
     dims=["nyp", "nxp"],
     attrs=dict(
@@ -83,7 +84,7 @@ angle_dy = xr.DataArray(
         standard_name="grid_vertex_x_angle_WRT_geographic_east",
     )
 )
-arcx = xr.DataArray(
+ds.arcx = xr.DataArray(
     [b'arcx'],
     attrs=dict(
         standard_name="grid_edge_x_arc_type",
@@ -92,100 +93,118 @@ arcx = xr.DataArray(
     )
 )
 
-out_grid_dataset = xr.Dataset(
-    data_vars={
-        "tile": tile,
-        "x": x,
-        "y": y,
-        "dx": dx,
-        "dy": dy,
-        "area": area,
-        "angle_dx": angle_dx,
-        "angle_dy": angle_dy,
-        "arcx": arcx,
-    }
-)
+
+def test_read_write(tmp_path):
+
+    gridfile = Path("test.nc")
+
+    testgrid = GridObj(gridtype="cubic")
+    answers = [(ds.x, testgrid.x_obj),
+               (ds.y, testgrid.y_obj),
+               (ds.dx, testgrid.dx_obj),
+               (ds.dy, testgrid.dy_obj),
+               (ds.area, testgrid.area_obj),
+               (ds.angle_dx, testgrid.angle_dx_obj),
+               (ds.angle_dy, testgrid.angle_dy_obj),
+               (ds.arcx, testgrid.arcx_obj),
+               (ds.tile, testgrid.tile_obj)
+    ]
+
+    pyfms.fms.init()
+
+    testgrid.x = ds.x.data
+    testgrid.y = ds.y.data
+    testgrid.dx = ds.dx.data
+    testgrid.dy = ds.dy.data
+    testgrid.area = ds.area.data
+    testgrid.angle_dx = ds.angle_dx.data
+    testgrid.angle_dy = ds.angle_dy.data
+    testgrid.arcx = ds.arcx.data
+    testgrid.tile = ds.tile.data
+
+    testgrid.write(gridfile)
+
+    assert gridfile.exists()
+
+    del testgrid
+
+    testgrid = GridObj(gridfile=gridfile).read_all()
+
+    #test dims
+    assert testgrid.nx == nx
+    assert testgrid.ny == ny
+    assert testgrid.nxp == nxp
+    assert testgrid.nyp == nyp
+    
+    #test values
+    for ds_coord, testgrid_coord in answers:
+        assert_array_equal(ds_coord, testgrid_coord.data)
+
+    gridfile.unlink()
+
+    pyfms.fms.end()
 
 
-def test_empty_grid_obj():
+def test_center_option():
 
-    empty_grid_obj = GridObj()
-    assert isinstance(empty_grid_obj, GridObj)
+    pyfms.fms.init()
+    
+    gridfile = "test_center.nc"
+    nx2 = nx // 2
+    ny2 = ny // 2
+    nx2p = nx2 + 1
+    ny2p = ny2 + 1
+
+    # center points are value of 1
+    x = np.array([[1,0]*nx2 + [1]]*nyp)
+    y = np.array([[1]*nxp, [0]*nxp]*ny2 + [[1]*nxp])
+
+    GridObj(gridfile=gridfile, x=x, y=y).write()
+
+    grid = GridObj(gridfile=gridfile)
+    xc, yc = grid.read_xy(center=True, radians=True)
+
+    assert grid.nx == nx2
+    assert grid.ny == ny2
+    assert grid.nxp == nx2 + 1
+    assert grid.nyp == ny2 + 1
+
+    answer = np.radians(np.ones((ny2p,nx2p), dtype=np.float64))
+    
+    assert_array_equal(xc, answer)
+    assert_array_equal(yc, answer)
+
+    pyfms.fms.end()
+    
+    
+def test_to_domain():
+
+    nx, ny = 8, 8
+    global_indices = [0, nx-1, 0, ny-1]
+    
+    pyfms.fms.init(ndomain=1)
+    domain = pyfms.mpp_domains.define_domains(global_indices)
+
+    x1 = np.arange(nx+1, dtype=np.float64)
+    y1 = np.arange(ny+1, dtype=np.float64)
+    x, y = np.meshgrid(x1, y1)
+
+    area = np.ones((ny, nx), dtype=np.float64)
+    
+    grid = GridObj(x=x, y=y, area=area)
+    grid.to_domain(domain)
+
+    x1 = np.arange(domain.isc, domain.iec+2, dtype=np.float64)
+    y1 = np.arange(domain.jsc, domain.jec+2, dtype=np.float64)
+    xanswer, yanswer = np.meshgrid(x1, y1)
+    area_answer = np.ones((domain.ysize_c, domain.xsize_c), dtype=np.float64)
+    
+    assert_array_equal(grid.x, xanswer)
+    assert_array_equal(grid.y, yanswer)
+    assert_array_equal(grid.area, area_answer)
+
+    pyfms.fms.end()
 
     
-def test_gridobj_from_dataset():
-
-    from_dataset_grid_obj = GridObj(dataset=out_grid_dataset)
-    from_dataset_grid_obj.get_attributes()
-    assert isinstance(from_dataset_grid_obj, GridObj)
-    assert from_dataset_grid_obj.dataset is not None
-
-    np.testing.assert_array_equal(from_dataset_grid_obj.x, out_grid_dataset.x.values)
-    np.testing.assert_array_equal(from_dataset_grid_obj.y, out_grid_dataset.y.values)
-    np.testing.assert_array_equal(from_dataset_grid_obj.dx, out_grid_dataset.dx.values)
-    np.testing.assert_array_equal(from_dataset_grid_obj.dy, out_grid_dataset.dy.values)
-    np.testing.assert_array_equal(from_dataset_grid_obj.area, out_grid_dataset.area.values)
-    np.testing.assert_array_equal(from_dataset_grid_obj.angle_dx, out_grid_dataset.angle_dx.values)
-    np.testing.assert_array_equal(from_dataset_grid_obj.angle_dy, out_grid_dataset.angle_dy)
-
-    
-def test_write_grid(tmp_path):
-
-    from_dataset_grid_obj = GridObj(dataset=out_grid_dataset)
-
-    file_path = tmp_path / "test_grid.nc"
-
-    from_dataset_grid_obj.write(filepath=file_path)
-
-    assert file_path.exists()
-
-    file_path.unlink()
-
-    assert not file_path.exists()
-
-    
-def test_gridobj_from_file(tmp_path):
-
-    gridfile = tmp_path / "test_grid.nc"
-    
-    out_grid_dataset.to_netcdf(gridfile)
-
-    from_file_init_grid_obj = GridObj(gridfile=gridfile).read()
-    assert isinstance(from_file_init_grid_obj, GridObj)
-    assert from_file_init_grid_obj.gridfile is not None
-
-    np.testing.assert_array_equal(from_file_init_grid_obj.x, out_grid_dataset.x.values)
-    np.testing.assert_array_equal(from_file_init_grid_obj.y, out_grid_dataset.y.values)
-    np.testing.assert_array_equal(from_file_init_grid_obj.dx, out_grid_dataset.dx.values)
-    np.testing.assert_array_equal(from_file_init_grid_obj.dy, out_grid_dataset.dy.values)
-    np.testing.assert_array_equal(from_file_init_grid_obj.area, out_grid_dataset.area.values)
-    np.testing.assert_array_equal(from_file_init_grid_obj.angle_dx, out_grid_dataset.angle_dx.values)
-    np.testing.assert_array_equal(from_file_init_grid_obj.angle_dy, out_grid_dataset.angle_dy.values)
-
-    os.remove(gridfile)
 
 
-def test_gridobj_read(tmp_path):
-    
-    gridfile = tmp_path / "test_grid.nc"
-
-    out_grid_dataset.to_netcdf(gridfile)
-
-    grid = GridObj(gridfile=gridfile).read(toradians=True, agrid=True, free_dataset=True)
-
-    assert grid.dataset == None
-    
-    assert grid.nx == nx//2
-    assert grid.ny == ny//2
-    assert grid.nxp == nx//2 + 1
-    assert grid.nyp == ny//2 + 1
-
-    for i in range(grid.nxp):
-        for j in range(grid.nyp):
-            answer = 2*10*i+2*j
-            assert grid.x[i][j] == np.radians(answer)
-            assert grid.y[i][j] == np.radians(-answer)
-
-    os.remove(gridfile)
-
-    
