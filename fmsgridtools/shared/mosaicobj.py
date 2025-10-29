@@ -126,11 +126,11 @@ class MosaicObj:
             for obj in self.objlist:
                 variable = ds.get(obj.name)
                 if variable is not None:
+                    variable = variable.str.decode(encoding="utf-8")
                     if type(variable.data) is np.ndarray:
                         obj.data = variable.data.tolist()
                     else:
                         obj.data = str(variable.data)
-                
             self.ntiles = ds.sizes.get("ntile")
             self.ncontact = ds.sizes.get("ncontact")
             self.input_dir = input_dir

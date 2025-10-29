@@ -193,14 +193,14 @@ def make(atm_mosaic_file: str, lnd_mosaic_file: str, ocn_mosaic_file: str,
          topog_file: str, input_dir: str = "./", on_gpu: bool = False):    
     
     #read in mosaic files
-    atm_mosaic = MosaicObj(input_dir=input_dir, mosaic_file=atm_mosaic_file).read()
-    lnd_mosaic = MosaicObj(input_dir=input_dir, mosaic_file=lnd_mosaic_file).read()
-    ocn_mosaic = MosaicObj(input_dir=input_dir, mosaic_file=ocn_mosaic_file).read()
+    atm_mosaic = MosaicObj(input_dir=input_dir, mosaicfile=atm_mosaic_file).read()
+    lnd_mosaic = MosaicObj(input_dir=input_dir, mosaicfile=lnd_mosaic_file).read()
+    ocn_mosaic = MosaicObj(input_dir=input_dir, mosaicfile=ocn_mosaic_file).read()
 
     #read in grids
-    atm_mosaic.get_grid(toradians=True, agrid=True, free_dataset=True)
-    lnd_mosaic.get_grid(toradians=True, agrid=True, free_dataset=True)
-    ocn_mosaic.get_grid(toradians=True, agrid=True, free_dataset=True)
+    atmg_grids = atm_mosaic.get_grid(radians=True, center=True)
+    lnd_grids =lnd_mosaic.get_grid(radians=True, center=True)
+    ocn_grids = ocn_mosaic.get_grid(radians=True, center=True)
     
     #get ocean mask
     topogfile_dict = {'tile1': input_dir + '/' + topog_file}
