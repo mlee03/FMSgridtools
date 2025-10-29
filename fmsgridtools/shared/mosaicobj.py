@@ -193,7 +193,6 @@ class MosaicObj:
 
         for obj in self.objlist:
             name = obj.name
-            print(name)
             ds[name] = xr.DataArray(
                 data=obj.data,
                 attrs=attrs[name],
@@ -204,12 +203,12 @@ class MosaicObj:
 
 
     @property
-    def name(self):
-        return self.name_obj.data
+    def mosaic(self):
+        return self.mosaic_obj.data
 
-    @name.setter
-    def name(self, data):
-        self.name_obj.data = data
+    @mosaic.setter
+    def mosaic(self, data):
+        self.mosaic_obj.data = data
 
     @property
     def gridlocation(self):
