@@ -157,7 +157,7 @@ class GridObj:
 
             self._set_dims(ds.sizes, center=center)
                 
-        return self.x, self.y
+        return self
         
                             
     def to_domain(self, domain: pyfms.Domain):
