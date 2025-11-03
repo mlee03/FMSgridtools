@@ -1,10 +1,11 @@
 import numpy as np
-from numpy.testing import assert_array_equal
 from pathlib import Path
+import pytest
 from types import SimpleNamespace
 import xarray as xr
 
 import pyfms
+import fmsgridtools
 from fmsgridtools import GridObj
 
 
@@ -45,7 +46,7 @@ ds.y = xr.DataArray(
     )
 )
 ds.dx = xr.DataArray(
-    data=np.full(shape=(nyp,nxp), fill_value=1.5, dtype=np.float64),
+    data=np.full(shape=(nyp,nx), fill_value=1.5, dtype=np.float64),
     dims=["nyp", "nx"],
     attrs=dict(
         units="meters",
@@ -53,7 +54,7 @@ ds.dx = xr.DataArray(
     )
 )
 ds.dy = xr.DataArray(
-    data=np.full(shape=(nyp,nxp), fill_value=2.5, dtype=np.float64),
+    data=np.full(shape=(ny,nxp), fill_value=2.5, dtype=np.float64),
     dims=["ny", "nxp"],
     attrs=dict(
         units="meters",
@@ -93,10 +94,25 @@ ds.arcx = xr.DataArray(
     )
 )
 
+@pytest.fixture(autouse=True)
+def set_fms_files():
 
-def test_read_write(tmp_path):
+    inputnml = Path("input.nml")
+    logfile = Path("logfile.000000.out")
+    warnfile = Path("warnfile.000000.out")
+    
+    inputnml.touch()
 
-    gridfile = Path("test.nc")
+    yield
+
+    if inputnml.exists(): inputnml.unlink()
+    if logfile.exists(): logfile.unlink()
+    if warnfile.exists(): warnfile.unlink()
+    
+
+def test_read_write(set_fms_files):
+    
+    gridfile = Path("test_read_write.nc")
 
     pyfms.fms.init()
     
@@ -109,16 +125,16 @@ def test_read_write(tmp_path):
     testgrid.area = ds.area.data
     testgrid.angle_dx = ds.angle_dx.data
     testgrid.angle_dy = ds.angle_dy.data
-    testgrid.arcx = ds.arcx.data
-    testgrid.tile = ds.tile.data
+    testgrid.arcx = str(ds.arcx.data)
+    testgrid.tile = str(ds.tile.data)
 
     testgrid.write(gridfile)
 
     assert gridfile.exists()
 
     del testgrid
-
-    testgrid = GridObj(gridfile=gridfile).read_all()
+    
+    testgrid = GridObj(gridfile=gridfile).read()
 
     #test dims
     assert testgrid.nx == nx
@@ -127,26 +143,26 @@ def test_read_write(tmp_path):
     assert testgrid.nyp == nyp
     
     #test values
-    assert_array_equal(testgrid.x = ds.x.data)
-    assert_array_equal(testgrid.y = ds.y.data)
-    assert_array_equal(testgrid.dx = ds.dx.data)
-    assert_array_equal(testgrid.dy = ds.dy.data)
-    assert_array_equal(testgrid.area = ds.area.data)
-    assert_array_equal(testgrid.angle_dx = ds.angle_dx.data)
-    assert_array_equal(testgrid.angle_dy = ds.angle_dy.data)
-    assert_array_equal(testgrid.arcx = ds.arcx.data)
-    assert_array_equal(testgrid.tile = ds.tile.data)
+    np.testing.assert_array_equal(testgrid.x, ds.x.data)
+    np.testing.assert_array_equal(testgrid.y, ds.y.data)
+    np.testing.assert_array_equal(testgrid.dx, ds.dx.data)
+    np.testing.assert_array_equal(testgrid.dy, ds.dy.data)
+    np.testing.assert_array_equal(testgrid.area, ds.area.data)
+    np.testing.assert_array_equal(testgrid.angle_dx, ds.angle_dx.data)
+    np.testing.assert_array_equal(testgrid.angle_dy, ds.angle_dy.data)
+    assert testgrid.arcx == str(ds.arcx.data)
+    assert testgrid.tile == str(ds.tile.data)
 
     gridfile.unlink()
 
     pyfms.fms.end()
+    
 
-
-def test_center_option():
+def test_center_option(set_fms_files):
 
     pyfms.fms.init()
     
-    gridfile = "test_center.nc"
+    gridfile = Path("test_center.nc")
     nx2 = nx // 2
     ny2 = ny // 2
     nx2p = nx2 + 1
@@ -158,8 +174,7 @@ def test_center_option():
 
     GridObj(gridfile=gridfile, x=x, y=y).write()
 
-    grid = GridObj(gridfile=gridfile)
-    xc, yc = grid.read_xy(center=True, radians=True)
+    grid = GridObj(gridfile=gridfile).read_xy(center=True, radians=True)
 
     assert grid.nx == nx2
     assert grid.ny == ny2
@@ -168,17 +183,20 @@ def test_center_option():
 
     answer = np.radians(np.ones((ny2p,nx2p), dtype=np.float64))
     
-    assert_array_equal(xc, answer)
-    assert_array_equal(yc, answer)
+    np.testing.assert_array_equal(grid.x, answer)
+    np.testing.assert_array_equal(grid.y, answer)
+
+    gridfile.unlink()
 
     pyfms.fms.end()
     
     
-def test_to_domain():
+def test_to_domain(set_fms_files):
 
     nx, ny = 8, 8
     global_indices = [0, nx-1, 0, ny-1]
-    
+
+    Path("input.nml").touch()
     pyfms.fms.init(ndomain=1)
     domain = pyfms.mpp_domains.define_domains(global_indices)
 
@@ -196,12 +214,9 @@ def test_to_domain():
     xanswer, yanswer = np.meshgrid(x1, y1)
     area_answer = np.ones((domain.ysize_c, domain.xsize_c), dtype=np.float64)
     
-    assert_array_equal(grid.x, xanswer)
-    assert_array_equal(grid.y, yanswer)
-    assert_array_equal(grid.area, area_answer)
+    np.testing.assert_array_equal(grid.x, xanswer)
+    np.testing.assert_array_equal(grid.y, yanswer)
+    np.testing.assert_array_equal(grid.area, area_answer)
 
     pyfms.fms.end()
-
-    
-
 

@@ -13,21 +13,74 @@ GridObj:
 Class for containing basic grid data to be used by other grid objects
 """
 
-tiletype = dict(
-    simple_cartesian = dict(standard_name = "grid_tile_spec",
-                            geometry = "planar",
-                            discretization = "logically_rectangular",
-                            conformal = "True"
-    ),
-    cubic = dict(standard_name = "grid_tile_spec",
-                 geometry = "spherical",
-                 north_pole = "0.0 90.0",
-                 discretization = "logically_rectangular",
-                 conformal = "False"
-    ),
-    none = {}
-)    
+attrs = {}
+attrs["x"] = dict(
+    standard_name = "geographic_longitude",
+    units = "degree_east"
+)
+attrs["y"] = dict(
+    standard_name = "geographic_latitude",
+    units = "degrees_north"
+)
+attrs["tile"] = {}
+attrs["tile_options"] = {}
+attrs["tile_options"]["cubic"] = dict(
+    standard_name = "grid_tile_spec",
+    geometry = "spherical",
+    north_pole = "0.0 90.0",
+    discretization = "logically_rectangular",
+    conformal = "false"
+)
+attrs["tile_options"]["simple_cartesian"] = dict(
+    standard_name = "grid_tile_spec",
+    geometry = "planar",
+    discretization = "logically_rectangular",
+    conformal = "true"
+)
+attrs["tile_options"]["none"] = dict(
+    standard_name = "grid_tile_spec",
+    geometry = "spherical",    
+    north_pole = "0.0 90.0",
+    projection = "none", 
+    discretization = "logically_rectangular",
+    conformal = "true"
+)
+    
+attrs["dx"] = dict(
+    standard_name = "grid_edge_x_distance",
+    units = "meters"
+)
+attrs["dy"] = dict(
+    standard_name = "grid_edge_y_distance",
+    units = "meters"
+)
+attrs["area"] = dict(
+    standard_name = "grid_cell_area",
+    units = "m2"
+)
+attrs["angle_dx"] = dict(
+    standard_name = "grid_vertex_x_angle_WRT_geographic_east",
+    units = "degrees_east"
+)
+attrs["angle_dy"] = dict(
+    standard_name = "grid_vertex_y_angle_WRT_geographic_north",
+    units = "degrees_north"
+)
+attrs["arcx"] = dict(
+    standard_name = "grid_edge_x_arc_type",
+    north_pole = "0.0,90.0"
+)
 
+dims = {}
+dims["x"] = ["nyp", "nxp"]
+dims["y"] = ["nyp", "nxp"]
+dims["dx"] = ["nyp", "nx"]
+dims["dy"] = ["ny", "nxp"]
+dims["area"] = ["ny", "nx"]
+dims["angle_dx"] = ["nyp", "nxp"]
+dims["angle_dy"] = ["nyp", "nxp"]
+dims["tile"] = ()
+dims["arcx"] = ()
 
 class GridObj:
 
@@ -35,7 +88,7 @@ class GridObj:
                  input_dir: str = "./",
                  gridfile: str = None,
                  domain: pyfms.Domain = None,
-                 gridtype: str = "none",
+                 gridtype: str = None,
                  tile: str = None,
                  nx: int = None,
                  ny: int = None,
@@ -52,7 +105,7 @@ class GridObj:
     ):
 
         self.input_dir = Path(input_dir)
-        self.gridfile = gridfile if gridfile is None else Path(gridfile)
+        self.gridfile = gridfile
         self.domain = domain
 
         self.nx = nx
@@ -65,70 +118,38 @@ class GridObj:
         self.x_obj = SimpleNamespace(
             name="x",
             data=x,
-            dims=["nyp", "nxp"],
-            attrs={"standard_name": "geographic_longitude",
-                   "units": "degree_east"
-            }
         )
         self.y_obj = SimpleNamespace(
             name="y",
             data=y,
-            dims=["nyp", "nxp"],
-            attrs={"standard_name": "geographic_latitude",
-                   "units": "degrees_north"
-            }
         )
         self.tile_obj = SimpleNamespace(
             name="tile",
             data=tile,
-            attrs=tiletype[self.gridtype]            
         )
         self.dx_obj = SimpleNamespace(
             name="dx",
             data=dx,
-            dims=["nyp", "nxp"],
-            attrs={"standard_name": "grid_edge_x_distance",
-                   "units": "meters"
-            }
         )
         self.dy_obj = SimpleNamespace(
             name="dy",
             data=dy,
-            dims=["nyp", "nxp"],
-            attrs={"standard_name": "grid_edge_y_distance",
-                   "units": "meters"
-            }
         )
         self.area_obj = SimpleNamespace(
             name="area",
             data=area,
-            dims=["ny", "nx"],
-            attrs={"standard_name": "grid_cell_area",
-                   "units": "m2"
-            }
         )        
         self.angle_dx_obj = SimpleNamespace(
             name="angle_dx",
             data=angle_dx,
-            dims=["nyp", "nxp"],
-            attrs={"standard_name": "grid_vertex_x_angle_WRT_geographic_east",
-                   "units": "degrees_east"
-            }            
         )
         self.angle_dy_obj = SimpleNamespace(
             name="angle_dy",
             data=angle_dy,
-            dims=["nyp", "nxp"],
-            attrs={"standard_name": "grid_vertex_y_angle_WRT_geographic_east",
-                   "units": "degrees_north"
-            }
         )
         self.arcx_obj = SimpleNamespace(
             name="arcx", 
             data=arcx,
-            attrs={"standard_name": "grid_edge_x_arc_type",
-                   "north_pole": "0.0, 90.0"
-            }
         )
         self.objlist = [
             self.x_obj,
@@ -141,19 +162,20 @@ class GridObj:
             self.arcx_obj,
             self.tile_obj
         ]
-        
+                
 
+        
     def read_xy(self, center: bool = True, radians: bool = True):
 
         with xr.open_dataset(self.input_dir/self.gridfile) as ds:
 
-            for coord_obj in [self.x_obj, self.y_obj]:
-                data = ds[coord_obj.name].data
+            for obj in [self.x_obj, self.y_obj]:
+                data = ds[obj.name].data
                 if center:
                     data = data[::2, ::2]                
                 if radians:
                     data = np.radians(data, dtype=np.float64)
-                coord_obj.data = np.ascontiguousarray(data)
+                obj.data = np.ascontiguousarray(data)
 
             self._set_dims(ds.sizes, center=center)
                 
@@ -162,9 +184,6 @@ class GridObj:
                             
     def to_domain(self, domain: pyfms.Domain):
 
-        if self.x_obj.data is None or self.y_obj.data is None:
-            pyfms.fms.error(FATAL, "must read in grid first")
-
         isc, iec, jsc, jec = domain.isc, domain.iec, domain.jsc, domain.jec
 
         self.nx = domain.xsize_c
@@ -172,14 +191,14 @@ class GridObj:
         self.nxp = domain.xsize_c + 1
         self.nyp = domain.ysize_c + 1
 
-        for coord in self.objlist:
+        for obj in self.objlist:
 
             edge, shape = 2, (self.nyp, self.nxp)
-            if coord is self.area_obj: edge, shape = 1, (self.ny, self.nx)
+            if obj is self.area_obj: edge, shape = 1, (self.ny, self.nx)
 
-            if coord.data is not None and type(coord.data) is not str:
-                coord.data = np.ascontiguousarray(coord.data[jsc:jec+edge, isc:iec+edge])                    
-                if coord.data.shape != shape:
+            if obj.data is not None and type(obj.data) is not str:
+                obj.data = np.ascontiguousarray(obj.data[jsc:jec+edge, isc:iec+edge])                    
+                if obj.data.shape != shape:
                     raise RuntimeError("grid on domain is not the correct size")
 
         return self
@@ -191,7 +210,7 @@ class GridObj:
         return self.area
 
     
-    def read_all(self, radians: bool = False, center: bool = False):
+    def read(self, radians: bool = False, center: bool = False):
 
         """
         read:
@@ -201,17 +220,16 @@ class GridObj:
         check_file_is_there(self.gridfile)
 
         with xr.open_dataset(self.input_dir/self.gridfile) as ds:        
-            for coord_obj in self.objlist:
-                if coord_obj.name in ds:
-                    coord_obj.data = ds[coord_obj.name].data
+            for obj in self.objlist:
+                if obj.name in ds:
+                    obj.data = ds[obj.name].data
                     if radians:
-                        coord_obj.data = np.radians(coord_obj.data, dtype=np.float64)
+                        obj.data = np.radians(obj.data, dtype=np.float64)
                     if center:
-                        coord_obj.data = np.ascontiguousarray(coord_obj.data[::2, ::2])
+                        obj.data = np.ascontiguousarray(obj.data[::2, ::2])
                 else:
-                    pass
-                    #pyfms.mpp.error(pyfms.mpp.WARNING, f"{coord.name} not found in {self.gridfile}")
-
+                    raise RuntimeError(f"could not {obj.name} in {self.gridfile}")
+                    
             self._set_dims(ds.sizes, center=center)
             
         return self
@@ -224,15 +242,27 @@ class GridObj:
         This method will generate a netcdf file containing grid content
         """
 
-        ds = {}        
-        for coord_obj in self.objlist:
-            if coord_obj.data is not None:
-                ds[coord_obj.name] = xr.DataArray.from_dict(coord_obj.__dict__)
-
         if gridfile is None:
             if self.gridfile is None: pyfms.fms.error(FATAL, "must provide grid filename")
             gridfile = self.gridfile
             
+        if self.gridtype == "none":
+            attrs["tile"] = attrs["tile_options"]["none"]
+        elif self.gridtype == "cubic":
+            attrs["tile"] = attrs["tile_options"]["cubic"]
+        elif self.gridtype == "simple_cartesian":
+            attrs["tile"] = attrs["tile_options"]["simple_cartesian"]
+        
+        ds = {}        
+        for obj in self.objlist:
+            if obj.data is not None:
+                name = obj.name
+                ds[name] = xr.DataArray(
+                    data = obj.data,
+                    attrs = attrs[name],
+                    dims=dims[name]
+                )
+
         xr.Dataset(data_vars=ds).to_netcdf(gridfile)
 
 

@@ -102,7 +102,6 @@ class MosaicObj:
             name = "contact_index",
             data = contact_index
         )
-
         self.objlist = [
             self.mosaic_obj,
             self.gridlocation_obj,
@@ -126,7 +125,8 @@ class MosaicObj:
             for obj in self.objlist:
                 variable = ds.get(obj.name)
                 if variable is not None:
-                    variable = variable.str.decode(encoding="utf-8")
+                    if variable.dtype is bytes:
+                        variable = variable.str.decode(encoding="utf-8")
                     if type(variable.data) is np.ndarray:
                         obj.data = variable.data.tolist()
                     else:
