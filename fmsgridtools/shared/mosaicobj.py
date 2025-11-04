@@ -1,6 +1,11 @@
-import numpy as np
+"""
+MosaicObj class
+"""
+
 from pathlib import Path
 from types import SimpleNamespace
+
+import numpy as np
 import xarray as xr
 
 from fmsgridtools.shared.gridobj import GridObj
@@ -42,13 +47,13 @@ dims = dict(
 def set_attribute(variable: str, var_attr: dict):
 
     global attrs
-    
+
     if variable in attrs:
         attrs[variable] = var_attr
     else:
         raise RuntimeError(f"{variable} does not exist in attributes")
 
-    
+
 def set_dims(variable: str, var_dim: list):
 
     global dims
@@ -56,10 +61,14 @@ def set_dims(variable: str, var_dim: list):
     if variable in dims:
         dims[variable] = var_dim
     else:
-        raise RuntimeError(f"{variable} does not exist in dims")    
+        raise RuntimeError(f"{variable} does not exist in dims")
 
 
 class MosaicObj:
+
+    """
+    MosaicObj
+    """
 
     def __init__(self,
                  input_dir: str = "./",
@@ -71,13 +80,14 @@ class MosaicObj:
                  gridtiles: list[str] = None,
                  contacts: list[str] = None,
                  contact_index: list[str] = None,
-                 grid: dict = None):
+                 ):
 
         self.input_dir = Path(input_dir)
         self.mosaicfile = mosaicfile
 
         self.ntiles = ntiles
-        
+        self.ncontacts = None
+
         self.mosaic_obj = SimpleNamespace(
             name = "mosaic",
             data = mosaic
@@ -114,12 +124,15 @@ class MosaicObj:
 
     def read(self, mosaicfile: str|Path = None, input_dir: str|Path = "."):
 
+        """
+        Read the mosac file
+        """
+
         if mosaicfile is None:
             if self.mosaicfile is None:
                 raise IOError("Please specify the mosaic file")
-            else:
-                mosaicfile = self.mosaicfile
-        
+            mosaicfile = self.mosaicfile
+
         with xr.open_dataset(Path(self.input_dir)/mosaicfile) as ds:
 
             for obj in self.objlist:
@@ -127,25 +140,29 @@ class MosaicObj:
                 if variable is not None:
                     if variable.dtype is bytes:
                         variable = variable.str.decode(encoding="utf-8")
-                    if type(variable.data) is np.ndarray:
+                    if isinstance(variable.data, np.ndarray):
                         obj.data = variable.data.tolist()
                     else:
                         obj.data = str(variable.data)
             self.ntiles = ds.sizes.get("ntiles")
-            self.ncontact = ds.sizes.get("ncontact")
+            self.ncontacts = ds.sizes.get("ncontact")
             self.input_dir = input_dir
             self.mosaicfile = mosaicfile
 
         return self
 
-    
+
     def from_dict(self, mosaic_dict: dict):
+
+        """
+        Generate mosaic file from dictionary
+        """
 
         names = [obj.name for obj in self.objlist]
         for key in mosaic_dict:
             if key not in names:
-                raise RuntimeError(f"{key} not a field in MosaicObj")            
-        
+                raise RuntimeError(f"{key} not a field in MosaicObj")
+
         for key in mosaic_dict:
             for obj in self.objlist:
                 if obj.name == key:
@@ -157,23 +174,28 @@ class MosaicObj:
 
         self.ntiles = None if self.gridfiles is None else len(self.gridfiles.data)
         self.ncontacts = None if self.contacts is None else len(self.contacts.data)
-                
+
         return self
 
-    
+
     def get_grid(self, input_dir: str|Path = "./", radians: bool = False, center: bool = False) -> dict:
+
+
+        """
+        Get grids from gridfiles
+        """
 
         if self.gridfiles is None:
             raise RuntimeError("need to set gridfiles")
 
         if self.gridtiles is None:
             raise RuntimeError("need to set gridtiles")
-        
+
         if self.ntiles is None:
             ntiles = len(self.gridfiles)
-                    
+
         grid = {}
-        
+
         for gridfile, gridtile in zip(self.gridfiles, self.gridtiles):
             readfile = Path(input_dir)/gridfile
             grid[gridtile] = GridObj(gridfile=readfile).read_xy(radians=radians, center=center)
@@ -183,12 +205,16 @@ class MosaicObj:
 
     def write(self, mosaicfile: str = None) -> None:
 
+        """
+        write mosaic file
+        """
+
         if mosaicfile is None:
             if self.mosaicfile is None:
                 raise RuntimeError("need to specify mosaic filename")
             else:
                 mosaicfile = self.mosaicfile
-        
+
         ds = {}
 
         for obj in self.objlist:
@@ -199,55 +225,115 @@ class MosaicObj:
                     attrs=attrs[name],
                     dims=dims[name]
                 )
-                    
+
         xr.Dataset(data_vars=ds).to_netcdf(mosaicfile)
 
 
     @property
     def mosaic(self):
+
+        """
+        retrieve mosaic
+        """
+
         return self.mosaic_obj.data
 
     @mosaic.setter
     def mosaic(self, data):
+
+        """
+        set mosaic data
+        """
+
         self.mosaic_obj.data = data
 
     @property
     def gridlocation(self):
+
+        """
+        retrieve gridlocation
+        """
+
         return self.gridlocation_obj.data
 
     @gridlocation.setter
     def gridlocation(self, data):
+
+        """
+        set gridlocation data
+        """
+
         self.gridlocation_obj.data = data
 
     @property
     def gridtiles(self):
+
+        """
+        retrieve gridtiles
+        """
+
         return self.gridtiles_obj.data
 
     @gridtiles.setter
     def gridtiles(self, data):
+
+        """
+        set gridtiles data
+        """
+
         self.gridtiles_obj.data = data
-        
+
     @property
     def gridfiles(self):
+
+        """
+        retrieve gridfiles
+        """
+
         return self.gridfiles_obj.data
 
     @gridfiles.setter
     def gridfiles(self, data):
+
+        """
+        set gridfiles data
+        """
+
         self.gridfiles_obj.data = data
 
     @property
     def contacts(self):
+
+        """
+        retrieve contacts
+        """
+
         return self.contacts_obj.data
 
     @contacts.setter
     def contacts(self, data):
+
+        """
+        set contacts data
+        """
+
         self.contacts_obj.data = data
 
     @property
     def contact_index(self):
+
+        """
+        retrieve contact_index
+        """
+
         return self.contact_index_obj.data
 
     @contact_index.setter
     def contact_index(self, data):
+
+        """
+        set contact_index data
+        """
+
         self.contact_index_obj.data = data
-    
+
