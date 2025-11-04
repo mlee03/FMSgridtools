@@ -131,7 +131,7 @@ class MosaicObj:
                         obj.data = variable.data.tolist()
                     else:
                         obj.data = str(variable.data)
-            self.ntiles = ds.sizes.get("ntile")
+            self.ntiles = ds.sizes.get("ntiles")
             self.ncontact = ds.sizes.get("ncontact")
             self.input_dir = input_dir
             self.mosaicfile = mosaicfile
@@ -192,12 +192,13 @@ class MosaicObj:
         ds = {}
 
         for obj in self.objlist:
-            name = obj.name
-            ds[name] = xr.DataArray(
-                data=obj.data,
-                attrs=attrs[name],
-                dims=dims[name]
-            )
+            if obj.data is not None:
+                name = obj.name
+                ds[name] = xr.DataArray(
+                    data=obj.data,
+                    attrs=attrs[name],
+                    dims=dims[name]
+                )
                     
         xr.Dataset(data_vars=ds).to_netcdf(mosaicfile)
 

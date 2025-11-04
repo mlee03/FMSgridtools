@@ -372,7 +372,16 @@ class GridObj:
     def arcx(self, data):
         self.arcx_obj.data = data
     
-    
+
+    def __repr__(self):
+        summary = f"\n\nGrid for {self.gridfile}, tile = {self.tile_obj.name}\n"
+        summary += "nx = {:>5} ny = {:>5} nxp = {:>5} nyp = {:>5}\n".format(self.nx, self.ny, self.nxp, self.nyp)
+        summary += f"gridtype = {self.gridtype}\n"
+
+        for obj in self.objlist:
+            summary += f"{obj.name} = {obj.data}\n"
+
+        return summary
     
         
         
