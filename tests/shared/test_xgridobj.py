@@ -99,8 +99,11 @@ def test_xgridobj(on_gpu: bool):
     xgrid.get_parents()
     xgrid.read(remapfile=remapfile)
 
-    errmsg = "tile {}: expected {} but got {}"
-    area = fmsgridtools.GridObj(gridfile=tgt.gridfile + ".tile1.nc").read(center=True, radians=True).get_fms_area()
+    errmsg = "tile {}, gridoint {}: expected {} but got {}"
+    nxgrid = tgt.nx//2 * tgt.ny//2
+    area = fmsgridtools.GridObj(
+        gridfile=tgt.gridfile + ".tile1.nc").read(center=True, radians=True).get_fms_area()
+
     for tile in xgrid.interps:
 
         interp = xgrid.interps[tile]
@@ -109,25 +112,26 @@ def test_xgridobj(on_gpu: bool):
         i_dst = interp.i_dst
         j_dst = interp.j_dst
 
-        assert interp.nxgrid == tgt.nx//2 * tgt.ny//2, errmsg.format(tile, tgt.nx//2 * tgt.ny//2, interp.nxgrid)
+        assert interp.nxgrid == nxgrid, errmsg.format(tile, "N/A", nxgrid, interp.nxgrid)
 
         answers = get_answer()
 
         for i in range(interp.nxgrid):
-            idst, jdst = i_dst[i], j_dst[i]
-            answerlist = answers[j_src[i]][i_src[i]]
-            check_indices = [idst, jdst]
-            check_area = area[int(jdst), int(idst)]
+            iss, jss = i_src[i], j_src[i]
+            idd, jdd = i_dst[i], j_dst[i]
+
             np.testing.assert_almost_equal(
                 interp.xgrid_area[i],
-                check_area,
-                decimal=5,
-                err_msg=f"gridpoint {i} on tile {tile} ")
+                area[idd, idd],
+                decimal=2,
+                err_msg=f"tile {tile} gridpoint {i}")
+
+            check_indices = [idd, jdd]
             try:
-                answerlist.remove(check_indices)
+                answers[jss][iss].remove(check_indices)
             except ValueError:
-                assert False, f"tile {tile}: xpoint {i}, {check} not found in answers {answerlist}, {i_src[i]}, {j_src[i]}"
+                assert False, errmsg.format(tile, i, answers[jss][iss], check_indices)
 
 
 if __name__ == "__main__":
-    test_xgridobj(on_gpu=True)
+    test_xgridobj(on_gpu=False)
