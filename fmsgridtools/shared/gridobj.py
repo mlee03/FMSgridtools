@@ -169,7 +169,11 @@ class GridObj:
             self.arcx_obj,
             self.tile_obj
         ]
-        
+
+        self._set_dims()
+
+        logger.info("Created new GridObj named:\n %s", self.__repr__())
+
 
     def to_domain(self):
 
@@ -185,7 +189,7 @@ class GridObj:
                 edge = 1 if obj is self.area_obj else 2
                 obj.data = np.ascontiguousarray(obj.data[jsc:jec+edge, isc:iec+edge])
 
-        self._set_dims(on_domain=True)
+        self._set_dims()
 
         return self
 
@@ -228,7 +232,7 @@ class GridObj:
             objlist = [self.x_obj, self.y_obj]            
         else:
             objlist = self.objlist
-            logger.info(f"reading in file {self.gridfile}")
+            logger.info("reading in file %s\n", self.gridfile)
 
         with xr.open_dataset(self.input_dir/self.gridfile) as ds:
             for obj in objlist:
@@ -248,7 +252,7 @@ class GridObj:
                     logger.error("please specify domain by ")
                 self.to_domain()
 
-            self._set_dims(ds.sizes, center=center, on_domain=on_domain)
+            self._set_dims()
 
         return self
 
@@ -265,7 +269,7 @@ class GridObj:
                 logger.error("must provide gridfile name")
             gridfile = self.gridfile
 
-        logger.info()"writing out gridfile %s", {gridfile})
+        logger.info("writing out gridfile %s", {gridfile})
 
         if self.gridtype == "none":
             attrs["tile"] = attrs["tile_options"]["none"]
@@ -288,46 +292,13 @@ class GridObj:
         xr.Dataset(data_vars=ds).to_netcdf(gridfile)
 
 
-    def _set_dims(self, dims: dict = None, center: bool = True, on_domain: bool = False):
+    def _set_dims(self):
 
-
-        if on_domain:
-            self.nx = self.domain.xsize_c
-            self.ny = self.domain.ysize_c
-            self.nxp = self.nx + 1
-            self.nyp = self.ny + 1
-            return
-
-        self.nxp = dims.get("nxp")
-        self.nyp = dims.get("nyp")
-        self.nx = dims.get("nx")
-        self.ny = dims.get("ny")
-
-        #nx
-        if self.nxp is None:
-            if self.nx is None:
-                logger.error("cannot set dimension nxp")
-            self.nxp = self.nx + 1
-        elif self.nx is None:
-            if self.nxp is None:
-                logger.error("cannot set dimension nx")
-            self.nx = self.nxp - 1
-
-        #ny
-        if self.nyp is None:
-            if self.ny is None:
-                logger.error("cannot set dimension nyp")
-            self.nyp = self.ny + 1
-        elif self.ny is None:
-            if self.nyp is None:
-                logger.error("cannot set dimension ny")
+        if self.x_obj.data is not None:
+            print("hereherehere")
+            self.nyp, self.nxp = self.x_obj.data.shape
             self.ny = self.nyp - 1
-
-        if center:
-            self.nx = self.nx // 2
-            self.ny = self.ny // 2
-            self.nxp = self.nx + 1
-            self.nyp = self.ny + 1
+            self.nx = self.nxp - 1
 
 
     @property
@@ -494,12 +465,16 @@ class GridObj:
 
 
     def __repr__(self):
-        summary = f"\n\nGrid for {self.gridfile}, tile = {self.tile_obj.name}\n"
-        summary += "nx = {:>5} ny = {:>5} nxp = {:>5} nyp = {:>5}\n".format(self.nx, self.ny, self.nxp, self.nyp)
-        summary += f"gridtype = {self.gridtype}\n"
+        summary = "%s\n" % (self.__class__.__name__)
+        summary += "gridfile = %s\n" % (self.gridfile)
+        summary += "gridtype = %s\n" % (self.gridtype)
+        summary += "nx = %s" % (self.nx)
+        summary += "ny = %s" % (self.ny)
+        summary += "nxp = %s" %(self.nxp)
+        summary += "nyp = %s" %(self.nyp)
 
         for obj in self.objlist:
-            summary += f"{obj.name} = {obj.data}\n"
+            summary += "%s = %s\n" % (obj.name, obj.data)
 
         return summary
 
