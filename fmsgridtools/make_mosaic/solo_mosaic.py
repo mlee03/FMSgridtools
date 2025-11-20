@@ -36,7 +36,7 @@ def make(num_tiles,
 
     if len(gridtiles) != num_tiles: sys.exit("Error, number of gridtiles does not equal num_tiles")
 
-    grid = MosaicObj(ntiles=num_tiles, gridfiles = tilefiles, gridtiles = gridtiles).get_grid(toradians=True)
+    grid = MosaicObj(ntiles=num_tiles, gridfiles = tilefiles, gridtiles = gridtiles).get_grid(radians=True)
                 
     ncontact, contacts, contact_index = 0, [], []
     #FIND CONTACT REGIONS
@@ -64,7 +64,7 @@ def make(num_tiles,
         print(f"NOTE: There are {ncontact} contacts\n")
         
         if ncontact > 0:
-            mosaic = MosaicObj(name=mosaic_name,
+            mosaic = MosaicObj(mosaic=mosaic_name,
                                gridlocation=dir_name,
                                gridfiles=tilefiles,
                                gridtiles=gridtiles,
