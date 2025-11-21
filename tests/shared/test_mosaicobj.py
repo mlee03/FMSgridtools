@@ -106,6 +106,7 @@ def test_read_and_write(set_fms_files):
     mosaic.contact_index = answers_ds.contact_index.data
 
     mosaic.write()
+    assert mosaicfile.exists()
 
     # delete object in order to read
     del mosaic
