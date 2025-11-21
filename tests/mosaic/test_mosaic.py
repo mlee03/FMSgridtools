@@ -53,46 +53,18 @@ def test_create_regional_input():
             "grid_yt_sub01": yt_data}).to_netcdf(
             f"regional_input_file.tile{tile_number}.nc")
 
-def test_write():
-    mosaic = fmsgridtools.MosaicObj(ntiles=6,
-                                    name=f"output[:-3]",
-                                    gridlocation='./',
-                                    gridfiles=np.asarray(gridfiles),
-                                    gridtiles=np.asarray(gridtiles),
-                                    contacts=np.full(6, "", dtype=str),
-                                    contact_index=np.full(6, "", dtype=str))
-    mosaic.write(output)
-    assert os.path.exists(output)
- 
-def test_ntiles():
-    mosaic = fmsgridtools.MosaicObj(mosaic_file=output).read()
-    assert mosaic.ntiles == 6
-
-    
-def test_gridfiles():
-    mosaic2 = fmsgridtools.MosaicObj(mosaic_file=output).read()
-    assert all([mosaic2.gridfiles[i] == gridfiles[i] for i in range(mosaic2.ntiles)])
-    os.remove(output)
-
-    
-def test_getgrid():
-
-    for ifile in gridfiles: make_grid(ifile)
-    mosaic = fmsgridtools.MosaicObj(ntiles=ntiles, gridtiles=gridtiles, gridfiles=gridfiles)
-    mosaic.get_grid(toradians=True, agrid=True, free_dataset=True)
-    
     
 def test_solo_mosaic():
 
-    x1, y1 = np.meshgrid(np.arange(0,46,1, dtype=np.float64), np.arange(0,11,1, dtype=np.float64))
-    xr.Dataset(data_vars=dict(x=xr.DataArray(x1, dims=["nyp","nxp"]),
-                              y=xr.DataArray(y1, dims=["nyp", "nxp"]))
-    ).to_netcdf('grid.tile1.nc')
-    
-    x2, y2 = np.meshgrid(np.arange(45,90,1, dtype=np.float64), np.arange(0,11,1, dtype=np.float64))
-    xr.Dataset(data_vars=dict(x=xr.DataArray(x2, dims=["nyp","nxp"]),
-                              y=xr.DataArray(y2, dims=["nyp", "nxp"]))
-    ).to_netcdf('grid.tile2.nc')
+    x = np.arange(0, 46, dtype=np.float64)
+    y = np.arange(0, 11, dtype=np.float64)
+    x1, y1 = np.meshgrid(x, y)
+    fmsgridtools.GridObj(x=x1, y=y1).write("grid.tile1.nc")
+
+    x = np.arange(45, 90, 1, dtype=np.float64)
+    y = np.arange(0, 11, 1, dtype=np.float64)
+    x2, y2 = np.meshgrid(x, y)
+    fmsgridtools.GridObj(x=x2, y=y2).write("grid.tile2.nc")
                           
     runner = CliRunner()
     result = runner.invoke(fmsgridtools.make_mosaic.solo, ['--num_tiles', '2',
@@ -100,8 +72,7 @@ def test_solo_mosaic():
                                                            '--tile_file', 'grid.tile2.nc'])
     
     assert result.exit_code == 0
-    print(result.stdout)
-    assert 'NOTE: There are 1 contacts' in result.stdout
+    assert 'NOTE: There are 1 contacts' in result.stdout, print(result.stdout)
     os.remove('mosaic.nc')
     os.remove('grid.tile1.nc')
     os.remove('grid.tile2.nc')

@@ -98,13 +98,19 @@ class MosaicObj:
         Read the mosaic file
         """
 
+        logger.info("Reading mosaicfile")
+
         if mosaicfile is None:
             if self.mosaicfile is None:
                 logger.error("Please specify mosaic file")
         else:
             self.mosaicfile = mosaicfile
 
-        with xr.open_dataset(Path(self.input_dir) / self.mosaicfile) as ds:
+        if str(input_dir) != (self.input_dir):
+            logger.warning("Resetting input_dir to %s", input_dir)
+            self.input_dir = Path(input_dir)
+
+        with xr.open_dataset(self.input_dir / self.mosaicfile) as ds:
 
             for obj in self.objlist:
                 variable = ds.get(obj.name)
@@ -130,10 +136,12 @@ class MosaicObj:
         Generate mosaic file from dictionary
         """
 
+        logger.info("Setting MosaicObj from dict")
+
         names = [obj.name for obj in self.objlist]
         for key in mosaic_dict:
             if key not in names:
-                logger.warning(f"{key} not a field in MosaicObj")
+                logger.error(f"{key} not a field in MosaicObj")
 
         for key in mosaic_dict:
             for obj in self.objlist:
@@ -158,9 +166,9 @@ class MosaicObj:
         Get grids from gridfiles
         """
 
-        logger.info("Reding in grid")
+        logger.info("Reading in grid")
 
-        if self.gridfiles_obj is None:
+        if self.gridfiles is None:
             raise RuntimeError("Cannot find gridfiles to read")
 
         if self.gridtiles is None:
