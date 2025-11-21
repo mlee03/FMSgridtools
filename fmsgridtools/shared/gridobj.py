@@ -5,7 +5,6 @@ Class for containing basic grid data to be used by other grid objects
 
 import logging
 from pathlib import Path
-from types import SimpleNamespace
 
 import numpy as np
 import numpy.typing as npt
@@ -123,8 +122,7 @@ class GridObj:
                  area: npt.NDArray = None,
                  angle_dx: npt.NDArray = None,
                  angle_dy: npt.NDArray = None,
-                 arcx: npt.NDArray = None,
-                 on_gpu: bool = False
+                 arcx: npt.NDArray = None
     ):
 
         self.input_dir = Path(input_dir)
@@ -147,17 +145,6 @@ class GridObj:
         self.angle_dx_obj = Variable(name="angle_dx", data=angle_dx)
         self.angle_dy_obj = Variable(name="angle_dy", data=angle_dy)
         self.arcx_obj = Variable(name="arcx", data=arcx)
-        self.objlist = [
-            self.x_obj,
-            self.y_obj,
-            self.dx_obj,
-            self.dy_obj,
-            self.area_obj,
-            self.angle_dx_obj,
-            self.angle_dy_obj,
-            self.arcx_obj,
-            self.tile_obj
-        ]
 
         self._set_dims()
 
@@ -293,8 +280,11 @@ class GridObj:
         elif self.gridtype == "simple_cartesian":
             attrs["tile"] = attrs["tile_options"]["simple_cartesian"]
 
+        objlist = [self.x_obj, self.y_obj, self.dx_obj, self.dy_obj, self.area_obj,
+        self.angle_dx_obj, self.angle_dy_obj, self.arcx_obj, self.tile_obj]
+
         ds = {}
-        for obj in self.objlist:
+        for obj in objlist:
             if obj.data is not None:
                 name = obj.name
                 ds[name] = xr.DataArray(
@@ -489,7 +479,10 @@ class GridObj:
         summary += "nxp = %s\n" %(self.nxp)
         summary += "nyp = %s\n" %(self.nyp)
 
-        for obj in self.objlist:
+        objlist = [self.x_obj, self.y_obj, self.dx_obj, self.dy_obj, self.area_obj,
+        self.angle_dx_obj, self.angle_dy_obj, self.arcx_obj, self.tile_obj]
+
+        for obj in objlist:
             summary += "%s = %s\n" % (obj.name, obj.data)
 
         return summary
