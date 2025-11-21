@@ -1,108 +1,131 @@
-import os
+"""
+test functionalities in xgridobj
+"""
+
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
-import xarray as xr
 
+import pyfms
 import fmsgridtools
 
+src = SimpleNamespace(
+    ntiles=6,
+    nx=12,
+    ny=24,
+    dxy=1,
+    mosaicfile="src_mosaic.nc",
+    gridfile="src_grid"
+)
+tgt = SimpleNamespace(
+    ntiles=1,
+    nx=24,
+    ny=48,
+    dxy=0.5,
+    mosaicfile="tgt_mosaic.nc",
+    gridfile="tgt_grid"
+)
 
-def generate_mosaic(nx: int = 90, ny: int = 45, refine: int = 2):
-
-    xstart, xend = 0, 180
-    ystart, yend = -45, 45
-
-    x_src = np.linspace(xstart, xend, nx+1)
-    y_src = np.linspace(ystart, yend, ny+1)
-    x_src, y_src = np.meshgrid(x_src, y_src)
-
-    x_tgt = np.linspace(xstart, xend, nx*refine+1)
-    y_tgt = np.linspace(ystart, yend, ny*refine+1)
-    x_tgt, y_tgt = np.meshgrid(x_tgt, y_tgt)
-    
-    area_src = np.ones((ny, nx), dtype=np.float64)
-    area_tgt = np.ones((ny*refine, nx*refine), dtype=np.float64)
-
-    for ifile in ("src", "tgt"):
-        mosaicfile = ifile + "_mosaic.nc"
-        gridfile = ifile + "_grid.nc"
-        gridlocation = "./"
-        gridtile = "tile1"
-        xr.Dataset(data_vars=dict(mosaic=mosaicfile.encode(),
-                                  gridlocation=gridlocation.encode(),
-                                  gridfiles=(["ntiles"], [gridfile.encode()]),
-                                  gridtiles=(["ntiles"], [gridtile.encode()]))
-        ).to_netcdf(mosaicfile)
+nxgrid_per_tile = tgt.nx//2 * tgt.ny//2
+nxgrid = nxgrid_per_tile * 6
+remapfile = "test_remap.nc"
 
 
-    for (x, y, area, prefix) in [(x_src, y_src, area_src, "src"), (x_tgt, y_tgt, area_tgt, "tgt")]:
-        xr.Dataset(data_vars=dict(x=(["nyp", "nxp"], x),
-                                  y=(["nyp", "nxp"], y),
-                                  area=(["ny", "nx"], area))
-        ).to_netcdf(prefix+"_grid.nc")
+def make_testfiles():
+
+    """
+    make mosaic and grid files for testing
+    """
+
+    # write mosaic
+    for parent in [src, tgt]:
+        fmsgridtools.MosaicObj(
+            gridtiles=[f"tile{i}" for i in range(1, parent.ntiles+1)],
+            gridfiles=[f"{parent.gridfile}.tile{i}.nc" for i in range(1, parent.ntiles+1)]
+        ).write(parent.mosaicfile)
+
+    # write grid
+    for parent in [src, tgt]:
+        for itile in range(1, parent.ntiles+1):
+            x1 = np.array([i*parent.dxy for i in range(parent.nx+1)], dtype=np.float64)
+            y1 = np.array([j*parent.dxy for j in range(parent.ny+1)], dtype=np.float64)
+            x, y = np.meshgrid(x1, y1)
+            fmsgridtools.GridObj(x=x, y=y).write(parent.gridfile + f".tile{itile}.nc")
 
 
-def remove_mosaic():
-    os.remove("src_grid.nc")
-    os.remove("tgt_grid.nc")
-    os.remove("src_mosaic.nc")
-    os.remove("tgt_mosaic.nc")
-    os.remove("remap.nc")
+#@pytest.mark.parametrize("on_gpu", [False, True])
+def xgridobj_test(on_gpu: bool = False):
 
+    """
+    tests generating the exchange grid
+    tests reading and write exchange grid
+    """
 
-@pytest.mark.parametrize("on_gpu", [False, True])
-def test_create_xgrid(on_gpu):
+    pyfms.fms.init(ndomain=4)
+    pyfms.horiz_interp.init(ninterp=src.ntiles)
 
-    nx, ny, refine = 45, 45, 2
-    generate_mosaic(nx=nx, ny=ny, refine=refine)
+    domain = pyfms.mpp_domains.define_domains([0, tgt.nx-1, 0, tgt.ny-1])
 
-    xgrid = fmsgridtools.XGridObj(src_mosaic_file="src_mosaic.nc",
-                                  tgt_mosaic_file="tgt_mosaic.nc",
-                                  on_gpu=on_gpu,
-                                  on_agrid=False
+    if pyfms.mpp.pe() == pyfms.mpp.root_pe():
+        make_testfiles()
+    pyfms.mpp.sync()
+
+    xgrid = fmsgridtools.XGridObj(
+        src_mosaicfile=src.mosaicfile,
+        tgt_mosaicfile=tgt.mosaicfile,
+        domain=domain
     )
-    xgrid.create_xgrid()
-    xgrid.to_dataset()
-    xgrid.dataset["tile1"]["tile1"].to_netcdf("remap.nc")
-    
+
+    xgrid.get_parents()
+    xgrid.get_interp()
+    xgrid.write(outfile=remapfile)
+
+    pyfms.horiz_interp.end()
     del xgrid
-    
-    xgrid = fmsgridtools.XGridObj(restart_remap_file="remap.nc")
 
-    #check nxcells
-    nxcells = nx * refine * ny * refine
-    assert xgrid.nxcells == nxcells
+    pyfms.horiz_interp.init(ninterp=src.ntiles)
 
-    #check parent input cells
-    answer_i = [i+1 for i in range(nx) for ixcells in range(refine*refine)]*ny
-    answer_j = [j+1 for j in range(ny) for i in range(nx*refine) for ixcells in range(refine)]
+    xgrid = fmsgridtools.XGridObj(
+        src_mosaicfile=src.mosaicfile,
+        tgt_mosaicfile=tgt.mosaicfile,
+        remapfile=remapfile)
 
-    src_i = [xgrid.src_cell[i][0] for i in range(nxcells)]
-    src_j = [xgrid.src_cell[i][1] for i in range(nxcells)]
-    
-    assert src_i == answer_i
-    assert src_j == answer_j
+    xgrid.get_parents()
+    xgrid.read(remapfile=remapfile)
 
-    #check parent output cells
-    answer_i = []
-    for j in range(ny):
-        for i in range(nx):
-            answer_i += [refine*i + ixcell + 1 for ixcell in range(refine)]*refine
 
-    answer_j = []
-    for j in range(ny):
-        for i in range(nx):
-            for ixcell in range(refine):
-                answer_j += [j*refine + ixcell + 1]*refine
-                
-    tgt_i = [xgrid.tgt_cell[i][0] for i in range(nxcells)]
-    tgt_j = [xgrid.tgt_cell[i][1] for i in range(nxcells)]
+    area = fmsgridtools.GridObj(
+        gridfile=tgt.gridfile + ".tile1.nc").read(center=True, radians=True).get_fms_area()
 
-    assert tgt_i == answer_i
-    assert tgt_j == answer_j
+    for tile in xgrid.interps:
 
-    remove_mosaic()
+        interp = xgrid.interps[tile]
+        i_src = interp.i_src
+        j_src = interp.j_src
+        i_dst = interp.i_dst
+        j_dst = interp.j_dst
 
+        assert interp.nxgrid == tgt.nx//2 * tgt.ny//2, errmsg.format(tile, "N/A", nxgrid, interp.nxgrid)
+
+        for i in range(interp.nxgrid):
+
+            idd, jdd = i_dst[i], j_dst[i]
+            assert i_src[i] == idd//2, f"xcell {i}, i_dst={idd}, j_dst={jdd}"
+            assert j_src[i] == jdd//2, f"xcell {i}, i_dst={idd}, j_dst={jdd}"
+
+            np.testing.assert_almost_equal(
+                interp.xgrid_area[i],
+                area[jdd, idd],
+                decimal=2,
+                err_msg=f"tile {tile} gridpoint {i}")
+
+
+def test_xgridobj_gpu():
+    xgridobj_test(on_gpu=True)
+
+def test_xgridobj_cpu():
+    xgridobj_test(on_gpu=False)
 
 if __name__ == "__main__":
-    test_create_xgrid(on_gpu=False)
+    test_xgridobj_cpu()
