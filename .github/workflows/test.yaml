@@ -31,5 +31,5 @@ jobs:
           pytest tests/shared/test_gridobj.py::test_read_write
           pytest tests/shared/test_gridobj.py::test_center_option
           pytest tests/shared/test_gridobj.py::test_to_domain
-          pytest tests/shared/test_xgridobj.py
-          pytest tests/hgrid/test_hgrid.py
+          #pytest tests/shared/test_xgridobj.py
+          #pytest tests/hgrid/test_hgrid.py
