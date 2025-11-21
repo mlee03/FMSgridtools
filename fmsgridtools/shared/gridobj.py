@@ -256,7 +256,7 @@ class GridObj:
                         logger.info("saving center points for %s", {obj.name})
                         obj.data = np.ascontiguousarray(obj.data[::2, ::2])
                 else:
-                    logger.error("could not %s in %s", {obj.name}, {self.gridfile})
+                    logger.warning("could not %s in %s", {obj.name}, {self.gridfile})
 
             if radians:
                 self.to_radians()
