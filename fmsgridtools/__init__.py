@@ -9,3 +9,7 @@ from .shared.gridtools_utils import check_file_is_there, get_provenance_attrs
 from .shared.gridobj import GridObj
 from .shared.mosaicobj import MosaicObj
 from .shared.xgridobj import XGridObj
+
+import fmsgridtools.utils.setlogger as setlogger
+
+setlogger.setconfig(filename="FMSGRIDTOOLS.LOG", debug=True)
