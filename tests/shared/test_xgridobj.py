@@ -77,6 +77,7 @@ def xgridobj_test(on_gpu: bool = False):
         tgt_mosaicfile=tgt.mosaicfile,
         domain=domain,
     )
+    xgrid.set_target_tile("tile1")
     xgrid.get_interp(on_gpu=on_gpu)
     xgrid.write(outfile=remapfile)
         
@@ -85,7 +86,8 @@ def xgridobj_test(on_gpu: bool = False):
     xgrid = fmsgridtools.XGridObj(
         src_mosaicfile=src.mosaicfile,
         tgt_mosaicfile=tgt.mosaicfile,
-        remapfile=remapfile)
+        remapfile=remapfile,
+        tgt_tile = "tile1")    
     xgrid.read(remapfile=remapfile)
 
     #answers

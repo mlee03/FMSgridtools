@@ -65,7 +65,7 @@ class XGridObj:
         tgt_gridfile: str | Path = None,
         src_grid: dict[str, GridObj] = None,
         tgt_grid: dict[str, GridObj] = None,
-        tgt_tile: str = "tile1",
+        tgt_tile: str = None,
         src_mask: dict[str, np.ndarray] = None,
         tgt_mask: dict[str, np.ndarray] = None,
         order: int = 1,
@@ -118,13 +118,21 @@ class XGridObj:
             domain=domain,
         )
 
-        self.tgt.grid = self.tgt.grid[tgt_tile]
         self.tgt_tile = tgt_tile
+        if self.tgt_tile is not None:
+            self.tgt.grid = self.tgt.grid[tgt_tile]
+
         self.remapfile: str | Path = remapfile
         self.order = order
 
         self.interps: pyfms.ConserveInterp | dict[str, pyfms.ConserveInterp] = None
 
+
+    def set_target_tile(self, tgt_tile: str = "tile1"):
+        self.tgt_tile = tgt_tile
+        self.tgt.grid = self.tgt.grid[tgt_tile]        
+
+        
     def read(
         self,
         input_dir: Path | str = None,
