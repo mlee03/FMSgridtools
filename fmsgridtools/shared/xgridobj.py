@@ -118,6 +118,7 @@ class XGridObj:
             domain=domain,
         )
 
+        self.tgt.grid = self.tgt.grid[tgt_tile]
         self.tgt_tile = tgt_tile
         self.remapfile: str | Path = remapfile
         self.order = order
@@ -135,9 +136,7 @@ class XGridObj:
         read remap file and store as pyfms.ConserveInterp objects
         """
 
-        if input_dir is None:
-            input_dir = self.input_dir
-        input_dir = Path(input_dir)
+        input_dir = self.input_dir if input_dir is None else Path(input_dir)
 
         if remapfile is None:
             if self.remapfile is None:
@@ -152,15 +151,14 @@ class XGridObj:
             domain = self.tgt.domain
 
         self.interps = {}
-        tgt_tile = self.tgt_tile
         for itile, src_tile in enumerate(self.src.grid):
             interp_id = pyfms.horiz_interp.read_weights_conserve(
                 weight_filename=str(remapfile),
                 weight_file_src="fregrid",
                 nlon_src=self.src.grid[src_tile].nx,
                 nlat_src=self.src.grid[src_tile].ny,
-                nlon_tgt=self.tgt.grid[tgt_tile].nx,
-                nlat_tgt=self.tgt.grid[tgt_tile].ny,
+                nlon_tgt=self.tgt.grid.nx,
+                nlat_tgt=self.tgt.grid.ny,
                 domain=domain,
                 src_tile=itile,
                 save_xgrid_area=True,
@@ -189,23 +187,18 @@ class XGridObj:
             global_interp.xgrid_area = pyfms.mpp.gatherv(interp.xgrid_area, ssize=interp.nxgrid, rsize=nxgrids)
         return global_interps
 
-    def write(self, output_dir: Path | str = "./", outfile: str | Path = None):
+
+    def write(self, output_dir: Path | str = "./", outfile: str | Path = Path("remap.nc")):
         """
         write remap file
         """
 
-        if self.tgt.domain is None:
-            global_interps = self.interps
-        else:
-            global_interps = self.gather()
+        global_interps = self.interps if self.tgt.domain is None else self.gather()
 
         if pyfms.mpp.pe() == pyfms.mpp.root_pe():
 
-            if outfile is None:
-                print("writing remap file to remap.nc")
-                outfile = Path(output_dir) / "remap.nc"
-            else:
-                outfile = Path(output_dir) / outfile
+            outfile = Path(output_dir) / outfile
+            logger.info("writing remap file to %s", outfile)
 
             datasets = []
             for tile1, src_tile in enumerate(global_interps):
@@ -249,7 +242,6 @@ class XGridObj:
         """
 
         self.interps = {}
-        tgt_grid = list(self.tgt.grid.values())[0]
 
         for src_tile in self.src.grid:
             src_grid = self.src.grid[src_tile]
@@ -258,12 +250,12 @@ class XGridObj:
                 xdict = pyfrenctools.create_xgrid.get_2dx2d_order1_gpu(
                     src_nlon=src_grid.nx,
                     src_nlat=src_grid.ny,
-                    tgt_nlon=tgt_grid.nx,
-                    tgt_nlat=tgt_grid.ny,
+                    tgt_nlon=self.tgt.grid.nx,
+                    tgt_nlat=self.tgt.grid.ny,
                     src_lon=src_grid.x,
                     src_lat=src_grid.y,
-                    tgt_lon=tgt_grid.x,
-                    tgt_lat=tgt_grid.y,
+                    tgt_lon=self.tgt.grid.x,
+                    tgt_lat=self.tgt.grid.y,
                     src_mask=src_mask,
                     tgt_mask=self.tgt.mask,
                 )
@@ -279,8 +271,8 @@ class XGridObj:
                 interp_id = pyfms.horiz_interp.get_weights(
                     lon_in=src_grid.x,
                     lat_in=src_grid.y,
-                    lon_out=tgt_grid.x,
-                    lat_out=tgt_grid.y,
+                    lon_out=self.tgt.grid.x,
+                    lat_out=self.tgt.grid.y,
                     mask_in=src_mask,
                     mask_out=self.tgt.mask,
                     is_latlon_in=False,

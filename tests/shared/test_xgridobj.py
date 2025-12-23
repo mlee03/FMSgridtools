@@ -5,7 +5,6 @@ test functionalities in xgridobj
 from types import SimpleNamespace
 
 import numpy as np
-import pytest
 
 import pyfms
 import fmsgridtools
@@ -124,4 +123,4 @@ def test_xgridobj_cpu():
     xgridobj_test(on_gpu=False)
 
 if __name__ == "__main__":
-    test_xgridobj_cpu()
+    test_xgridobj_gpu()
