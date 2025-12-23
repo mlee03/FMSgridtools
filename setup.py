@@ -27,7 +27,7 @@ requirements: List[str] = [
     "numpy",
     "xarray",
     "netCDF4",
-    local_pkg("pyFMS", "pyFMS"),
+#    local_pkg("pyFMS", "pyFMS"),
     local_pkg("pyfrenctools", "FREnctools_lib")
 ]
 

@@ -150,7 +150,7 @@ class GridObj:
         else:
             if self.domain is not None:
                 logger.warning("Overwriting %s with %s", self.domain, domain)
-                self.domain = domain
+            self.domain = domain
 
         if not pyfms.fms.module_is_initialized():
             logger.error("Please initialize pyfms first")

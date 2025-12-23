@@ -14,15 +14,15 @@ src = SimpleNamespace(
     ntiles=6,
     nx=12,
     ny=24,
-    dxy=1,
+    dxy=1.0,
     mosaicfile="src_mosaic.nc",
     gridfile="src_grid"
 )
 tgt = SimpleNamespace(
     ntiles=1,
-    nx=24,
-    ny=48,
-    dxy=0.5,
+    nx=src.nx * 2,
+    ny=src.ny * 2,
+    dxy=src.dxy / 2.0,
     mosaicfile="tgt_mosaic.nc",
     gridfile="tgt_grid"
 )
@@ -30,7 +30,6 @@ tgt = SimpleNamespace(
 nxgrid_per_tile = tgt.nx//2 * tgt.ny//2
 nxgrid = nxgrid_per_tile * 6
 remapfile = "test_remap.nc"
-
 
 def make_testfiles():
 
@@ -62,10 +61,13 @@ def xgridobj_test(on_gpu: bool = False):
     tests reading and write exchange grid
     """
 
-    pyfms.fms.init(ndomain=4)
-    pyfms.horiz_interp.init(ninterp=src.ntiles)
+    pyfms.fms.init(ndomain=None if on_gpu else 4)
+    pyfms.horiz_interp.init(ninterp=src.ntiles*2)
 
-    domain = pyfms.mpp_domains.define_domains([0, tgt.nx-1, 0, tgt.ny-1])
+    if on_gpu:
+        domain = None
+    else:
+        domain = pyfms.mpp_domains.define_domains([0, tgt.nx-1, 0, tgt.ny-1])
 
     if pyfms.mpp.pe() == pyfms.mpp.root_pe():
         make_testfiles()
@@ -74,27 +76,20 @@ def xgridobj_test(on_gpu: bool = False):
     xgrid = fmsgridtools.XGridObj(
         src_mosaicfile=src.mosaicfile,
         tgt_mosaicfile=tgt.mosaicfile,
-        domain=domain
+        domain=domain,
     )
-
-    xgrid.get_parents()
-    xgrid.get_interp()
+    xgrid.get_interp(on_gpu=on_gpu)
     xgrid.write(outfile=remapfile)
-
-    pyfms.horiz_interp.end()
+        
     del xgrid
-
-    pyfms.horiz_interp.init(ninterp=src.ntiles)
 
     xgrid = fmsgridtools.XGridObj(
         src_mosaicfile=src.mosaicfile,
         tgt_mosaicfile=tgt.mosaicfile,
         remapfile=remapfile)
-
-    xgrid.get_parents()
     xgrid.read(remapfile=remapfile)
 
-
+    #answers
     area = fmsgridtools.GridObj(
         gridfile=tgt.gridfile + ".tile1.nc").read(center=True, radians=True).get_fms_area()
 
@@ -106,19 +101,20 @@ def xgridobj_test(on_gpu: bool = False):
         i_dst = interp.i_dst
         j_dst = interp.j_dst
 
-        assert interp.nxgrid == tgt.nx//2 * tgt.ny//2, errmsg.format(tile, "N/A", nxgrid, interp.nxgrid)
+        assert interp.nxgrid == tgt.nx//2 * tgt.ny//2, f"src_tile = {tile}, {interp.nxgrid}"
 
         for i in range(interp.nxgrid):
 
-            idd, jdd = i_dst[i], j_dst[i]
-            assert i_src[i] == idd//2, f"xcell {i}, i_dst={idd}, j_dst={jdd}"
-            assert j_src[i] == jdd//2, f"xcell {i}, i_dst={idd}, j_dst={jdd}"
+            i_d, j_d = i_dst[i], j_dst[i]
+            assert i_src[i] == i_d // 2 and j_src[i] == j_d // 2, f"xcell {i}, i_src={i_src[i]}, j_src={j_src[i]} i_dst={i_d}, j_dst={j_d}"
 
             np.testing.assert_almost_equal(
                 interp.xgrid_area[i],
-                area[jdd, idd],
+                area[j_d, i_d],
                 decimal=2,
                 err_msg=f"tile {tile} gridpoint {i}")
+
+    pyfms.fms.end()
 
 
 def test_xgridobj_gpu():

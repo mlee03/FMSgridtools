@@ -44,7 +44,7 @@ class Parent:
                     logger.warning("Cannot set %s grid", self.parent)
                 self.mosaic = MosaicObj(
                     input_dir=self.input_dir, mosaicfile=self.mosaicfile
-                )
+                ).read()
             self.grid = self.mosaic.get_grid(
                 input_dir=self.input_dir, center=True, radians=True, domain=self.domain
             )
@@ -70,9 +70,10 @@ class XGridObj:
         tgt_mask: dict[str, np.ndarray] = None,
         order: int = 1,
         domain: pyfms.Domain = None,
-        on_gpu: bool = False,
     ):
-        """Create an XGridObj container for building/reading remap/interp data.
+
+        """
+        Create an XGridObj container for building/reading remap/interp data.
 
         Args:
             input_dir (str|Path): Base directory for input files.
@@ -117,9 +118,9 @@ class XGridObj:
             domain=domain,
         )
 
+        self.tgt_tile = tgt_tile
         self.remapfile: str | Path = remapfile
         self.order = order
-        self.on_gpu = on_gpu
 
         self.interps: pyfms.ConserveInterp | dict[str, pyfms.ConserveInterp] = None
 
@@ -129,6 +130,7 @@ class XGridObj:
         remapfile: Path | str = None,
         domain: pyfms.Domain = None,
     ):
+
         """
         read remap file and store as pyfms.ConserveInterp objects
         """
@@ -146,60 +148,56 @@ class XGridObj:
         if not remapfile.exists():
             logger.error("remap file %s does not exist", self.remapfile)
 
-        itile = 1
+        if domain is None:
+            domain = self.tgt.domain
+
         self.interps = {}
-        for src_tile in self.src.grid:
+        tgt_tile = self.tgt_tile
+        for itile, src_tile in enumerate(self.src.grid):
             interp_id = pyfms.horiz_interp.read_weights_conserve(
                 weight_filename=str(remapfile),
                 weight_file_src="fregrid",
                 nlon_src=self.src.grid[src_tile].nx,
                 nlat_src=self.src.grid[src_tile].ny,
-                nlon_tgt=self.tgt.grid.nx,
-                nlat_tgt=self.tgt.grid.ny,
+                nlon_tgt=self.tgt.grid[tgt_tile].nx,
+                nlat_tgt=self.tgt.grid[tgt_tile].ny,
                 domain=domain,
                 src_tile=itile,
-                save_weights_as_fregrid=True,
+                save_xgrid_area=True,
             )
-            self.interps[src_tile] = pyfms.ConserveInterp(
-                interp_id, weights_as_fregrid=True
-            )
-            itile += 1
+            self.interps[src_tile] = pyfms.ConserveInterp(interp_id, save_xgrid_area=True)
+
+
+    def gather(self):
+
+        """
+        gathers xgrid 
+        """
+
+        isc, jsc = self.tgt.domain.isc, self.tgt.domain.jsc
+
+        global_interps = {}
+        for src_tile in self.interps:
+            interp = self.interps[src_tile]
+            global_interp = global_interps[src_tile] = pyfms.ConserveInterp()
+            nxgrids = pyfms.mpp.gather(np.array([interp.nxgrid], dtype=np.int32), rbuf_size=len(self.interps))
+            global_interp.nxgrid = np.sum(nxgrids) if pyfms.mpp.pe() == pyfms.mpp.root_pe() else None
+            global_interp.i_src = pyfms.mpp.gatherv(interp.i_src, ssize=interp.nxgrid, rsize=nxgrids)
+            global_interp.j_src = pyfms.mpp.gatherv(interp.j_src, ssize=interp.nxgrid, rsize=nxgrids)
+            global_interp.i_dst = pyfms.mpp.gatherv(interp.i_dst + isc, ssize=interp.nxgrid, rsize=nxgrids)
+            global_interp.j_dst = pyfms.mpp.gatherv(interp.j_dst + jsc, ssize=interp.nxgrid, rsize=nxgrids)
+            global_interp.xgrid_area = pyfms.mpp.gatherv(interp.xgrid_area, ssize=interp.nxgrid, rsize=nxgrids)
+        return global_interps
 
     def write(self, output_dir: Path | str = "./", outfile: str | Path = None):
         """
         write remap file
         """
 
-        is_root_pe = pyfms.mpp.pe() == pyfms.mpp.root_pe()
-
         if self.tgt.domain is None:
-            i_src = {itile: self.interps[itile].i_src for itile in self.interps}
-            j_src = {itile: self.interps[itile].j_src for itile in self.interps}
-            i_dst = {itile: self.interps[itile].i_dst for itile in self.interps}
-            j_dst = {itile: self.interps[itile].j_dst for itile in self.interps}
-            xgrid_area = {
-                itile: self.interps[itile].xgrid_area for itile in self.interps
-            }
+            global_interps = self.interps
         else:
-            i_src, j_src, i_dst, j_dst, xgrid_area = {}, {}, {}, {}, {}
-            for src_tile in self.interps:
-                interp = self.interps[src_tile]
-                nxgrids = pyfms.mpp.gather(np.array([interp.nxgrid], dtype=np.int32))
-                i_src[src_tile] = pyfms.mpp.gather(
-                    interp.i_src, ssize=interp.nxgrid, rsize=nxgrids
-                )
-                j_src[src_tile] = pyfms.mpp.gather(
-                    interp.j_src, ssize=interp.nxgrid, rsize=nxgrids
-                )
-                i_dst[src_tile] = pyfms.mpp.gather(
-                    interp.i_dst, ssize=interp.nxgrid, rsize=nxgrids
-                )
-                j_dst[src_tile] = pyfms.mpp.gather(
-                    interp.j_dst, ssize=interp.nxgrid, rsize=nxgrids
-                )
-                xgrid_area[src_tile] = pyfms.mpp.gather(
-                    interp.xgrid_area, ssize=interp.nxgrid, rsize=nxgrids
-                )
+            global_interps = self.gather()
 
         if pyfms.mpp.pe() == pyfms.mpp.root_pe():
 
@@ -209,28 +207,29 @@ class XGridObj:
             else:
                 outfile = Path(output_dir) / outfile
 
-            datasets, tile1 = [], 1
-            for src_tile in self.interps:
-                nxgrid = i_src[src_tile].size
+            datasets = []
+            for tile1, src_tile in enumerate(global_interps):
+                
+                interp = global_interps[src_tile]
                 dataset = xr.Dataset()
+
                 dataset["tile1"] = xr.DataArray(
-                    np.full(nxgrid, tile1),
+                    np.full(interp.nxgrid, tile1),
                     dims=["ncells"],
                     attrs={"standard_name": "tile_number_in_mosaic1"},
                 )
-                tile1 += 1
                 dataset["tile1_cell"] = xr.DataArray(
-                    np.column_stack((i_src[src_tile] + 1, j_src[src_tile] + 1)),
+                    np.column_stack((interp.i_src + 1, interp.j_src + 1)),
                     dims=["ncells", "two"],
                     attrs={"standard_name": "parent_cell_indices_in_mosaic1"},
                 )
                 dataset["tile2_cell"] = xr.DataArray(
-                    np.column_stack((i_dst[src_tile] + 1, j_dst[src_tile] + 1)),
+                    np.column_stack((interp.i_dst + 1, interp.j_dst + 1)),
                     dims=["ncells", "two"],
                     attrs={"standard_name": "parent_cell_indices_in_mosaic2"},
                 )
                 dataset["xgrid_area"] = xr.DataArray(
-                    xgrid_area[src_tile],
+                    interp.xgrid_area,
                     dims=["ncells"],
                     attrs={"standard_name": "exchange_grid_area", "units": "m2"},
                 )
@@ -242,68 +241,53 @@ class XGridObj:
 
         pyfms.mpp.sync()
 
-    def get_interp(self) -> dict:
+
+    def get_interp(self, on_gpu) -> dict:
+
+        """
+        call fms to compute xgrid
+        """
 
         self.interps = {}
+        tgt_grid = list(self.tgt.grid.values())[0]
 
         for src_tile in self.src.grid:
             src_grid = self.src.grid[src_tile]
             src_mask = None if self.src.mask is None else self.src.mask[src_tile]
-            if self.on_gpu:
+            if on_gpu:
                 xdict = pyfrenctools.create_xgrid.get_2dx2d_order1_gpu(
                     src_nlon=src_grid.nx,
                     src_nlat=src_grid.ny,
-                    tgt_nlon=self.tgt.grid.nx,
-                    tgt_nlat=self.tgt.grid.ny,
+                    tgt_nlon=tgt_grid.nx,
+                    tgt_nlat=tgt_grid.ny,
                     src_lon=src_grid.x,
                     src_lat=src_grid.y,
-                    tgt_lon=self.tgt.grid.x,
-                    tgt_lat=self.tgt.grid.y,
+                    tgt_lon=tgt_grid.x,
+                    tgt_lat=tgt_grid.y,
                     src_mask=src_mask,
                     tgt_mask=self.tgt.mask,
                 )
                 interp = pyfms.ConserveInterp()
-                interp.nxgrid = (xdict["ncells"],)
-                interp.i_src = (xdict["src_i"],)
-                interp.j_src = (xdict["src_j"],)
-                interp.i_tgt = (xdict["tgt_i"],)
-                interp.j_tgt = (xdict["tgt_j"],)
+                interp.nxgrid = xdict["nxcells"]
+                interp.i_src = xdict["src_i"]
+                interp.j_src = xdict["src_j"]
+                interp.i_dst = xdict["tgt_i"]
+                interp.j_dst = xdict["tgt_j"]
                 interp.xgrid_area = xdict["xarea"]
                 self.interps[src_tile] = interp
             else:
                 interp_id = pyfms.horiz_interp.get_weights(
                     lon_in=src_grid.x,
                     lat_in=src_grid.y,
-                    lon_out=self.tgt.grid.x,
-                    lat_out=self.tgt.grid.y,
+                    lon_out=tgt_grid.x,
+                    lat_out=tgt_grid.y,
                     mask_in=src_mask,
                     mask_out=self.tgt.mask,
                     is_latlon_in=False,
                     is_latlon_out=False,
-                    save_weights_as_fregrid=True,
+                    save_xgrid_area=True,
                     convert_cf_order=False,
+                    as_fregrid=True,
                     interp_method="conservative",
                 )
-                self.interps[src_tile] = pyfms.ConserveInterp(
-                    interp_id, weights_as_fregrid=True
-                )
-
-    def get_parents(self):
-
-        input_dir = self.input_dir
-        for parent in [self.src, self.tgt]:
-            if parent.grid is None:
-                if parent.mosaic is None:
-                    if parent.mosaicfile is None:
-                        raise RuntimeError("can't get grid")
-                    parent.mosaic = MosaicObj(
-                        input_dir=input_dir, mosaicfile=parent.mosaicfile
-                    ).read()
-                parent.grid = parent.mosaic.get_grid(
-                    input_dir=input_dir, center=True, radians=True, domain=parent.domain
-                )
-            else:
-                print("parent grid exists")
-
-        self.tgt.grid = self.tgt.grid[self.tgt.tile]
-        self.src.ntiles = len(self.src.grid)
+                self.interps[src_tile] = pyfms.ConserveInterp(interp_id, save_xgrid_area=True)
