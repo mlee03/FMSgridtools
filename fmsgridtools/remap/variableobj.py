@@ -31,7 +31,7 @@ class DimsObj():
 
         for name, coord in da_coords.items():
             for dim in dims_list:
-                if dim.axis == coord.attrs["axis"]:
+                if dim.axis == coord.att["axis"]:
                     dim.name = name
                     dim.size = coord.size
                     dim.here = True
@@ -61,11 +61,11 @@ class VariableObj():
         else:
             self.datafiles = {tile: input_dir/Path(datafile.with_suffix(tile + ".nc")) for tile in tiles}
 
-        self.attrs = SimpleNamespace(
-            missing = None,
-            fill_value = None,
-            offset = None,
-            scale_factor = None
+        self.att = SimpleNamespace(
+            missing = False,
+            fill_value = False,
+            offset = False,
+            scale_factor = False
         )
 
         self.area = SimpleNamespace(
@@ -91,17 +91,40 @@ class VariableObj():
             self.dims.get(dataarray.coords)
 
             attributes = dataarray.attrs
-            self.attrs.missing = attributes.get("missing_value")
-            self.attrs.fill_value = attributes.get("_FillValue")
-            self.attrs.offset = attributes.get("add_offset")
-            self.attrs.scale_factor = attributes.get("scale_factor")
+            self.att.missing = attributes.get("missing_value")
+            self.att.fill_value = attributes.get("_FillValue")
+            self.att.offset = attributes.get("add_offset")
+            self.att.scale_factor = attributes.get("scale_factor")
 
             if "area" in str(attributes.get("cell_method")):
               self._get_static_files(dataset, variable)
 
 
-    def slice(self, time: int = None, z: int = None):
+    def slice(self, tile: str = "tile1", timepoint: int|bool = False, klevel: int|bool = False):
 
+        #python, values above 0 are true...
+
+        with xr.open_dataset(self.datafiles[tile], decode_cf=False) as dataset:
+
+            slice_dict = {}
+
+            if klevel and self.dims.z.here: slice_dict[self.dims.z.name] = klevel
+            if timepoint and self.dims.time.here: slice_dict[self.dims.time.name] = timepoint
+
+            data = dataset[self.variable].isel(slice_dict)
+
+            #missing value mask
+            mask = None
+            if self.att.missing_value:
+                mask = data != self.att.missing_value
+
+            if self.att.offset: data += self.att.offset
+            if self.att.scale_factor: data *= self.att.scale_factor
+
+            #zero out missing values so it doens't contribute to remapping
+            data = data.where(mask, 0.0, data)
+
+            return data
 
     def _get_static_files(self, dataset, variable):
 
@@ -113,11 +136,9 @@ class VariableObj():
             return
 
         # soil_area: 00010101.land_static.nc cell_area: 00010101.land_static_sg.nc
-        global_attrs = str(dataset.attrs.get("associated_files"))
-        if cell_measures in global_attrs:
-          global_attrs_dict = {keyval.strip(":"): areaval for keyval, areaval in pairwise(global_attrs.split())}
-          static_file = global_attrs_dict[cell_measures]
-        else:
+        global_att = str(dataset.attrs.get("associated_files"))
+        static_file = {keyval.strip(":"): areaval for keyval, areaval in pairwise(global_att.split())}.get(cell_measures)
+        if static_file is None:
           raise RuntimeError("cannot find static file")
 
         if self.tiles is not None:
