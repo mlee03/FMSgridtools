@@ -27,16 +27,16 @@ class DimsObj():
         get dimensions
         """
 
-        dims_list = [self.x, self.y, self.z, self.time]
+        dims_dict = {dim.axis: dim for dim in [self.x, self.y, self.z, self.time]}
 
         for name, coord in da_coords.items():
-            for dim in dims_list:
-                if dim.axis == coord.att["axis"]:
-                    dim.name = name
-                    dim.size = coord.size
-                    dim.here = True
-                    dims_list.remove(dim)
-                    break
+            try:
+                dim = dims_dict[coord.att.get("axis")]
+                dim.name = name
+                dim.size = coord.size
+                dim.here = True
+            except:
+                print("dim not found")
 
     def __repr__(self):
 
@@ -114,7 +114,7 @@ class VariableObj():
             data = dataset[self.variable].isel(slice_dict)
 
             #missing value mask
-            mask = None
+            mask = False
             if self.att.missing_value:
                 mask = data != self.att.missing_value
 
@@ -122,9 +122,10 @@ class VariableObj():
             if self.att.scale_factor: data *= self.att.scale_factor
 
             #zero out missing values so it doens't contribute to remapping
-            data = data.where(mask, 0.0, data)
+            if mask: data = data.where(mask, 0.0, data)
 
             return data
+
 
     def _get_static_files(self, dataset, variable):
 
