@@ -5,7 +5,8 @@ import xarray as xr
 import fmsgridtools
 
 def write_files(outfile):
-    grid_xt, grid_yt = 100, 50
+
+    grid_xt, grid_yt, nk, ntimes = 100, 50, 10, 4
 
     variable_xt = xr.DataArray(
         np.arange(grid_xt, dtype=np.float64),
@@ -24,6 +25,39 @@ def write_files(outfile):
             "units": "degrees_N",
             "long_name": "made up T-cell latitude",
             "axis": "Y"
+        }
+    )
+
+    variable_yt = xr.DataArray(
+        np.arange(grid_yt, dtype=np.float64),
+        dims = ["grid_yt"],
+        attrs={
+            "units": "degrees_N",
+            "long_name": "made up T-cell latitude",
+            "axis": "Y"
+        }
+    )
+
+    variable_pfull = xr.DataArray(
+        np.arange(nk, dtype=np.float64),
+        dims = ["pfull"],
+        attrs = {
+            "units": "mb",
+            "long_name": "ref full pressure level",
+            "axis": "Z",
+            "positive": "down"
+        }
+    )
+
+    variable_time = xr.DataArray(
+        np.arange(ntimes, dtype=np.float64),
+        dims = ["time"],
+        attrs= {
+            "units": "days since 0001-01-01 00:00:00",
+            "long_name": "time",
+            "axis": "T",
+            "calendar_type": "NOLEAP",
+            "calendar": "noleap"
         }
     )
 
@@ -60,13 +94,15 @@ def write_files(outfile):
     data_vars = {
         "grid_xt": variable_xt,
         "grid_yt": variable_yt,
+        "pfull": variable_pfull,
+        "time": variable_time,
         "variable1": variable1,
         "variable2": variable2
     }
 
     dataset = xr.Dataset(
         data_vars=data_vars,
-        attrs={"associated_files": "pemberley_area: pemberley.nc"}
+        attrs={"associated_files": "pemberley_area: pemberley.nc longbourn_area: longbourn.nc"}
     )
 
     dataset.to_netcdf(outfile)
@@ -75,10 +111,13 @@ def write_files(outfile):
 
 def test_dataobj():
 
-    dataset = write_files("test.nc")
+    dataset = write_files("test.tile1.nc")
 
-    variable1 = fmsgridtools.VariableObj(datafile="test")
+    fileobj = fmsgridtools.FileObj("test")
+
+    variable1 = fmsgridtools.VariableObj(fileobj=fileobj)
     variable1.get_attributes(variable="variable1")
+    print(variable1.dims)
 
     #check dimensions
     for (name, dim) in [("grid_xt", variable1.dims.x), ("grid_yt", variable1.dims.y)]:
@@ -91,13 +130,10 @@ def test_dataobj():
         assert dim.size is None
 
     attributes = dataset["variable1"].attrs
-    assert variable1.attrs.missing == attributes.get("missing_value")
-    assert variable1.attrs.fill_value == attributes.get("_FillValue")
-    assert variable1.attrs.offset == attributes.get("add_offset")
-    assert variable1.attrs.scale_factor == attributes.get("scale_factor")
-
-    print(variable1.area)
-
+    assert variable1.missing == attributes.get("missing_value")
+    assert variable1.fill_value == attributes.get("_FillValue")
+    assert variable1.offset == attributes.get("add_offset")
+    assert variable1.scale_factor == attributes.get("scale_factor")
 
 
 if __name__ == "__main__":
