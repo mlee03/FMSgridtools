@@ -78,20 +78,22 @@ class VariableObj():
 
     time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)
 
-    def __init__(self, fileobj: FileObj = None):
+    def __init__(self, variable: str, fileobj: FileObj = None):
 
-        self.fileobj = fileobj
+        self.variable = variable
+        self.fileobj = fileobj        
         self.dims = DimsObj()
 
-        self.missing = False,
-        self.fill_value = False,
-        self.offset = False,
-        self.scale_factor = False
+        self.missing_value = None,
+        self.fill_value = None,
+        self.offset = None,
+        self.scale_factor = None
 
-        self.static_files = {}
+        self.static_files: {} = None
+        self.data = None
 
 
-    def get_attributes(self, variable):
+    def get_attributes(self):
 
         tile = self.fileobj.tiles[0]
         infile = self.fileobj.datafiles[tile]
@@ -101,14 +103,14 @@ class VariableObj():
 
         with xr.open_dataset(infile, decode_cf=False) as dataset:
 
-            if variable not in dataset:
+            if self.variable not in dataset:
                 raise RuntimeError("variable not found")
-            dataarray = dataset[variable]
+            dataarray = dataset[self.variable]
 
             self.dims.get(dataarray)
 
             attributes = dataarray.attrs
-            self.missing = attributes.get("missing_value")
+            self.missing_value = attributes.get("missing_value")
             self.fill_value = attributes.get("_FillValue")
             self.offset = attributes.get("add_offset")
             self.scale_factor = attributes.get("scale_factor")
@@ -119,28 +121,34 @@ class VariableObj():
                     self.static_files = self.fileobj.static_files[cell_measures.split()[1]]
 
 
-    # def slice(self, tile: str = "tile1", timepoint: int|bool = False, klevel: int|bool = False):
+    def slice(self, tile: str = "tile1", timepoint: int = -99, klevel: int = -99):
 
-    #     #python, values above 0 are true...
+        #python, values above 0 are true...
 
-    #     with xr.open_dataset(self.datafiles[tile], decode_cf=False) as dataset:
+        with xr.open_dataset(self.fileobj.datafiles[tile], decode_cf=False) as dataset:
 
-    #         slice_dict = {}
+            slice_dict = {}
 
-    #         if klevel and self.dims.z.here: slice_dict[self.dims.z.name] = klevel
-    #         if timepoint and self.dims.time.here: slice_dict[self.dims.time.name] = timepoint
+            if klevel>-1 and self.dims.z.here: slice_dict[self.dims.z.name] = klevel
+            if timepoint>-1 and self.dims.time.here: slice_dict[self.dims.time.name] = timepoint
 
-    #         data = dataset[self.variable].isel(slice_dict)
+        self.data = dataset[self.variable].isel(slice_dict).values
+        return self.data
 
-    #         #missing value mask
-    #         mask = False
-    #         if self.missing_value:
-    #             mask = data != self.missing_value
+    
+    def prepare_data(self):
 
-    #         if self.offset: data += self.offset
-    #         if self.scale_factor: data *= self.scale_factor
+        #missing value mask
+        missing_value_mask = None
+        if self.missing_value is not None:
+            missing_value_mask = self.data == self.missing_value
+        
+        if self.offset: self.data += self.offset
+        if self.scale_factor: self.data *= self.scale_factor
+        
+        #zero out missing values so it doens't contribute to remapping
+        if missing_value_mask is not None:
+            self.data = xr.where(missing_value_mask, 0.0, self.data)
 
-    #         #zero out missing values so it doens't contribute to remapping
-    #         if mask: data = data.where(mask, 0.0, data)
-
-    #         return data
+        return self.data
+        

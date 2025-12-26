@@ -4,12 +4,26 @@ import xarray as xr
 
 import fmsgridtools
 
+nx, ny, nk, ntimes = 10, 8, 3, 4
+
+answers = np.zeros((ntimes, nk, ny, nx), dtype=np.float64)
+for itime in range(ntimes):
+    for k in range(nk):
+        for j in range(ny):
+            start = itime*1000+k*100+j*10
+            answers[itime, k, j, :] = np.arange(start, start+nx, dtype=np.float64)
+
+missing_ijkl = [(1,1,1,1), (2,2,2,2)]
+for (itime, k, j, i) in missing_ijkl:
+    answers[itime,k,j,i] = missing_value
+
+
 def write_files(outfile):
 
-    grid_xt, grid_yt, nk, ntimes = 100, 50, 10, 4
+
 
     variable_xt = xr.DataArray(
-        np.arange(grid_xt, dtype=np.float64),
+        np.arange(nx, dtype=np.float64),
         dims = ["grid_xt"],
         attrs={
             "units": "degrees_E",
@@ -19,17 +33,7 @@ def write_files(outfile):
     )
 
     variable_yt = xr.DataArray(
-        np.arange(grid_yt, dtype=np.float64),
-        dims = ["grid_yt"],
-        attrs={
-            "units": "degrees_N",
-            "long_name": "made up T-cell latitude",
-            "axis": "Y"
-        }
-    )
-
-    variable_yt = xr.DataArray(
-        np.arange(grid_yt, dtype=np.float64),
+        np.arange(ny, dtype=np.float64),
         dims = ["grid_yt"],
         attrs={
             "units": "degrees_N",
@@ -62,15 +66,15 @@ def write_files(outfile):
     )
 
     variable1 = xr.DataArray(
-        np.ones((grid_yt, grid_xt), dtype=np.float64),
-        dims = ["grid_yt", "grid_xt"],
+        answers,
+        dims = ["time", "pfull", "grid_yt", "grid_xt"],
         attrs = {
             "_FillValue": -np.float64(-100),
             "long_name": "test variable 1",
             "units": "kg m-2",
-            "missing": np.float64(45.12),
-            "add_offset": np.float64(-24.326),
-            "scale_factor": np.float64(-55),
+            "missing_value": missing_value,
+            "add_offset": np.float64(0.0),
+            "scale_factor": np.float64(0.0),
             "cell_method": "area:mean time:mean",
             "cell_measures": "area: pemberley_area",
             "standard_name": "Mr. Darcy"
@@ -78,7 +82,7 @@ def write_files(outfile):
     )
 
     variable2 = xr.DataArray(
-        np.zeros((grid_yt, grid_xt), dtype=np.float32),
+        np.zeros((ny, nx), dtype=np.float32),
         dims = ["grid_yt", "grid_xt"],
         attrs = {
             "_FillValue": False,
@@ -105,7 +109,7 @@ def write_files(outfile):
         attrs={"associated_files": "pemberley_area: pemberley.nc longbourn_area: longbourn.nc"}
     )
 
-    dataset.to_netcdf(outfile)
+    dataset.to_netcdf(outfile, unlimited_dims="time")
     return dataset
 
 
@@ -115,25 +119,40 @@ def test_dataobj():
 
     fileobj = fmsgridtools.FileObj("test")
 
-    variable1 = fmsgridtools.VariableObj(fileobj=fileobj)
-    variable1.get_attributes(variable="variable1")
-    print(variable1.dims)
+    variable1 = fmsgridtools.VariableObj(variable="variable1", fileobj=fileobj)
 
     #check dimensions
-    for (name, dim) in [("grid_xt", variable1.dims.x), ("grid_yt", variable1.dims.y)]:
+    variable1.get_attributes()
+    dims = [
+        ("grid_xt", variable1.dims.x),
+        ("grid_yt", variable1.dims.y),
+        ("time", variable1.dims.time),
+        ("pfull", variable1.dims.z)
+    ]
+    for (name, dim) in dims:
         assert dim.name == name
         assert dim.here
         assert dim.size == dataset[name].size
-    for dim in [variable1.dims.time, variable1.dims.z]:
-        assert dim.name is None
-        assert not dim.here
-        assert dim.size is None
 
     attributes = dataset["variable1"].attrs
-    assert variable1.missing == attributes.get("missing_value")
+    assert variable1.missing_value == attributes.get("missing_value")
     assert variable1.fill_value == attributes.get("_FillValue")
     assert variable1.offset == attributes.get("add_offset")
     assert variable1.scale_factor == attributes.get("scale_factor")
+
+    #slice
+    reconstruct_data = np.zeros((ntimes, nk, ny, nx), dtype=np.float64)
+    for itime in range(ntimes):
+        for k in range(nk):
+            sliced_data = variable1.slice(timepoint=itime, klevel=k)
+            np.testing.assert_equal(sliced_data, answers[itime, k, :, :])
+            reconstruct_data[itime, k, :, :] = variable1.prepare_data()
+
+    #check missing values
+    for (itime, k, j, i) in missing_ijkl:
+        assert reconstruct_data[itime,k,j,i] ==  np.float64(0.0)
+
+
 
 
 if __name__ == "__main__":
