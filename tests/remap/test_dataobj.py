@@ -153,7 +153,5 @@ def test_dataobj():
         assert reconstruct_data[itime,k,j,i] ==  np.float64(0.0)
 
 
-
-
 if __name__ == "__main__":
     test_dataobj()

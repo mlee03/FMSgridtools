@@ -48,14 +48,26 @@ class DimsObj():
 
 class FileObj():
 
-    def __init__(self, datafile: str, tiles: list = ["tile1"], input_dir: str = "./"):
+    skip = [
+        "geolon_c", "geolat_c", "geolon_u", "geolat_u", "geolon_v", "geolat_v",
+        "FA_X", "FA_Y", "FI_X", "FI_Y", "IX_TRANS", "IY_TRANS",
+        "UI", "VI", "UO", "VO", "wet_c", "wet_v", "wet_u",
+        "dxCu", "dyCu", "dxCv", "dyCv", "Coriolis",
+        "areacello_cu", "areacello_cv", "areacello_bu",
+        "average_T1", "average_T2", "average_DT", "time_bnds"
+    ]
+
+    
+    def __init__(self, datafile: str, tiles: list = ["tile1"], input_dir: str = "./", variables: list = None):
 
         self.input_dir = str(input_dir)
         self.tiles = tiles
         self.datafiles = {tile: Path(input_dir)/Path(datafile + f".{tile}.nc") for tile in tiles}
         self.static_files = {}
+        self.variables = variables
 
         with xr.open_dataset(self.datafiles[self.tiles[0]], decode_cf=False) as dataset:
+
             # soil_area: 00010101.land_static.nc cell_area: 00010101.land_static_sg.nc
             associated_files = dataset.attrs.get("associated_files")
             if associated_files is not None:
@@ -64,6 +76,16 @@ class FileObj():
                     self.static_files[stringsplit[i]] = {
                         tile: Path(input_dir)/stringsplit[i+1].replace(".nc", f".{tile}.nc") for tile in self.tiles
                     }
+
+            #get list of variables
+            if self.variables is None:
+                self.variables = []
+                for variable in dataset:
+                    if variable in dataset:
+                        print(f"skipping {variable}")
+                    else:
+                        self.variables.append(variable)
+                        
 
     def __repr__(self):
         repr_str = "\n"
@@ -121,7 +143,7 @@ class VariableObj():
                     self.static_files = self.fileobj.static_files[cell_measures.split()[1]]
 
 
-    def slice(self, tile: str = "tile1", timepoint: int = -99, klevel: int = -99):
+    def slice(self, tile: str = "tile1", timepoint: int = None, klevel: int = None, prepare_data: bool = False):
 
         #python, values above 0 are true...
 
@@ -129,10 +151,15 @@ class VariableObj():
 
             slice_dict = {}
 
-            if klevel>-1 and self.dims.z.here: slice_dict[self.dims.z.name] = klevel
-            if timepoint>-1 and self.dims.time.here: slice_dict[self.dims.time.name] = timepoint
+            if klevel is not None and self.dims.z.here:
+                slice_dict[self.dims.z.name] = klevel
+            if timepoint is not None  and self.dims.time.here:
+                slice_dict[self.dims.time.name] = timepoint
 
-        self.data = dataset[self.variable].isel(slice_dict).values
+            self.data = dataset[self.variable].isel(slice_dict).values
+
+        if prepare_data:
+            self.prepare_data()        
         return self.data
 
     
@@ -143,8 +170,8 @@ class VariableObj():
         if self.missing_value is not None:
             missing_value_mask = self.data == self.missing_value
         
-        if self.offset: self.data += self.offset
-        if self.scale_factor: self.data *= self.scale_factor
+        if self.offset is not None: self.data += self.offset
+        if self.scale_factor is not None: self.data *= self.scale_factor
         
         #zero out missing values so it doens't contribute to remapping
         if missing_value_mask is not None:
