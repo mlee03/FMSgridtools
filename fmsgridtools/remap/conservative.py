@@ -7,8 +7,8 @@ import pyfms
 
 
 def remap(input_dir: str = "./",
-      src_mosaic: str = None,
-      tgt_mosaic: str = None,
+      src_mosaicfile: str = None,
+      tgt_mosaicfile: str = None,
       input_file: str = None,
       output_dir: str = "./",
       output_file: str = None,
@@ -21,7 +21,7 @@ def remap(input_dir: str = "./",
       check_conserve: bool = False,
       gpu: bool = False):
 
-      xgrid = XGridObj(input_dir=input_dir, src_mosaic_file = src_mosaic, tgt_mosaicfile=tgt_mosaic)
+      xgrid = XGridObj(input_dir=input_dir, src_mosaicfile=src_mosaicfile, tgt_mosaicfile=tgt_mosaicfile)
       tgt_tiles = list(xgrid.tgt.grid.keys())
       src_tiles = list(xgrid.src.grid.keys())
 
@@ -32,7 +32,7 @@ def remap(input_dir: str = "./",
             pyfms.horiz_interp.init(len(src_tiles))
 
             #get xgrid
-            xgrid.domain = pyfms.mpp_domains.define_domains([0, xgrid.tgt.grid.nx-1, 0, xgrid.tgt.grid.ny-1])
+            xgrid.domain = pyfms.mpp_domains.define_domains([0, xgrid.tgt.grid[tgt_tile].nx-1, 0, xgrid.tgt.grid[tgt_tile].ny-1])
             xgrid.set_target_tile(tgt_tile)
             xgrid.get_interp()
 
@@ -45,18 +45,17 @@ def remap(input_dir: str = "./",
                 variable = VariableObj(var, fileobj)
                 variable.get_attributes()
 
-                times = list(range(variable.dims.ntimes)) if variable.time.here else [None]
-                klevels = list(range(variable.klevels.nz)) if variable.z.here else [None]
+                times = list(range(variable.dims.time.size)) if variable.dims.time.here else [None]
+                klevels = list(range(variable.dims.z.size)) if variable.dims.z.here else [None]
 
                 for itime in times:
                     for klevel in klevels:
                         for src_tile in src_tiles:
                             input_data = variable.slice(tile=src_tile, timepoint=itime, klevel=klevel, prepare_data=True)
-                            #HEREHEREHERE
-                            pyfms.fms.horiz_interp(xgrid.interps[src_tile].interp_id, )
+                            data = pyfms.horiz_interp.interp(xgrid.interps[src_tile].interp_id, input_data, convert_cf_order=False)
+                            print(data)
 
 
-
-
+                exit()
 
 

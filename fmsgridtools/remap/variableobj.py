@@ -48,7 +48,7 @@ class DimsObj():
 
 class FileObj():
 
-    skip = [
+    skip_variables = [
         "geolon_c", "geolat_c", "geolon_u", "geolat_u", "geolon_v", "geolat_v",
         "FA_X", "FA_Y", "FI_X", "FI_Y", "IX_TRANS", "IY_TRANS",
         "UI", "VI", "UO", "VO", "wet_c", "wet_v", "wet_u",
@@ -57,7 +57,7 @@ class FileObj():
         "average_T1", "average_T2", "average_DT", "time_bnds"
     ]
 
-    
+
     def __init__(self, datafile: str, tiles: list = ["tile1"], input_dir: str = "./", variables: list = None):
 
         self.input_dir = str(input_dir)
@@ -81,11 +81,11 @@ class FileObj():
             if self.variables is None:
                 self.variables = []
                 for variable in dataset:
-                    if variable in dataset:
+                    if variable in self.skip_variables:
                         print(f"skipping {variable}")
                     else:
                         self.variables.append(variable)
-                        
+
 
     def __repr__(self):
         repr_str = "\n"
@@ -103,7 +103,7 @@ class VariableObj():
     def __init__(self, variable: str, fileobj: FileObj = None):
 
         self.variable = variable
-        self.fileobj = fileobj        
+        self.fileobj = fileobj
         self.dims = DimsObj()
 
         self.missing_value = None,
@@ -145,7 +145,6 @@ class VariableObj():
 
     def slice(self, tile: str = "tile1", timepoint: int = None, klevel: int = None, prepare_data: bool = False):
 
-        #python, values above 0 are true...
 
         with xr.open_dataset(self.fileobj.datafiles[tile], decode_cf=False) as dataset:
 
@@ -159,23 +158,23 @@ class VariableObj():
             self.data = dataset[self.variable].isel(slice_dict).values
 
         if prepare_data:
-            self.prepare_data()        
+            self.prepare_data()
         return self.data
 
-    
+
     def prepare_data(self):
 
         #missing value mask
         missing_value_mask = None
         if self.missing_value is not None:
             missing_value_mask = self.data == self.missing_value
-        
+
         if self.offset is not None: self.data += self.offset
         if self.scale_factor is not None: self.data *= self.scale_factor
-        
+
         #zero out missing values so it doens't contribute to remapping
         if missing_value_mask is not None:
             self.data = xr.where(missing_value_mask, 0.0, self.data)
 
         return self.data
-        
+

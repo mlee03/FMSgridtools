@@ -130,9 +130,9 @@ class XGridObj:
 
     def set_target_tile(self, tgt_tile: str = "tile1"):
         self.tgt_tile = tgt_tile
-        self.tgt.grid = self.tgt.grid[tgt_tile]        
+        self.tgt.grid = self.tgt.grid[tgt_tile]
 
-        
+
     def read(
         self,
         input_dir: Path | str = None,
@@ -177,7 +177,7 @@ class XGridObj:
     def gather(self):
 
         """
-        gathers xgrid 
+        gathers xgrid
         """
 
         isc, jsc = self.tgt.domain.isc, self.tgt.domain.jsc
@@ -210,7 +210,7 @@ class XGridObj:
 
             datasets = []
             for tile1, src_tile in enumerate(global_interps):
-                
+
                 interp = global_interps[src_tile]
                 dataset = xr.Dataset()
 
@@ -243,7 +243,7 @@ class XGridObj:
         pyfms.mpp.sync()
 
 
-    def get_interp(self, on_gpu) -> dict:
+    def get_interp(self, on_gpu: bool = False) -> dict:
 
         """
         call fms to compute xgrid
