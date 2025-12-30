@@ -17,14 +17,6 @@ logger = logging.getLogger(__name__)
               Only 1 or 2 order is supported for conservative interpolation
               """
 )
-@click.option("--static_file",
-              type = click.Path(exists=True),
-              help =
-              """
-              To remap data where cell_methods = CELL_METHODS_MEAN, the static_file
-              will src grid cell areas should be provided
-              """
-)
 @click.option("--check_conserve",
               type = bool,
               help =
@@ -32,15 +24,35 @@ logger = logging.getLogger(__name__)
               If true, output grid area conservative will be checked
               """
 )
-def conservative_method(input_dir, output_dir, input_file, output_file, #common_options
-                        src_mosaic, tgt_mosaic, tgt_nlon, tgt_nlat,     #common_options
-                        lon_bounds, lat_bounds, kbounds, tbounds,       #common_options
-                        debug, order, static_file, check_conserve):
-    
+@click.option("--gpu",
+              type = bool,
+              help =
+              """
+              If true, the exchange grid will be created on the GPU
+              """
+)
+def conservative_method(input_dir, output_dir, input_mosaic_dir, output_mosaic_dir,
+                        input_file, output_file, #common_options
+                        src_mosaic, tgt_mosaic, tgt_nlon, tgt_nlat, #common_options
+                        scalar_variables, lon_bounds, lat_bounds,
+                        kbounds, tbounds, debug, order, check_conserve, gpu):
+
     setlogger.setconfig("remap.log", debug)
     logger.info("Starting conservative remapping")
-    
-    conservative.remap(src_mosaic, input_dir, output_dir, input_file,
-                       output_file, tgt_mosaic, tgt_nlon, tgt_nlat,
-                       lon_bounds, lat_bounds, kbounds, tbounds,
-                       order, static_file, check_conserve)    
+
+    xgrid = conservative.remap(input_dir=input_dir,
+                               output_dir=output_dir,
+                               input_mosaic_dir=input_mosaic_dir,
+                               output_mosaic_dir=output_mosaic_dir,
+                               input_file=input_file,
+                               src_mosaic=src_mosaic,
+                               tgt_mosaic=tgt_mosaic,
+                               output_file=output_file,
+                               scalar_variables=scalar_variables,
+                               lon_bounds=lon_bounds,
+                               lat_bounds=lat_bounds,
+                               kbounds=kbounds,
+                               tbounds=tbounds,
+                               order=order,
+                               check_conserve=check_conserve,
+                               gpu=gpu)
