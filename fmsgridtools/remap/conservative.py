@@ -1,6 +1,6 @@
 import numpy as np
 
-from fmsgridtools.remap.variableobj import FileObj, VariableObj
+from fmsgridtools.remap.variableobj import SrcFileObj, TgtFileObj, VariableObj
 from fmsgridtools.shared.xgridobj import XGridObj
 
 import pyfms
@@ -43,29 +43,23 @@ def remap(input_dir: str = "./",
             if output_dir is None: output_dir = input_dir
 
             src_fileobj = SrcFileObj(datafile=input_file, input_dir=input_dir, tiles=src_tiles)
-            tgt_fileobj = TgtFileObj(datafile=output_file, output_dir=output_dir, tile=tgt_tile)
+            tgt_fileobj = TgtFileObj(datafile=output_file, output_dir=output_dir, nx=nx_tgt, ny=ny_tgt)
 
             for var in src_fileobj.variables:
 
                 variable = VariableObj(var, src_fileobj)
-                variable.get_attributes()
+                variable.init()
 
-                times = list(range(variable.dims.time.size)) if variable.dims.time.here else [None]
-                klevels = list(range(variable.dims.z.size)) if variable.dims.z.here else [None]
+                for itime in variable.timeslist:
+                    for klevel in variable.zlist:
 
-                #automatically sets up time and vertical levels
-                #find a way to not send in nx and ny
-                variable.init_tgt_data(self, nx=nx_tgt, ny=ny_tgt)
+                        input_data = variable.slice(tile=src_tiles[0], timepoint=itime, klevel=klevel, prepare_data=True)
+                        data_slice = pyfms.horiz_interp.interp(xgrid.interps[src_tile].interp_id, input_data, convert_cf_order=False)
 
-                for itime in times:
-                    for klevel in klevels:
-                        data_slice = np.zeros(ny_tgt, nx_tgt, dtype=variable.dtype)
-                        for src_tile in src_tiles:
+                        for src_tile in src_tiles[1:]:
                             input_data = variable.slice(tile=src_tile, timepoint=itime, klevel=klevel, prepare_data=True)
                             data_slice += pyfms.horiz_interp.interp(xgrid.interps[src_tile].interp_id, input_data, convert_cf_order=False)
 
                             #gather if parallel, for now, no
                         variable.set_tgt_data(data_slice, timepoint=itime, klevel=klevel)
-
-                tgt_fileobj.set_dataarray(var, data_dict=variable.tgt_dict)
 

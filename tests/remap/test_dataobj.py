@@ -7,20 +7,21 @@ import write_files
 
 def test_dataobj():
 
-    dataset = write_files.write_data("test.tile1.nc")
+    dataset = write_files.write_data("test")
 
-    fileobj = fmsgridtools.FileObj("test")
-
-    variable1 = fmsgridtools.VariableObj(variable="variable1", fileobj=fileobj)
+    srcfileobj = fmsgridtools.SrcFileObj("test", tiles=["tile1"])
+    tgtfileobj = fmsgridtools.TgtFileObj("test", nx=10, ny=14)
+    
+    variable1 = fmsgridtools.VariableObj(variable="variable1", src_fileobj=srcfileobj, tgt_fileobj=tgtfileobj)
 
     #check dimensions
-    variable1.get_attributes()
     dims = [
-        ("grid_xt", variable1.dims.x),
-        ("grid_yt", variable1.dims.y),
-        ("time", variable1.dims.time),
-        ("pfull", variable1.dims.z)
+        ("grid_xt", variable1.src_fileobj.dims.x),
+        ("grid_yt", variable1.src_fileobj.dims.y),
+        ("time", variable1.time),
+        ("pfull", variable1.z)
     ]
+
     for (name, dim) in dims:
         assert dim.name == name
         assert dim.here
@@ -34,12 +35,12 @@ def test_dataobj():
 
     #slice
     src = write_files.src
-    reconstruct_data = np.zeros((src.ntimes, src.nk, src.ny, src.nx), dtype=np.float64)
+    reconstruct_data = np.zeros((src.ntimes, src.nk, src.ny//2, src.nx//2), dtype=np.float64)
     for itime in range(src.ntimes):
         for k in range(src.nk):
-            sliced_data = variable1.slice(timepoint=itime, klevel=k)
-            np.testing.assert_equal(sliced_data, write_files.data[itime, k, :, :])
-            reconstruct_data[itime, k, :, :] = variable1.prepare_data()
+            sliced_data = variable1.slice(tile="tile1", timepoint=itime, klevel=k)
+            np.testing.assert_equal(sliced_data, write_files.data_list[0][itime, k, :, :])
+            reconstruct_data[itime, k, :, :] = variable1.prepare_data(sliced_data)
 
     #check missing values
     for (itime, k, j, i) in write_files.missing_ijkl:
@@ -57,4 +58,4 @@ def test_remap():
 
 
 if __name__ == "__main__":
-    test_remap()
+    test_dataobj()

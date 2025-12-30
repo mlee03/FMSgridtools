@@ -3,18 +3,21 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
+import numpy.typing as npt
 import xarray as xr
 
 class DimObj():
 
-    def __init__(self, axis: str, name: str = None, here: bool = False, size: int = None):
+    def __init__(self, axis: str, name: str = None, here: bool = False, size: int = None, attr: dict = None, coord_values: npt.NDArray = None):
         self.axis = axis
         self.name = name
         self.size = size
+        self.attr = None
+        self.coords = coord_values
         self.here = False
 
 
-class DimsObj():
+class FileDimsObj():
 
     def __init__(self):
         self.x = DimObj("X")
@@ -22,22 +25,38 @@ class DimsObj():
         self.z = DimObj("Z")
         self.time = DimObj("T")
 
-    def get(self, da: xr.DataArray):
+
+    def init(self, dataset: xr.Dataset):
 
         """
         get dimensions
         """
 
-        dims_dict = {dim.axis: dim for dim in [self.x, self.y, self.z, self.time]}
+        dims_dict = {dim.axis: dim for dim in [self.time, self.z, self.y, self.x]}
 
-        for name, coord in da.coords.items():
+        for name, coord in dataset.coords.items():
             try:
                 dim = dims_dict[coord.attrs.get("axis")]
                 dim.name = name
+                dim.attr = coord.attrs
                 dim.size = coord.size
+                dim.coords = coord.values
                 dim.here = True
             except:
                 print(f"{name} dim not found")
+
+    def get_z(self, dims_list: list):
+        if self.z.name in dims_list:
+            return self.z
+        else:
+            return DimObj(axis="Z", name=self.z.name)
+
+    def get_time(self, dims_list: list):
+        if self.time.name in dims_list:
+            return self.time
+        else:
+            return DimObj(axis="T", name=self.time.name)
+
 
     def __repr__(self):
 
@@ -63,15 +82,20 @@ class SrcFileObj():
 
         self.input_dir = str(input_dir)
         self.tiles = tiles
+        self.dims = FileDimsObj()
         self.src_datafiles = {tile: Path(input_dir)/Path(datafile + f".{tile}.nc") for tile in tiles}
         self.static_files = {}
-        self.variables = variables
+        self.variables = [] if variables is None else variables
 
-        self.src_datasets = {
+        self.datasets = {
             tile: xr.open_dataset(self.src_datafiles[tile], decode_cf=False) for tile in self.tiles
         }
 
-        dataset = self.src_datasets[tiles[0]]
+        dataset = self.datasets[tiles[0]]
+
+        # get dims
+        self.dims.init(dataset)
+
         # soil_area: 00010101.land_static.nc cell_area: 00010101.land_static_sg.nc
         associated_files = dataset.attrs.get("associated_files")
         if associated_files is not None:
@@ -81,9 +105,8 @@ class SrcFileObj():
                     tile: Path(input_dir)/stringsplit[i+1].replace(".nc", f".{tile}.nc") for tile in self.tiles
                 }
 
-        #get list of variables
-        if self.variables is None:
-            self.variables = []
+        #get list of variables if not specified
+        if not bool(self.variables):
             for variable in dataset:
                 if variable in self.skip_variables:
                     print(f"skipping {variable}")
@@ -102,19 +125,31 @@ class SrcFileObj():
 
 class TgtFileObj():
 
-    def __init__(self, datadict: dict = {}):
-        self.dataarrays = datadict
-        self.name = None
-        self.dims = None
+    def __init__(self, datafile: str|Path,  nx: int, ny: int, output_dir: str = "./"):
 
-    def set_dataarray(self, variable: str = None, data_dict: dict = None, dataarray: xr.DataArray = None):
+        self.output_dir = str(output_dir)
+        self.datafile = datafile
+        self.nx = nx
+        self.ny = ny
 
-        if data_dict is not None:
-            self.dataarrays["variable" ] = xr.DataArray.from_dict(data_dict)
-        elif dataarray is not None:
-            self.dataarrays["variable"] = dataarray
-        else:
-            raise RuntimeError("must provide something")
+        self.datadict = {}
+
+
+    def init_variable(self, variable: str, dtype, dims_list: list = None, attributes: dict = None, z_size: int = None, time_size: int = None):
+
+        data_info = {}
+        if dims_list is not None: data_info["dims"] = dims_list
+        if attributes is not None: data_info["attrs"] = attributes
+
+        shape = []
+        if time_size is not None: shape.append(time_size)
+        if z_size is not None: shape.append(z_size)
+        shape += [self.ny, self.nx]
+
+        data_info["data"] = np.zeros(shape, dtype=dtype)
+
+        self.datadict[variable] = data_info
+
 
     def set_coords(self, grid):
         pass
@@ -125,39 +160,35 @@ class VariableObj():
 
     time_coder = xr.coders.CFDatetimeCoder(use_cftime=True)
 
-    def __init__(self, variable: str, fileobj: SrcFileObj = None):
+    def __init__(self, variable: str, src_fileobj: SrcFileObj = None, tgt_fileobj: TgtFileObj = None):
 
         self.variable = variable
-        self.fileobj = fileobj
-        self.dims = DimsObj()
+        self.src_fileobj = src_fileobj
+        self.tgt_fileobj = tgt_fileobj
 
-        self.dtype = None,
-        self.missing_value = None,
-        self.fill_value = None,
-        self.offset = None,
+        self.z = None
+        self.time = None
+
+        self.dtype = None
+        self.missing_value = None
+        self.fill_value = None
+        self.offset = None
         self.scale_factor = None
 
         self.static_files: {} = None
-        self.src_data = None
-
-        self.tgt_dict = {
-            "data": npt.NDArray = None,
-            "dims": list = None,
-            "attrs": dict =  None
-        }
-
-
-    def get_attributes(self):
-
-        tile = self.fileobj.tiles[0]
-        dataset = self.fileobj.datasets[tile]
+        
+        tile = self.src_fileobj.tiles[0]
+        dataset = self.src_fileobj.datasets[tile]
 
         if self.variable not in dataset:
             raise RuntimeError("variable not found")
 
         dataarray = dataset[self.variable]
 
-        self.dims.get(dataarray)
+        dims_list = dataarray.dims
+        self.z = self.src_fileobj.dims.get_z(dims_list)
+        self.time = self.src_fileobj.dims.get_time(dims_list)
+
         self.dtype=dataarray.dtype
 
         attributes = dataarray.attrs
@@ -169,73 +200,57 @@ class VariableObj():
         if "area" in str(attributes.get("cell_method")):
             cell_measures = str(attributes.get("cell_measures"))
             if "area:" in cell_measures:
-                self.static_files = self.fileobj.static_files[cell_measures.split()[1]]
+                self.static_files = self.src_fileobj.static_files[cell_measures.split()[1]]
+
+        self.tgt_fileobj.init_variable(self.variable, self.dtype, dims_list=dims_list)#, attributes=attributes, z_size=self.z.size, time_size=self.time.size)
 
 
     def slice(self, tile: str = "tile1", timepoint: int = None, klevel: int = None, prepare_data: bool = False):
 
 
-        dataset = self.fileobj.datasets[tile]
+        dataset = self.src_fileobj.datasets[tile]
 
         slice_dict = {}
-        if klevel is not None and self.dims.z.here:
-            slice_dict[self.dims.z.name] = klevel
-        if timepoint is not None  and self.dims.time.here:
-            slice_dict[self.dims.time.name] = timepoint
+        if klevel is not None:
+            slice_dict[self.z.name] = klevel
+        if timepoint is not None:
+            slice_dict[self.time.name] = timepoint
 
-        self.src_data = dataset[self.variable].isel(slice_dict).values
+        src_data = dataset[self.variable].isel(slice_dict).values
 
         if prepare_data:
-            self.prepare_data()
-        return self.src_data
+            src_data = self.prepare_data(src_data)
+        return src_data
 
 
-    def prepare_data(self):
+    def prepare_data(self, src_data: npt.NDArray = None):
 
         #missing value mask
         missing_value_mask = None
         if self.missing_value is not None:
-            missing_value_mask = self.src_data == self.missing_value
+            missing_value_mask = src_data == self.missing_value
 
-        if self.offset is not None: self.src_data += self.offset
-        if self.scale_factor is not None: self.src_data *= self.scale_factor
+        if self.offset is not None: src_data += self.offset
+        if self.scale_factor is not None: src_data *= self.scale_factor
 
         #zero out missing values so it doens't contribute to remapping
         if missing_value_mask is not None:
-            self.src_data = xr.where(missing_value_mask, 0.0, self.src_data)
+            src_data = xr.where(missing_value_mask, 0.0, src_data)
 
-        return self.src_data
-
-
-    def init_tgt_dict(self, nx: int, ny: int, ntimes: int = None, nz: int = None):
-
-        dims = []
-        if self.dims.time.here:
-            if ntimes is None: ntimes = self.dims.time.size
-        dims.append(ntimes)
-
-        if self.dims.z.here:
-            if nz is None: nz = self.dims.z.size
-        dims.append(nx)
-
-        dims += [self.dims.y.size, self.dims.x.size]
-
-        self.tgt_dict["dims"] = dims
-        self.tgt_dict["attrs"]= self.src_datasets[self.fileobj.tiles[0]][self.variable].attrs
-        self.tgt_dict["data"] = np.zeros((ntimes, nz, ny, nx), dtype=self.dtype)
-
-        return self.tgt_dict
+        return src_data
 
 
     def set_tgt_data(self, data: npt.NDArray, timepoint: int = None, klevel: int = None):
 
-        if timepoint is None and klevel is None:
-            self.tgt_dict["data"] = data
-        elif timepoint is not None and klevel is not None:
-            self.tgt_dict["data"][timepoint, klevel, :, :] = data
-        elif timepoint is not None:
-            self.tgt_dict["data"][timepoint, :, :] = data
-        elif klevel is not None:
-            self.tgt_dict["data"][klevel, :, :] = data
+        tgt_data = self.tgt_fileobj.datadict[self.variable]["data"]
 
-        return self.tgt_dict
+        if timepoint is None and klevel is None:
+            tgt_data = data
+        elif timepoint is not None and klevel is not None:
+            tgt_data[timepoint, klevel, :, :] = data
+        elif timepoint is not None:
+            tgt_data[timepoint, :, :] = data
+        elif klevel is not None:
+            tgt_data[klevel, :, :] = data
+
+        self.tgt_fileobj.datadict[self.variable]["data"] = tgt_data
