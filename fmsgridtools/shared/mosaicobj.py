@@ -159,7 +159,6 @@ class MosaicObj:
         self,
         input_dir: str | Path = "./",
         radians: bool = False,
-        center: bool = False,
         domain: pyfms.Domain = None,
     ) -> dict:
         """
@@ -183,7 +182,6 @@ class MosaicObj:
             readfile = Path(input_dir) / gridfile
             grid[gridtile] = GridObj(gridfile=readfile).read(
                 radians=radians,
-                center=center,
                 domain=domain,
                 on_domain=False if domain is None else True,
                 xy_only=True,
