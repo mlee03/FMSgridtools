@@ -29,7 +29,7 @@ jobs:
           pytest tests/shared/test_libs.py
           pytest tests/mosaic/test_mosaic.py
           pytest tests/shared/test_gridobj.py::test_read_write
-          pytest tests/shared/test_gridobj.py::test_center_option
+          pytest tests/shared/test_gridobj.py::test_minigrids_option
           pytest tests/shared/test_gridobj.py::test_to_domain
           #pytest tests/shared/test_xgridobj.py
           #pytest tests/hgrid/test_hgrid.py

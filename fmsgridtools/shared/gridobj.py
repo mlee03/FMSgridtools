@@ -86,6 +86,24 @@ class Variable:
         self.name = name
         self.data = data
 
+class MiniGridObj:
+
+    def __init__(self, xsize: int = None, ysize: int = None, x: npt.NDArray = None, y: npt.NDArray = None):
+        self.xsize = xsize
+        self.ysize = ysize
+        self.x = x
+        self.y = y
+
+    def set_size(self):
+
+        xsize, ysize = self.x.shape
+
+        if self.x.shape != self.y.shape:
+            logger.error("MiniGrid, x and y differ in dimensions")
+
+        self.xsize = xsize
+        self.ysize = ysize
+
 
 class GridObj:
     """
@@ -135,6 +153,9 @@ class GridObj:
         self.arcx_obj = Variable(name="arcx", data=arcx)
 
         self._set_dims()
+
+        self.gridc = MiniGridObj()
+        self.gridt = MiniGridObj()
 
         logger.info("Created new GridObj named:\n %s", self.__repr__())
 
@@ -212,12 +233,54 @@ class GridObj:
         self.area = pyfms.grid_utils.get_grid_area(lon=x, lat=y, convert_cf_order=False)
         return self.area
 
+    def get_gridc(self):
+
+        """
+        Save the edge points
+        """
+
+        if self.x is None or self.y is None:
+            logger.error("Cannot set gridc.  Please set x and y values first")
+
+        self.gridc.x = np.ascontiguousarray(self.x[::2, ::2])
+        self.gridc.y = np.ascontiguousarray(self.y[::2, ::2])
+        self.gridc.set_size()
+
+        return self.gridc
+
+    def get_gridt(self):
+
+        """
+        Save the center points
+        """
+
+        if self.x is None or self.y is None:
+            logger.error("Cannot set gridt.  Please set and y values first")
+
+        self.gridt.x = np.ascontiguousarray(self.x[1::2, 1::2])
+        self.gridt.y = np.ascontiguousarray(self.x[1::2, 1::2])
+        self.gridt.set_size()
+
+        return self.gridt
+
+    def free_supergrid(self):
+
+        self.x = None
+        self.y = None
+
+    def free_gridc(self):
+
+        self.gridc = None
+
+    def free_gridt(self):
+
+        self.gridt = None
+
     def read(
         self,
         gridfile: str = None,
         domain: dict = None,
         radians: bool = False,
-        center: bool = False,
         on_domain: bool = False,
         xy_only: bool = False,
     ):
@@ -252,9 +315,6 @@ class GridObj:
             for obj in objlist:
                 if obj.name in ds:
                     obj.data = ds[obj.name].data
-                    if center:
-                        logger.info("saving center points for %s", {obj.name})
-                        obj.data = np.ascontiguousarray(obj.data[::2, ::2])
                 else:
                     logger.warning("could not %s in %s", {obj.name}, {self.gridfile})
 

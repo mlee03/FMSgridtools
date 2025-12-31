@@ -19,7 +19,7 @@ def generate_mosaic(nx: int = 90, ny: int = 45, refine: int = 2):
     x_tgt = np.linspace(xstart, xend, nx*refine+1)
     y_tgt = np.linspace(ystart, yend, ny*refine+1)
     x_tgt, y_tgt = np.meshgrid(x_tgt, y_tgt)
-    
+
     area_src = np.ones((ny, nx), dtype=np.float64)
     area_tgt = np.ones((ny*refine, nx*refine), dtype=np.float64)
 
@@ -64,9 +64,9 @@ def test_create_xgrid(on_gpu):
     xgrid.create_xgrid()
     xgrid.to_dataset()
     xgrid.dataset["tile1"]["tile1"].to_netcdf("remap.nc")
-    
+
     del xgrid
-    
+
     xgrid = fmsgridtools.XGridObj(restart_remap_file="remap.nc")
 
     #check nxcells
@@ -79,7 +79,7 @@ def test_create_xgrid(on_gpu):
 
     src_i = [xgrid.src_cell[i][0] for i in range(nxcells)]
     src_j = [xgrid.src_cell[i][1] for i in range(nxcells)]
-    
+
     assert src_i == answer_i
     assert src_j == answer_j
 
@@ -94,7 +94,7 @@ def test_create_xgrid(on_gpu):
         for i in range(nx):
             for ixcell in range(refine):
                 answer_j += [j*refine + ixcell + 1]*refine
-                
+
     tgt_i = [xgrid.tgt_cell[i][0] for i in range(nxcells)]
     tgt_j = [xgrid.tgt_cell[i][1] for i in range(nxcells)]
 
