@@ -204,7 +204,6 @@ def test_minigrids_option(set_fms_files):
     gridfile.unlink()
     pyfms.fms.end()
 
-#@pytest.mark.skip("error in pyFMS")
 def test_to_domain(set_fms_files):
 
     nx, ny = 8, 8
