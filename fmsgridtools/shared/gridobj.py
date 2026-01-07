@@ -88,22 +88,15 @@ class Variable:
 
 class MiniGridObj:
 
-    def __init__(self, xsize: int = None, ysize: int = None, x: npt.NDArray = None, y: npt.NDArray = None):
-        self.xsize = xsize
-        self.ysize = ysize
+    def __init__(self, nx: int = None, ny: int = None, nxp: int = None, nyp: int = None,
+                    x: npt.NDArray = None, y: npt.NDArray = None):
+
+        self.nx = nx #number of cells
+        self.ny = ny #number of cells
+        self.nxp = nxp #number of gridpoints
+        self.nyp = nyp #number of gridpoints
         self.x = x
         self.y = y
-
-    def set_size(self):
-
-        xsize, ysize = self.x.shape
-
-        if self.x.shape != self.y.shape:
-            logger.error("MiniGrid, x and y differ in dimensions")
-
-        self.xsize = xsize
-        self.ysize = ysize
-
 
 class GridObj:
     """
@@ -171,7 +164,7 @@ class GridObj:
         else:
             if self.domain is not None:
                 logger.warning("Overwriting %s with %s", self.domain, domain)
-                self.domain = domain
+            self.domain = domain
 
         if not pyfms.fms.module_is_initialized():
             logger.error("Please initialize pyfms first")
@@ -218,7 +211,7 @@ class GridObj:
                 logger.info("Converting %s to radians", {obj.name})
                 obj.data = np.radians(obj.data, dtype=np.float64)
 
-    def get_fms_area(self):
+    def get_fms_area(self, gridc: bool = False):
         """
         Compute grid cell areas
         """
@@ -228,8 +221,13 @@ class GridObj:
         if not pyfms.fms.module_is_initialized():
             logger.error("Please initialize pyfms first")
 
-        x = np.ascontiguousarray(self.x, dtype=np.float64)
-        y = np.ascontiguousarray(self.y, dtype=np.float64)
+        if gridc:
+            x = self.gridc.x
+            y = self.gridc.y
+        else:
+            x = np.ascontiguousarray(self.x, dtype=np.float64)
+            y = np.ascontiguousarray(self.y, dtype=np.float64)
+
         self.area = pyfms.grid_utils.get_grid_area(lon=x, lat=y, convert_cf_order=False)
         return self.area
 
@@ -244,7 +242,10 @@ class GridObj:
 
         self.gridc.x = np.ascontiguousarray(self.x[::2, ::2])
         self.gridc.y = np.ascontiguousarray(self.y[::2, ::2])
-        self.gridc.set_size()
+
+        self.gridc.nyp, self.gridc.nxp = self.gridc.x.shape
+        self.gridc.ny = self.gridc.nyp - 1
+        self.gridc.nx = self.gridc.nxp - 1
 
         return self.gridc
 
@@ -259,7 +260,7 @@ class GridObj:
 
         self.gridt.x = np.ascontiguousarray(self.x[1::2, 1::2])
         self.gridt.y = np.ascontiguousarray(self.x[1::2, 1::2])
-        self.gridt.set_size()
+        self.gridt.nyp, self.gridt.nxp = self.gridt.x.shape
 
         return self.gridt
 

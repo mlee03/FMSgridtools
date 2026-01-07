@@ -108,11 +108,7 @@ def transfer_data_gpu(nxcells: int, src_nlon: int, tgt_nlon: int):
                 xarea=xarea[:nxcells])
 
 
-def get_2dx2d_order1_gpu(src_nlon: int,
-                         src_nlat: int,
-                         tgt_nlon: int,
-                         tgt_nlat: int,
-                         src_lon: npt.NDArray,
+def get_2dx2d_order1_gpu(src_lon: npt.NDArray,
                          src_lat: npt.NDArray,
                          tgt_lon: npt.NDArray,
                          tgt_lat: npt.NDArray,
@@ -121,11 +117,18 @@ def get_2dx2d_order1_gpu(src_nlon: int,
 
     create_xgrid_order1_gpu_wrapper = _lib.create_xgrid_order1_gpu_wrapper
 
+    nyp, nxp = src_lon.shape
+    src_nlon = nxp - 1
+    src_nlat = nyp - 1
+
+    nyp, nxp = tgt_lon.shape
+    tgt_nlon = nxp - 1
+    tgt_nlat = nyp - 1
+    
     if src_mask is None: src_mask = np.ones((src_nlon*src_nlat), dtype=np.float64)
     if tgt_mask is None: tgt_mask = np.ones((tgt_nlon*tgt_nlat), dtype=np.float64)
 
     arrayptr_double = np.ctypeslib.ndpointer(dtype=np.float64, flags="C_CONTIGUOUS")
-
     create_xgrid_order1_gpu_wrapper.restype = np.int32
     create_xgrid_order1_gpu_wrapper.argtypes = [c_int, #src_nlon
                                                 c_int, #src_nlat
