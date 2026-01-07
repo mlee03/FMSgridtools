@@ -46,7 +46,7 @@ class Parent:
                     input_dir=self.input_dir, mosaicfile=self.mosaicfile
                 ).read()
             self.grid = self.mosaic.get_grid(
-                input_dir=self.input_dir, center=True, radians=True, domain=self.domain
+                input_dir=self.input_dir, radians=True, domain=self.domain
             )
             logger.info("set grid for %s", self.parent)
 
@@ -65,11 +65,12 @@ class XGridObj:
         tgt_gridfile: str | Path = None,
         src_grid: dict[str, GridObj] = None,
         tgt_grid: dict[str, GridObj] = None,
-        tgt_tile: str = None,
+        tgt_tile: str = "tile1",
         src_mask: dict[str, np.ndarray] = None,
         tgt_mask: dict[str, np.ndarray] = None,
         order: int = 1,
         domain: pyfms.Domain = None,
+        use_allpoints: bool = False
     ):
 
         """
@@ -122,6 +123,15 @@ class XGridObj:
         if self.tgt_tile is not None:
             self.tgt.grid = self.tgt.grid[tgt_tile]
 
+        if not use_allpoints:
+            for key in self.src.grid:
+                self.src.grid[key] = self.src.grid[key].get_gridc()
+                self.src.grid[key].free_supergrid()
+                self.tgt.grid = self.tgt.grid.get_gridc()
+                self.tgt.grid.free_supergrid()
+
+
+        self.use_allpoints = use_allpoints
         self.remapfile: str | Path = remapfile
         self.order = order
 
@@ -130,9 +140,9 @@ class XGridObj:
 
     def set_target_tile(self, tgt_tile: str = "tile1"):
         self.tgt_tile = tgt_tile
-        self.tgt.grid = self.tgt.grid[tgt_tile]        
+        self.tgt.grid = self.tgt.grid[tgt_tile]
 
-        
+
     def read(
         self,
         input_dir: Path | str = None,
@@ -177,7 +187,7 @@ class XGridObj:
     def gather(self):
 
         """
-        gathers xgrid 
+        gathers xgrid
         """
 
         isc, jsc = self.tgt.domain.isc, self.tgt.domain.jsc
@@ -210,7 +220,7 @@ class XGridObj:
 
             datasets = []
             for tile1, src_tile in enumerate(global_interps):
-                
+
                 interp = global_interps[src_tile]
                 dataset = xr.Dataset()
 
@@ -251,19 +261,29 @@ class XGridObj:
 
         self.interps = {}
 
+        tgt_grid = tgt.grid[self.tgt_tile]
+        if self.use_allpoints:
+            tgt_x, tgt_y = tgt_grid.x, tgt_grid.y
+        else:
+            tgt_x, tgt_y = tgt_grid.gridc.x, tgt_grid.gridc.y
+
+
         for src_tile in self.src.grid:
+
             src_grid = self.src.grid[src_tile]
+            if self.use_allpoints:
+                src_x, src_y = src_grid.x, src_grid.y
+            else:
+                src_x, src_y = src_grid.gridc.x, src_grid.gridc.y
+
+
             src_mask = None if self.src.mask is None else self.src.mask[src_tile]
             if on_gpu:
                 xdict = pyfrenctools.create_xgrid.get_2dx2d_order1_gpu(
-                    src_nlon=src_grid.nx,
-                    src_nlat=src_grid.ny,
-                    tgt_nlon=self.tgt.grid.nx,
-                    tgt_nlat=self.tgt.grid.ny,
-                    src_lon=src_grid.x,
-                    src_lat=src_grid.y,
-                    tgt_lon=self.tgt.grid.x,
-                    tgt_lat=self.tgt.grid.y,
+                    src_lon=src_x,
+                    src_lat=src_y,
+                    tgt_lon=self.tgt_x,
+                    tgt_lat=self.tgt_y,
                     src_mask=src_mask,
                     tgt_mask=self.tgt.mask,
                 )
@@ -277,10 +297,10 @@ class XGridObj:
                 self.interps[src_tile] = interp
             else:
                 interp_id = pyfms.horiz_interp.get_weights(
-                    lon_in=src_grid.x,
-                    lat_in=src_grid.y,
-                    lon_out=self.tgt.grid.x,
-                    lat_out=self.tgt.grid.y,
+                    lon_in=src_x,
+                    lat_in=src_y,
+                    lon_out=self.tgt_x,
+                    lat_out=self.tgt_y,
                     mask_in=src_mask,
                     mask_out=self.tgt.mask,
                     is_latlon_in=False,

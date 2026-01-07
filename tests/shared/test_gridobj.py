@@ -155,7 +155,7 @@ def test_read_write(set_fms_files):
     pyfms.fms.end()
 
 
-def test_center_option(set_fms_files):
+def test_minigrids_option(set_fms_files):
 
     pyfms.fms.init()
 
@@ -171,21 +171,38 @@ def test_center_option(set_fms_files):
 
     GridObj(gridfile=gridfile, x=x, y=y).write()
 
-    grid = GridObj(gridfile=gridfile).read(center=True, radians=True, xy_only=True)
+    #test gridc
+    grid = GridObj(gridfile=gridfile).read(radians=True, xy_only=True)
+    gridc = grid.get_gridc()
 
-    assert grid.nx == nx2
-    assert grid.ny == ny2
-    assert grid.nxp == nx2 + 1
-    assert grid.nyp == ny2 + 1
+    assert gridc.xsize == nx2p
+    assert gridc.ysize == ny2p
 
     answer = np.radians(np.ones((ny2p, nx2p), dtype=np.float64))
+    np.testing.assert_array_equal(gridc.x, answer)
+    np.testing.assert_array_equal(gridc.y, answer)
 
-    np.testing.assert_array_equal(grid.x, answer)
-    np.testing.assert_array_equal(grid.y, answer)
+    grid.free_gridc()
+    assert grid.gridc is None
+
+    #test gridt
+    gridt = grid.get_gridt()
+
+    assert gridt.xsize == nx2
+    assert gridt.ysize == ny2
+
+    answer = np.zeros((ny2, nx2), dtype=np.float64)
+    np.testing.assert_array_equal(gridt.x, answer)
+    np.testing.assert_array_equal(gridt.y, answer)
+
+    grid.free_gridt()
+    assert grid.gridt is None
+
+    grid.free_supergrid()
+    assert grid.x is grid.y is None
 
     gridfile.unlink()
     pyfms.fms.end()
-
 
 def test_to_domain(set_fms_files):
 

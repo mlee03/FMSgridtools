@@ -1,4 +1,5 @@
 
 [submodule "pyFMS"]
-	path = pyFMS
-	url = https://github.com/NOAA-GFDL/pyFMS.git
+  path = pyFMS
+  branch = fmsgridtools-development
+  url = https://github.com/mlee03/pyFMS.git

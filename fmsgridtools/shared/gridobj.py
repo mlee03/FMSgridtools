@@ -86,6 +86,17 @@ class Variable:
         self.name = name
         self.data = data
 
+class MiniGridObj:
+
+    def __init__(self, nx: int = None, ny: int = None, nxp: int = None, nyp: int = None,
+                    x: npt.NDArray = None, y: npt.NDArray = None):
+
+        self.nx = nx #number of cells
+        self.ny = ny #number of cells
+        self.nxp = nxp #number of gridpoints
+        self.nyp = nyp #number of gridpoints
+        self.x = x
+        self.y = y
 
 class GridObj:
     """
@@ -135,6 +146,9 @@ class GridObj:
         self.arcx_obj = Variable(name="arcx", data=arcx)
 
         self._set_dims()
+
+        self.gridc = MiniGridObj()
+        self.gridt = MiniGridObj()
 
         logger.info("Created new GridObj named:\n %s", self.__repr__())
 
@@ -197,7 +211,7 @@ class GridObj:
                 logger.info("Converting %s to radians", {obj.name})
                 obj.data = np.radians(obj.data, dtype=np.float64)
 
-    def get_fms_area(self):
+    def get_fms_area(self, gridc: bool = False):
         """
         Compute grid cell areas
         """
@@ -207,17 +221,67 @@ class GridObj:
         if not pyfms.fms.module_is_initialized():
             logger.error("Please initialize pyfms first")
 
-        x = np.ascontiguousarray(self.x, dtype=np.float64)
-        y = np.ascontiguousarray(self.y, dtype=np.float64)
+        if gridc:
+            x = self.gridc.x
+            y = self.gridc.y
+        else:
+            x = np.ascontiguousarray(self.x, dtype=np.float64)
+            y = np.ascontiguousarray(self.y, dtype=np.float64)
+
         self.area = pyfms.grid_utils.get_grid_area(lon=x, lat=y, convert_cf_order=False)
         return self.area
+
+    def get_gridc(self):
+
+        """
+        Save the edge points
+        """
+
+        if self.x is None or self.y is None:
+            logger.error("Cannot set gridc.  Please set x and y values first")
+
+        self.gridc.x = np.ascontiguousarray(self.x[::2, ::2])
+        self.gridc.y = np.ascontiguousarray(self.y[::2, ::2])
+
+        self.gridc.nyp, self.gridc.nxp = self.gridc.x.shape
+        self.gridc.ny = self.gridc.nyp - 1
+        self.gridc.nx = self.gridc.nxp - 1
+
+        return self.gridc
+
+    def get_gridt(self):
+
+        """
+        Save the center points
+        """
+
+        if self.x is None or self.y is None:
+            logger.error("Cannot set gridt.  Please set and y values first")
+
+        self.gridt.x = np.ascontiguousarray(self.x[1::2, 1::2])
+        self.gridt.y = np.ascontiguousarray(self.x[1::2, 1::2])
+        self.gridt.nyp, self.gridt.nxp = self.gridt.x.shape
+
+        return self.gridt
+
+    def free_supergrid(self):
+
+        self.x = None
+        self.y = None
+
+    def free_gridc(self):
+
+        self.gridc = None
+
+    def free_gridt(self):
+
+        self.gridt = None
 
     def read(
         self,
         gridfile: str = None,
         domain: dict = None,
         radians: bool = False,
-        center: bool = False,
         on_domain: bool = False,
         xy_only: bool = False,
     ):
@@ -252,9 +316,6 @@ class GridObj:
             for obj in objlist:
                 if obj.name in ds:
                     obj.data = ds[obj.name].data
-                    if center:
-                        logger.info("saving center points for %s", {obj.name})
-                        obj.data = np.ascontiguousarray(obj.data[::2, ::2])
                 else:
                     logger.warning("could not %s in %s", {obj.name}, {self.gridfile})
 

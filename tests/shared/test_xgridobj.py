@@ -36,12 +36,21 @@ def make_testfiles():
     make mosaic and grid files for testing
     """
 
+<<<<<<< HEAD
     # write mosaic
     for parent in [src, tgt]:
         fmsgridtools.MosaicObj(
             gridtiles=[f"tile{i}" for i in range(1, parent.ntiles+1)],
             gridfiles=[f"{parent.gridfile}.tile{i}.nc" for i in range(1, parent.ntiles+1)]
         ).write(parent.mosaicfile)
+=======
+    x_tgt = np.linspace(xstart, xend, nx*refine+1)
+    y_tgt = np.linspace(ystart, yend, ny*refine+1)
+    x_tgt, y_tgt = np.meshgrid(x_tgt, y_tgt)
+
+    area_src = np.ones((ny, nx), dtype=np.float64)
+    area_tgt = np.ones((ny*refine, nx*refine), dtype=np.float64)
+>>>>>>> origin/main
 
     # write grid
     for parent in [src, tgt]:
@@ -77,11 +86,21 @@ def xgridobj_test(on_gpu: bool = False):
         tgt_mosaicfile=tgt.mosaicfile,
         domain=domain,
     )
+<<<<<<< HEAD
     xgrid.set_target_tile("tile1")
     xgrid.get_interp(on_gpu=on_gpu)
     xgrid.write(outfile=remapfile)
         
     del xgrid
+=======
+    xgrid.create_xgrid()
+    xgrid.to_dataset()
+    xgrid.dataset["tile1"]["tile1"].to_netcdf("remap.nc")
+
+    del xgrid
+
+    xgrid = fmsgridtools.XGridObj(restart_remap_file="remap.nc")
+>>>>>>> origin/main
 
     xgrid = fmsgridtools.XGridObj(
         src_mosaicfile=src.mosaicfile,
@@ -94,7 +113,15 @@ def xgridobj_test(on_gpu: bool = False):
     area = fmsgridtools.GridObj(
         gridfile=tgt.gridfile + ".tile1.nc").read(center=True, radians=True).get_fms_area()
 
+<<<<<<< HEAD
     for tile in xgrid.interps:
+=======
+    src_i = [xgrid.src_cell[i][0] for i in range(nxcells)]
+    src_j = [xgrid.src_cell[i][1] for i in range(nxcells)]
+
+    assert src_i == answer_i
+    assert src_j == answer_j
+>>>>>>> origin/main
 
         interp = xgrid.interps[tile]
         i_src = interp.i_src
@@ -102,7 +129,18 @@ def xgridobj_test(on_gpu: bool = False):
         i_dst = interp.i_dst
         j_dst = interp.j_dst
 
+<<<<<<< HEAD
         assert interp.nxgrid == tgt.nx//2 * tgt.ny//2, f"src_tile = {tile}, {interp.nxgrid}"
+=======
+    answer_j = []
+    for j in range(ny):
+        for i in range(nx):
+            for ixcell in range(refine):
+                answer_j += [j*refine + ixcell + 1]*refine
+
+    tgt_i = [xgrid.tgt_cell[i][0] for i in range(nxcells)]
+    tgt_j = [xgrid.tgt_cell[i][1] for i in range(nxcells)]
+>>>>>>> origin/main
 
         for i in range(interp.nxgrid):
 
