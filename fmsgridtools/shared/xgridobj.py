@@ -65,7 +65,7 @@ class XGridObj:
         tgt_gridfile: str | Path = None,
         src_grid: dict[str, GridObj] = None,
         tgt_grid: dict[str, GridObj] = None,
-        tgt_tile: str = "tile1",
+        tgt_tile: str = None,
         src_mask: dict[str, np.ndarray] = None,
         tgt_mask: dict[str, np.ndarray] = None,
         order: int = 1,
@@ -119,29 +119,24 @@ class XGridObj:
             domain=domain,
         )
 
-        self.tgt_tile = tgt_tile
-        if self.tgt_tile is not None:
+        if tgt_tile is not None:
             self.tgt.grid = self.tgt.grid[tgt_tile]
-
+        self.tgt_tile = tgt_tile
+        
         if not use_allpoints:
             for key in self.src.grid:
-                self.src.grid[key] = self.src.grid[key].get_gridc()
-                self.src.grid[key].free_supergrid()
-                self.tgt.grid = self.tgt.grid.get_gridc()
-                self.tgt.grid.free_supergrid()
-
-
+                self.src.grid[key].get_gridc()
+                  
         self.use_allpoints = use_allpoints
         self.remapfile: str | Path = remapfile
         self.order = order
 
         self.interps: pyfms.ConserveInterp | dict[str, pyfms.ConserveInterp] = None
 
+    def set_target_grid(self, tgt_tile: str = "tile1"):
 
-    def set_target_tile(self, tgt_tile: str = "tile1"):
         self.tgt_tile = tgt_tile
         self.tgt.grid = self.tgt.grid[tgt_tile]
-
 
     def read(
         self,
@@ -167,16 +162,21 @@ class XGridObj:
 
         if domain is None:
             domain = self.tgt.domain
+                
+        tgt_grid = self.tgt.grid if self.use_allpoints else self.tgt.grid.get_gridc()
 
         self.interps = {}
         for itile, src_tile in enumerate(self.src.grid):
+
+            src_grid = self.src.grid[src_tile] if self.use_allpoints else self.src.grid[src_tile].get_gridc()
+
             interp_id = pyfms.horiz_interp.read_weights_conserve(
                 weight_filename=str(remapfile),
                 weight_file_src="fregrid",
-                nlon_src=self.src.grid[src_tile].nx,
-                nlat_src=self.src.grid[src_tile].ny,
-                nlon_tgt=self.tgt.grid.nx,
-                nlat_tgt=self.tgt.grid.ny,
+                nlon_src=src_grid.nx,
+                nlat_src=src_grid.ny,
+                nlon_tgt=tgt_grid.nx,
+                nlat_tgt=tgt_grid.ny,
                 domain=domain,
                 src_tile=itile,
                 save_xgrid_area=True,
@@ -207,6 +207,7 @@ class XGridObj:
 
 
     def write(self, output_dir: Path | str = "./", outfile: str | Path = Path("remap.nc")):
+
         """
         write remap file
         """
@@ -261,29 +262,19 @@ class XGridObj:
 
         self.interps = {}
 
-        tgt_grid = tgt.grid[self.tgt_tile]
-        if self.use_allpoints:
-            tgt_x, tgt_y = tgt_grid.x, tgt_grid.y
-        else:
-            tgt_x, tgt_y = tgt_grid.gridc.x, tgt_grid.gridc.y
-
+        tgt_grid = self.tgt.grid if self.use_allpoints else self.tgt.grid.get_gridc()
 
         for src_tile in self.src.grid:
 
-            src_grid = self.src.grid[src_tile]
-            if self.use_allpoints:
-                src_x, src_y = src_grid.x, src_grid.y
-            else:
-                src_x, src_y = src_grid.gridc.x, src_grid.gridc.y
-
+            src_grid = self.src.grid[src_tile].get_gridc() if self.use_allpoints else self.src.grid[src_tile]
 
             src_mask = None if self.src.mask is None else self.src.mask[src_tile]
             if on_gpu:
                 xdict = pyfrenctools.create_xgrid.get_2dx2d_order1_gpu(
-                    src_lon=src_x,
-                    src_lat=src_y,
-                    tgt_lon=self.tgt_x,
-                    tgt_lat=self.tgt_y,
+                    src_lon=src_grid.x,
+                    src_lat=src_grid.y,
+                    tgt_lon=tgt_grid.x,
+                    tgt_lat=tgt_grid.y,
                     src_mask=src_mask,
                     tgt_mask=self.tgt.mask,
                 )
@@ -297,10 +288,10 @@ class XGridObj:
                 self.interps[src_tile] = interp
             else:
                 interp_id = pyfms.horiz_interp.get_weights(
-                    lon_in=src_x,
-                    lat_in=src_y,
-                    lon_out=self.tgt_x,
-                    lat_out=self.tgt_y,
+                    lon_in=src_grid.x,
+                    lat_in=src_grid.y,
+                    lon_out=tgt_grid.x,
+                    lat_out=tgt_grid.y,
                     mask_in=src_mask,
                     mask_out=self.tgt.mask,
                     is_latlon_in=False,
